@@ -1,0 +1,778 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+enum TeamRole {
+  TRYOUT
+  PLAYER
+  ANALYST
+  COACH
+  CAPTAIN
+  ADMIN
+}
+
+enum MemberStatus {
+  ACTIVE
+  SUBSTITUTE
+  BENCH
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  AVAILABLE
+  UNAVAILABLE
+  MAYBE
+}
+
+enum TrainingType {
+  RANKED
+  CUSTOM
+  AIM_TRAINING
+  VOD_REVIEW
+  STRAT_PRACTICE
+  OTHER
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum MapSide {
+  ATTACK
+  DEFENSE
+}
+
+enum StratType {
+  DEFAULT
+  ANTI_STRAT
+  RETAKE
+  POST_PLANT
+  RUSH
+  SLOW_EXECUTE
+  OTHER
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+enum ThreatLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CommentEntityType {
+  TRAINING
+  SCRIM
+  STRAT
+  MATCH
+  LINEUP
+  REPLAY
+}
+
+// USER
+model User {
+  id            String   @id @default(cuid())
+  numericId     Int      @unique
+  email         String?  @unique
+  discordId     String   @unique
+  username      String   @unique
+  displayName   String
+  avatarUrl     String?
+  language      String   @default("de")
+  isAdmin       Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  discordAccessToken String?
+  emailNotifications Boolean @default(true)
+  r6Username    String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  teamMemberships  TeamMember[]
+  trainingVotes    TrainingVote[]
+  scrimVotes       ScrimVote[]
+  createdTrainings Training[]     @relation("CreatedTrainings")
+  createdScrims    Scrim[]        @relation("CreatedScrims")
+  createdStrats    Strat[]        @relation("CreatedStrats")
+  createdMatches   Match[]        @relation("CreatedMatches")
+  createdPlaybooks Playbook[]     @relation("CreatedPlaybooks")
+  scoutingNotes    ScoutingNote[] @relation("CreatedScoutingNotes")
+  uploadedReplays  Replay[]       @relation("UploadedReplays")
+  uploadedMossFiles MossFile[]    @relation("UploadedMossFiles")
+  lineupPlayers    LineupPlayer[]
+  comments         Comment[]
+  createdAnnouncements   Announcement[]      @relation("CreatedAnnouncements")
+  dismissedAnnouncements AnnouncementDismiss[]
+  createdPolls     Poll[]         @relation("CreatedPolls")
+  pollVotes        PollVote[]
+  notifications    Notification[] @relation("NotificationRecipient")
+  actedNotifications Notification[] @relation("NotificationActor")
+  attendanceTokens AttendanceToken[]
+  matchPlayerStats MatchPlayerStat[] @relation("MatchPlayerStats")
+  replayPlayerStats ReplayPlayerStat[] @relation("ReplayPlayerStats")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+// TEAM (single team, auto-created)
+model Team {
+  id          String  @id @default(cuid())
+  name        String
+  tag         String
+  game        String
+  logoUrl     String?
+  description String?
+  discordWebhookUrl String?
+
+  defaultReminderIntervals Int[]    @default([60, 1440])
+  autoEmailEvents          Boolean  @default(false)
+  enabledFeatures          String[] @default(["training", "scrims", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls"])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       TeamMember[]
+  gameConfig    GameConfig?
+  trainings     Training[]
+  scrims        Scrim[]
+  strats        Strat[]
+  matches       Match[]
+  lineups       Lineup[]
+  opponents     Opponent[]
+  replays       Replay[]
+  comments      Comment[]
+  announcements Announcement[]
+  polls         Poll[]
+  playbooks     Playbook[]
+  notifications Notification[]
+  matchPlayerStats MatchPlayerStat[]
+  mossFiles     MossFile[]
+  replayTags    ReplayTag[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id     String       @id @default(cuid())
+  role   TeamRole     @default(PLAYER)
+  status MemberStatus @default(ACTIVE)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  ign       String?
+  realName  String?
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, teamId])
+  @@map("team_members")
+}
+
+model GameConfig {
+  id             String   @id @default(cuid())
+  maps           String[]
+  characters     String[]
+  characterLabel String   @default("Operators")
+  playerRoles    String[]
+
+  teamId String @unique
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+  @@map("game_configs")
+}
+
+// TRAINING
+model Training {
+  id          String         @id @default(cuid())
+  title       String
+  type        TrainingType
+  date        DateTime
+  endDate     DateTime?
+  recurrence  RecurrenceType @default(NONE)
+  notes       String?
+  location    String?
+  reminderIntervals Int[]    @default([])
+
+  createdById String
+  createdBy   User           @relation("CreatedTrainings", fields: [createdById], references: [id])
+  teamId      String
+  team        Team           @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  votes TrainingVote[]
+  @@map("trainings")
+}
+
+model TrainingVote {
+  id      String           @id @default(cuid())
+  status  AttendanceStatus
+  comment String?
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  trainingId String
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, trainingId])
+  @@map("training_votes")
+}
+
+// SCRIMS
+model Scrim {
+  id           String   @id @default(cuid())
+  opponent     String
+  date         DateTime
+  endDate      DateTime?
+  mapPool      String[]
+  format       String?
+  contactInfo  String?
+  serverRegion String?
+  notes        String?
+  recurrence    RecurrenceType @default(NONE)
+  reminderIntervals Int[]      @default([])
+
+  createdById String
+  createdBy   User   @relation("CreatedScrims", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  votes   ScrimVote[]
+  result  ScrimResult?
+  matches Match[] @relation("ScrimMatches")
+  @@map("scrims")
+}
+
+model ScrimVote {
+  id      String           @id @default(cuid())
+  status  AttendanceStatus
+  comment String?
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  scrimId String
+  scrim   Scrim  @relation(fields: [scrimId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, scrimId])
+  @@map("scrim_votes")
+}
+
+model ScrimResult {
+  id        String  @id @default(cuid())
+  scoreUs   Int
+  scoreThem Int
+  maps      Json?
+  notes     String?
+  skillRating          Int?
+  communicationRating  Int?
+  punctualityRating    Int?
+
+  scrimId String @unique
+  scrim   Scrim  @relation(fields: [scrimId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@map("scrim_results")
+}
+
+// STRATS
+model Strat {
+  id          String    @id @default(cuid())
+  title       String
+  map         String
+  site        String?
+  side        MapSide
+  type        StratType @default(DEFAULT)
+  description String?
+  tags        String[]
+  fileUrl     String?
+  fileName    String?
+  isFavorite  Boolean   @default(false)
+  version     Int       @default(1)
+
+  createdById String
+  createdBy   User   @relation("CreatedStrats", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions  StratVersion[]
+  playbooks PlaybookStrat[]
+  @@map("strats")
+}
+
+model StratVersion {
+  id          String  @id @default(cuid())
+  version     Int
+  fileUrl     String?
+  fileName    String?
+  description String?
+  changes     String?
+
+  stratId String
+  strat   Strat  @relation(fields: [stratId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@map("strat_versions")
+}
+
+model Playbook {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  createdById String
+  createdBy   User   @relation("CreatedPlaybooks", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  strats PlaybookStrat[]
+  @@map("playbooks")
+}
+
+model PlaybookStrat {
+  id    String @id @default(cuid())
+  order Int    @default(0)
+
+  playbookId String
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  stratId    String
+  strat      Strat    @relation(fields: [stratId], references: [id], onDelete: Cascade)
+
+  @@unique([playbookId, stratId])
+  @@map("playbook_strats")
+}
+
+// MATCHES
+model Match {
+  id           String      @id @default(cuid())
+  opponent     String
+  date         DateTime
+  competition  String?
+  map          String
+  side         MapSide?
+  scoreUs      Int
+  scoreThem    Int
+  result       MatchResult
+  notes        String?
+  operatorBans String[]    @default([])
+  overtimeUs   Int?
+  overtimeThem Int?
+
+  scrimId String?
+  scrim   Scrim? @relation("ScrimMatches", fields: [scrimId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("CreatedMatches", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerStats MatchPlayerStat[]
+  replay      Replay?      @relation("ReplayMatch")
+  mossFiles   MossFile[]
+  @@index([scrimId])
+  @@map("matches")
+}
+
+model MatchPlayerStat {
+  id        String  @id @default(cuid())
+  kills     Int     @default(0)
+  deaths    Int     @default(0)
+  assists   Int     @default(0)
+  headshots Int     @default(0)
+  score     Int?
+  operator  String?
+  notes     String?
+  headshotRate Float?
+  kd           Float?
+  operators    String[] @default([])
+  clutches     Json?
+
+  userId  String
+  user    User   @relation("MatchPlayerStats", fields: [userId], references: [id], onDelete: Cascade)
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId  String
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, matchId])
+  @@map("match_player_stats")
+}
+
+// LINEUP
+model Lineup {
+  id    String  @id @default(cuid())
+  name  String
+  map   String
+  side  MapSide
+  notes String?
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  players LineupPlayer[]
+  @@map("lineups")
+}
+
+model LineupPlayer {
+  id        String   @id @default(cuid())
+  role      String
+  operators String[]
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  lineupId String
+  lineup   Lineup @relation(fields: [lineupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lineupId])
+  @@map("lineup_players")
+}
+
+// OPPONENT SCOUTING
+model Opponent {
+  id          String      @id @default(cuid())
+  name        String
+  teamTag     String?
+  threatLevel ThreatLevel @default(MEDIUM)
+  playstyle   String?
+  strengths   String?
+  weaknesses  String?
+  notes       String?
+
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  scoutingNotes ScoutingNote[]
+
+  @@unique([name, teamId])
+  @@map("opponents")
+}
+
+model ScoutingNote {
+  id       String  @id @default(cuid())
+  map      String?
+  content  String
+  category String?
+
+  opponentId String
+  opponent   Opponent @relation(fields: [opponentId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User @relation("CreatedScoutingNotes", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("scouting_notes")
+}
+
+// REPLAYS
+model Replay {
+  id        String    @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String?
+  map       String?
+  opponent  String?
+  matchDate DateTime?
+  matchType String?
+  notes     String?
+
+  uploadedById String
+  uploadedBy   User   @relation("UploadedReplays", fields: [uploadedById], references: [id])
+  teamId       String
+  team         Team   @relation(fields: [teamId], references: [id])
+
+  matchId    String?       @unique
+  match      Match?        @relation("ReplayMatch", fields: [matchId], references: [id], onDelete: SetNull)
+  parsed     Boolean       @default(false)
+  parseError String?
+  rounds     ReplayRound[]
+
+  createdAt DateTime @default(now())
+  @@map("replays")
+}
+
+model ReplayRound {
+  id             String   @id @default(cuid())
+  roundNumber    Int
+  fileName       String
+  fileUrl        String
+  attackTeam     String?
+  defenseTeam    String?
+  winnerTeam     String?
+  endReason      String?
+  roundDuration  Float?
+  events         Json?
+  tags           String[] @default([])
+  createdAt      DateTime @default(now())
+
+  replayId    String
+  replay      Replay             @relation(fields: [replayId], references: [id], onDelete: Cascade)
+  playerStats ReplayPlayerStat[]
+
+  @@unique([replayId, roundNumber])
+  @@map("replay_rounds")
+}
+
+model ReplayPlayerStat {
+  id                String  @id @default(cuid())
+  r6Username        String
+  team              String  @default("0")
+  operator          String  @default("")
+  kills             Int     @default(0)
+  deaths            Int     @default(0)
+  headshots         Int     @default(0)
+  assists           Int     @default(0)
+  score             Int     @default(0)
+  clutches          Json?
+  profileId         String?
+  isRecordingPlayer Boolean @default(false)
+
+  userId  String?
+  user    User?       @relation("ReplayPlayerStats", fields: [userId], references: [id], onDelete: SetNull)
+  roundId String
+  round   ReplayRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, r6Username])
+  @@map("replay_player_stats")
+}
+
+model ReplayTag {
+  id     String @id @default(cuid())
+  name   String
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, name])
+  @@map("replay_tags")
+}
+
+// MOSS FILES
+model MossFile {
+  id       String @id @default(cuid())
+  fileName String
+  fileUrl  String
+  fileSize Int
+
+  matchId      String
+  match        Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User   @relation("UploadedMossFiles", fields: [uploadedById], references: [id])
+  teamId       String
+  team         Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  @@map("moss_files")
+}
+
+// COMMENTS
+model Comment {
+  id         String            @id @default(cuid())
+  content    String
+  entityType CommentEntityType
+  entityId   String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entityType, entityId])
+  @@map("comments")
+}
+
+// ANNOUNCEMENTS
+model Announcement {
+  id        String    @id @default(cuid())
+  title     String
+  content   String
+  pinned    Boolean   @default(false)
+  expiresAt DateTime?
+
+  teamId      String
+  team        Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User    @relation("CreatedAnnouncements", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dismissals AnnouncementDismiss[]
+  @@map("announcements")
+}
+
+model AnnouncementDismiss {
+  id             String       @id @default(cuid())
+  announcementId String
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  dismissedAt    DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@map("announcement_dismissals")
+}
+
+// POLLS
+model Poll {
+  id            String    @id @default(cuid())
+  question      String
+  description   String?
+  deadline      DateTime?
+  allowMultiple Boolean   @default(false)
+
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User   @relation("CreatedPolls", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  options PollOption[]
+  @@map("polls")
+}
+
+model PollOption {
+  id    String @id @default(cuid())
+  text  String
+  order Int    @default(0)
+
+  pollId String
+  poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes  PollVote[]
+  @@map("poll_options")
+}
+
+model PollVote {
+  id           String     @id @default(cuid())
+  pollOptionId String
+  pollOption   PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([pollOptionId, userId])
+  @@map("poll_votes")
+}
+
+// NOTIFICATIONS
+model Notification {
+  id      String  @id @default(cuid())
+  type    String
+  title   String
+  message String
+  link    String?
+  read    Boolean @default(false)
+
+  userId  String
+  user    User   @relation("NotificationRecipient", fields: [userId], references: [id])
+  teamId  String
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  actorId String
+  actor   User   @relation("NotificationActor", fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+// EVENT REMINDERS
+model EventReminder {
+  id            String    @id @default(cuid())
+  eventType     String
+  eventId       String
+  minutesBefore Int
+  scheduledAt   DateTime
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([scheduledAt, sentAt])
+  @@map("event_reminders")
+}
+
+// ATTENDANCE TOKENS
+model AttendanceToken {
+  id        String    @id @default(cuid())
+  token     String    @unique @default(cuid())
+  userId    String
+  eventType String
+  eventId   String
+  response  String?
+  reason    String?
+  respondedAt DateTime?
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventType, eventId])
+  @@map("attendance_tokens")
+}
+
+// AUDIT LOG
+model AuditLog {
+  id       String  @id @default(cuid())
+  action   String
+  entity   String
+  entityId String?
+  details  Json?
+  teamId   String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  @@map("audit_logs")
+}
+
+// APP SETTINGS
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  @@map("app_settings")
+}

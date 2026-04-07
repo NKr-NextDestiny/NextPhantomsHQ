@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.next/
+.env
+uploads/
+*.log
+.DS_Store
+server/src/generated/

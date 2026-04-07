@@ -1,0 +1,22 @@
+{
+  "name": "next-phantoms",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NextPhantoms - Team Management Platform",
+  "scripts": {
+    "dev": "pnpm --filter shared build && concurrently \"pnpm --filter client dev\" \"pnpm --filter server dev\"",
+    "build": "pnpm --filter shared build && pnpm --filter server build && pnpm --filter client build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma", "esbuild", "@swc/core", "sharp", "@parcel/watcher", "unrs-resolver"]
+  },
+  "engines": { "node": ">=20.0.0", "pnpm": ">=9.0.0" }
+}

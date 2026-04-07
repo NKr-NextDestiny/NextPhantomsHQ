@@ -1,0 +1,34 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+# Copy workspace files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY shared/package.json shared/
+COPY client/package.json client/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile || pnpm install
+
+# Copy source
+COPY shared/ shared/
+COPY client/ client/
+COPY public/ client/public/
+
+# Build shared
+RUN pnpm --filter shared build
+
+# Build client
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+RUN pnpm --filter client build
+
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=base /app/client/.next/standalone ./
+COPY --from=base /app/client/.next/static ./.next/static
+COPY --from=base /app/client/public ./public
+
+EXPOSE 3000
+CMD ["node", "server.js"]
