@@ -23,6 +23,7 @@ export const config = {
   requiredGuildId: process.env.REQUIRED_GUILD_ID || "",
   allowedRoleIds: (process.env.ALLOWED_ROLE_IDS || "").split(",").filter(Boolean),
   adminRoleIds: (process.env.ADMIN_ROLE_IDS || "").split(",").filter(Boolean),
+  adminUserIds: (process.env.ADMIN_USER_IDS || "").split(",").filter(Boolean),
   smtpHost: process.env.SMTP_HOST || "",
   smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
   smtpUser: process.env.SMTP_USER || "",

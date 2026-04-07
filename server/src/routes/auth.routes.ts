@@ -72,7 +72,8 @@ authRouter.get("/discord/callback", async (req, res) => {
 
         if (config.allowedRoleIds.length > 0) {
           const hasAllowedRole = config.allowedRoleIds.some(roleId => memberRoles.includes(roleId));
-          if (!hasAllowedRole) { res.redirect(config.appUrl + "/access-denied?reason=missing_role"); return; }
+          const isAdminUser = config.adminUserIds.includes(discordUser.id);
+          if (!hasAllowedRole && !isAdminUser) { res.redirect(config.appUrl + "/access-denied?reason=missing_role"); return; }
         }
       } catch {
         res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
@@ -80,7 +81,10 @@ authRouter.get("/discord/callback", async (req, res) => {
       }
     }
 
-    const isDiscordAdmin = config.adminRoleIds.length > 0 && config.adminRoleIds.some(roleId => memberRoles.includes(roleId));
+    // Admin check: via role IDs OR via user IDs
+    const hasAdminRole = config.adminRoleIds.length > 0 && config.adminRoleIds.some(roleId => memberRoles.includes(roleId));
+    const hasAdminUserId = config.adminUserIds.includes(discordUser.id);
+    const isDiscordAdmin = hasAdminRole || hasAdminUserId;
 
     const teamId = await ensureTeamExists();
 
