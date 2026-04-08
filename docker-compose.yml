@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-phantoms}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
-      POSTGRES_DB: ${DB_NAME:-next_phantoms}
+      POSTGRES_DB: ${DB_NAME:-next_phantoms_hq}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-phantoms}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-next_phantoms}
+      DATABASE_URL: postgresql://${DB_USER:-phantoms}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-next_phantoms_hq}
     ports:
       - "4000:4000"
     volumes:

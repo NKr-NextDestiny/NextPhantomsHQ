@@ -33,6 +33,13 @@ import { attendanceRouter } from "./routes/attendance.routes.js";
 import { userRouter } from "./routes/user.routes.js";
 import { teamRouter } from "./routes/team.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
+import { trainingTemplateRouter } from "./routes/training-template.routes.js";
+import { matchReviewRouter } from "./routes/match-review.routes.js";
+import { availabilityRouter } from "./routes/availability.routes.js";
+import { reminderRouter } from "./routes/reminder.routes.js";
+import { wikiRouter } from "./routes/wiki.routes.js";
+import { notesRouter } from "./routes/notes.routes.js";
+import { searchRouter } from "./routes/search.routes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -107,6 +114,13 @@ app.use("/api/attendance", attendanceRouter);
 app.use("/api/users", userRouter);
 app.use("/api/team", teamRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/training-templates", trainingTemplateRouter);
+app.use("/api/matches", matchReviewRouter);
+app.use("/api/availability", availabilityRouter);
+app.use("/api/reminders", reminderRouter);
+app.use("/api/wiki", wikiRouter);
+app.use("/api/notes", notesRouter);
+app.use("/api/search", searchRouter);
 
 // Error handler
 app.use(errorHandler);
@@ -118,7 +132,7 @@ async function start() {
     startScheduler();
 
     httpServer.listen(config.port, () => {
-      console.log(`🚀 NextPhantoms API running on port ${config.port} (${config.nodeEnv})`);
+      console.log(`🚀 Next Phantoms HQ running on port ${config.port} (${config.nodeEnv})`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);

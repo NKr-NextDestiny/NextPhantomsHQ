@@ -8,6 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 import { getIO } from "../config/socket.js";
+import { sendWebhookNotification, buildMatchEmbed } from "../services/discord-webhook.service.js";
 
 export const matchRouter = Router();
 
@@ -135,6 +136,7 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
 
     await logAudit(req.user!.id, "CREATE", "match", match.id, { opponent: match.opponent, map: match.map }, req.teamId);
     try { getIO().to(`team:${req.teamId}`).emit("match:created", full); } catch {}
+    sendWebhookNotification(buildMatchEmbed({ opponent: match.opponent, map: match.map, result: match.result, scoreUs: match.scoreUs, scoreThem: match.scoreThem, competition: match.competition || undefined })).catch(console.error);
 
     res.status(201).json({ success: true, data: full });
   } catch (error) { next(error); }

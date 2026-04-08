@@ -1,10 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-title NextPhantoms - Clean / Uninstall
+cd /d "%~dp0"
+title Next Phantoms HQ - Clean / Uninstall
 color 0C
 
 echo ============================================
-echo   NextPhantoms - CLEAN / UNINSTALL
+echo   Next Phantoms HQ - CLEAN / UNINSTALL
 echo ============================================
 echo.
 echo WARNUNG: Dies loescht ALLES:
@@ -13,15 +14,16 @@ echo   - node_modules
 echo   - Build-Artefakte (.next, dist)
 echo   - Generierte Prisma Dateien
 echo   - Upload-Dateien
-echo   - pnpm Store Cache
+echo   - pnpm Lock-Datei
 echo.
 
-set /p CONFIRM="Bist du sicher? (ja/nein): "
-if /i not "!CONFIRM!"=="ja" (
-    echo Abgebrochen.
-    pause
-    exit /b 0
-)
+set /p CONFIRM="Bist du sicher? (y/n): "
+if /i "!CONFIRM!"=="y" goto :confirmed
+if /i "!CONFIRM!"=="j" goto :confirmed
+echo Abgebrochen.
+pause
+exit /b 0
+:confirmed
 
 echo.
 echo ============================================
@@ -41,7 +43,7 @@ if %ERRORLEVEL%==0 (
 
     :: Remove dangling images
     echo Entferne Docker Images...
-    for /f "tokens=*" %%i in ('docker images -q "nextphantoms*" 2^>nul') do (
+    for /f "tokens=*" %%i in ('docker images -q "nextphantomshq*" 2^>nul') do (
         docker rmi %%i 2>nul
     )
     echo [OK] Docker Images bereinigt
@@ -131,20 +133,6 @@ echo.
 if exist pnpm-lock.yaml (
     del /f pnpm-lock.yaml
     echo [OK] pnpm-lock.yaml geloescht
-)
-
-echo.
-echo ============================================
-echo   7. Prisma Migrations loeschen (optional)
-echo ============================================
-echo.
-
-set /p DEL_MIGRATIONS="Auch Prisma Migrations loeschen? (ja/nein): "
-if /i "!DEL_MIGRATIONS!"=="ja" (
-    if exist server\prisma\migrations (
-        rmdir /s /q server\prisma\migrations
-        echo [OK] Migrations geloescht
-    )
 )
 
 echo.

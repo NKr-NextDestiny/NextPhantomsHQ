@@ -17,6 +17,12 @@ import {
   Settings,
   Menu,
   X,
+  BookOpen,
+  StickyNote,
+  Bell,
+  Calendar,
+  History,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +38,12 @@ const navItems = [
   { href: "/moss", label: "MOSS", icon: Shield },
   { href: "/polls", label: "Umfragen", icon: BarChart3 },
   { href: "/announcements", label: "Ankuendigungen", icon: Megaphone },
+  { href: "/wiki", label: "Wiki", icon: BookOpen },
+  { href: "/notes", label: "Notizen", icon: StickyNote },
+  { href: "/reminders", label: "Erinnerungen", icon: Bell },
+  { href: "/availability", label: "Verfuegbarkeit", icon: Calendar },
+  { href: "/docs", label: "Dokumentation", icon: HelpCircle },
+  { href: "/changelog", label: "Changelog", icon: History },
   { href: "/settings", label: "Einstellungen", icon: Settings },
 ];
 
@@ -42,8 +54,8 @@ export function Sidebar() {
   const navContent = (
     <>
       <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-5">
-        <img src="/images/logo_icon.png" alt="NextPhantoms" className="h-9 w-9" />
-        <span className="text-lg font-bold text-[var(--primary)]">NextPhantoms</span>
+        <img src="/images/logo_icon.png" alt="Next Phantoms HQ" className="h-9 w-9" />
+        <span className="text-lg font-bold text-[var(--primary)]">Next Phantoms HQ</span>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">

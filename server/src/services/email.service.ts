@@ -23,7 +23,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
 }
 
 export async function sendNewEventNotification(to: string, eventType: string, title: string, date: string, createdBy: string) {
-  await sendEmail(to, `[NextPhantoms] Neues ${eventType}: ${title}`,
+  await sendEmail(to, `[Next Phantoms HQ] Neues ${eventType}: ${title}`,
     `<p><strong>${createdBy}</strong> hat ein neues ${eventType} erstellt:</p>
      <p><strong>${title}</strong><br>Datum: ${date}</p>
      <p>Logge dich ein um abzustimmen.</p>`);
@@ -37,7 +37,7 @@ export async function sendAttendanceReminder(to: string, eventType: string, titl
       <a href="${appUrl}/attendance/${token}?vote=UNAVAILABLE">&#x274C; Nicht verf&uuml;gbar</a> |
       <a href="${appUrl}/attendance/${token}?vote=MAYBE">&#x2753; Vielleicht</a>
     </p>` : "";
-  await sendEmail(to, `[NextPhantoms] Erinnerung: ${title}`,
+  await sendEmail(to, `[Next Phantoms HQ] Erinnerung: ${title}`,
     `<p>Erinnerung an <strong>${title}</strong> (${eventType})</p>
      <p>Datum: ${date}</p>${links}`);
 }

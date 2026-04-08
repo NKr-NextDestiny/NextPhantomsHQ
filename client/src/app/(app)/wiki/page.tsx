@@ -1,0 +1,177 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { Plus, BookOpen, Trash2, Edit3, Clock } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/lib/auth-store";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { Input, Textarea } from "@/components/ui/Input";
+import { formatDate } from "@/lib/utils";
+
+interface WikiPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  createdBy: { id: string; displayName: string };
+  updatedBy?: { id: string; displayName: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function WikiPageList() {
+  const { user } = useAuthStore();
+  const [pages, setPages] = useState<WikiPage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editPage, setEditPage] = useState<WikiPage | null>(null);
+  const [viewPage, setViewPage] = useState<WikiPage | null>(null);
+  const [form, setForm] = useState({ title: "", slug: "", content: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await api.get<WikiPage[]>("/api/wiki");
+      if (res.data) setPages(res.data);
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openCreate = () => {
+    setEditPage(null);
+    setForm({ title: "", slug: "", content: "" });
+    setShowModal(true);
+  };
+
+  const openEdit = async (slug: string) => {
+    try {
+      const res = await api.get<WikiPage>(`/api/wiki/${slug}`);
+      if (res.data) {
+        setEditPage(res.data);
+        setForm({ title: res.data.title, slug: res.data.slug, content: res.data.content });
+        setShowModal(true);
+      }
+    } catch {}
+  };
+
+  const openView = async (slug: string) => {
+    try {
+      const res = await api.get<WikiPage>(`/api/wiki/${slug}`);
+      if (res.data) setViewPage(res.data);
+    } catch {}
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      if (editPage) {
+        await api.put(`/api/wiki/${editPage.slug}`, form);
+      } else {
+        await api.post("/api/wiki", form);
+      }
+      setShowModal(false);
+      setEditPage(null);
+      load();
+    } catch {} finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async (slug: string) => {
+    if (!confirm("Wiki-Seite wirklich loeschen?")) return;
+    try {
+      await api.delete(`/api/wiki/${slug}`);
+      load();
+    } catch {}
+  };
+
+  const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--primary)]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Wiki</h1>
+          <p className="text-[var(--muted-foreground)]">Team-Wissensdatenbank</p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4" /> Neue Seite
+        </Button>
+      </div>
+
+      {pages.length === 0 ? (
+        <Card className="py-12 text-center">
+          <BookOpen className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
+          <p className="text-[var(--muted-foreground)]">Noch keine Wiki-Seiten erstellt.</p>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {pages.map((page) => (
+            <Card key={page.id} hover className="cursor-pointer" onClick={() => openView(page.slug)}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-[var(--foreground)]">{page.title}</h3>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">/{page.slug}</p>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={(e) => { e.stopPropagation(); openEdit(page.slug); }} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(page.slug); }} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
+                <Clock className="h-3.5 w-3.5" /> {formatDate(page.updatedAt)}
+                <span className="ml-2">von {page.createdBy.displayName}</span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* View page */}
+      <Modal open={!!viewPage} onClose={() => setViewPage(null)} title={viewPage?.title || ""}>
+        {viewPage && (
+          <div className="space-y-4">
+            <div className="whitespace-pre-wrap text-sm text-[var(--foreground)]">{viewPage.content}</div>
+            <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
+              Erstellt von {viewPage.createdBy.displayName} am {formatDate(viewPage.createdAt)}
+              {viewPage.updatedBy && <> — Bearbeitet von {viewPage.updatedBy.displayName}</>}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Create/Edit modal */}
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditPage(null); }} title={editPage ? "Seite bearbeiten" : "Neue Wiki-Seite"}>
+        <div className="space-y-4">
+          <Input
+            label="Titel"
+            value={form.title}
+            onChange={(e) => {
+              const title = e.target.value;
+              setForm({ ...form, title, slug: editPage ? form.slug : slugify(title) });
+            }}
+            placeholder="Seitentitel"
+          />
+          <Input label="Slug" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="seiten-slug" />
+          <Textarea label="Inhalt" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={10} />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => { setShowModal(false); setEditPage(null); }}>Abbrechen</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editPage ? "Speichern" : "Erstellen"}</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}

@@ -126,6 +126,13 @@ model User {
   matchPlayerStats MatchPlayerStat[] @relation("MatchPlayerStats")
   replayPlayerStats ReplayPlayerStat[] @relation("ReplayPlayerStats")
   auditLogs        AuditLog[]
+  createdTrainingTemplates TrainingTemplate[] @relation("CreatedTrainingTemplates")
+  matchReviews     MatchReview[]      @relation("CreatedMatchReviews")
+  availabilities   Availability[]
+  createdReminders Reminder[]         @relation("CreatedReminders")
+  createdWikiPages WikiPage[]         @relation("CreatedWikiPages")
+  updatedWikiPages WikiPage[]         @relation("UpdatedWikiPages")
+  notes            Note[]             @relation("CreatedNotes")
 
   @@map("users")
 }
@@ -142,7 +149,7 @@ model Team {
 
   defaultReminderIntervals Int[]    @default([60, 1440])
   autoEmailEvents          Boolean  @default(false)
-  enabledFeatures          String[] @default(["training", "scrims", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls"])
+  enabledFeatures          String[] @default(["training", "scrims", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls", "wiki", "notes", "reminders", "availability"])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -164,6 +171,12 @@ model Team {
   matchPlayerStats MatchPlayerStat[]
   mossFiles     MossFile[]
   replayTags    ReplayTag[]
+  trainingTemplates TrainingTemplate[]
+  matchReviews  MatchReview[]
+  availabilities Availability[]
+  reminders     Reminder[]
+  wikiPages     WikiPage[]
+  notes         Note[]
 
   @@map("teams")
 }
@@ -405,6 +418,7 @@ model Match {
   playerStats MatchPlayerStat[]
   replay      Replay?      @relation("ReplayMatch")
   mossFiles   MossFile[]
+  review      MatchReview?
   @@index([scrimId])
   @@map("matches")
 }
@@ -767,6 +781,117 @@ model AuditLog {
   user   User   @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   @@map("audit_logs")
+}
+
+// TRAINING TEMPLATES
+model TrainingTemplate {
+  id    String       @id @default(cuid())
+  title String
+  type  TrainingType
+  notes String?
+
+  createdById String
+  createdBy   User   @relation("CreatedTrainingTemplates", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("training_templates")
+}
+
+// MATCH REVIEWS
+model MatchReview {
+  id           String  @id @default(cuid())
+  positives    String?
+  negatives    String?
+  improvements String?
+  notes        String?
+
+  matchId String @unique
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId  String
+  team    Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("CreatedMatchReviews", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("match_reviews")
+}
+
+// AVAILABILITY
+model Availability {
+  id        String @id @default(cuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("availabilities")
+}
+
+// REMINDERS
+model Reminder {
+  id       String    @id @default(cuid())
+  title    String
+  content  String?
+  deadline DateTime?
+  done     Boolean   @default(false)
+
+  createdById String
+  createdBy   User   @relation("CreatedReminders", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("reminders")
+}
+
+// WIKI
+model WikiPage {
+  id      String @id @default(cuid())
+  title   String
+  slug    String
+  content String
+
+  createdById String
+  createdBy   User   @relation("CreatedWikiPages", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?  @relation("UpdatedWikiPages", fields: [updatedById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, slug])
+  @@map("wiki_pages")
+}
+
+// NOTES
+model Note {
+  id        String  @id @default(cuid())
+  title     String
+  content   String
+  isPrivate Boolean @default(false)
+
+  createdById String
+  createdBy   User   @relation("CreatedNotes", fields: [createdById], references: [id])
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("notes")
 }
 
 // APP SETTINGS

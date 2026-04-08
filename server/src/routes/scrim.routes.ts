@@ -11,6 +11,7 @@ import { notifyTeam } from "../services/notification.service.js";
 import { sendNewEventNotification } from "../services/email.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
 import { getIO } from "../config/socket.js";
+import { sendWebhookNotification, buildScrimEmbed } from "../services/discord-webhook.service.js";
 
 export const scrimRouter = Router();
 
@@ -140,6 +141,7 @@ scrimRouter.post("/", authenticate, teamContext, requireFeature("scrims"), requi
 
     await logAudit(req.user!.id, "CREATE", "scrim", scrim.id, { opponent: scrim.opponent }, req.teamId);
     try { getIO().to(`team:${req.teamId}`).emit("scrim:created", scrim); } catch {}
+    sendWebhookNotification(buildScrimEmbed({ opponent: scrim.opponent, date: scrim.date.toISOString(), format: scrim.format || undefined })).catch(console.error);
 
     res.status(201).json({ success: true, data: scrim });
   } catch (error) { next(error); }

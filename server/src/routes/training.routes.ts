@@ -8,6 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 import { notifyTeam } from "../services/notification.service.js";
+import { sendWebhookNotification, buildTrainingEmbed } from "../services/discord-webhook.service.js";
 import { sendNewEventNotification } from "../services/email.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
 import { getIO } from "../config/socket.js";
@@ -125,6 +126,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
     await logAudit(req.user!.id, "CREATE", "training", training.id, { title: training.title }, req.teamId);
 
     try { getIO().to(`team:${req.teamId}`).emit("training:created", training); } catch {}
+    sendWebhookNotification(buildTrainingEmbed({ title: training.title, type: training.type, date: training.date.toISOString() })).catch(console.error);
 
     res.status(201).json({ success: true, data: training });
   } catch (error) { next(error); }

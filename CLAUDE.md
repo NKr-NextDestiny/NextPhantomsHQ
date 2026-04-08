@@ -1,8 +1,8 @@
-# CLAUDE.md — NextPhantoms
+# CLAUDE.md — Next Phantoms HQ
 
 ## Project Overview
 
-NextPhantoms is a single-team esports management platform for the NextPhantoms team (part of Next Destiny eSports). It provides training scheduling, scrim management, match tracking, strategy sharing, lineup building, opponent scouting, replay management, MOSS file storage, polls, and announcements — all with Discord-based authentication and AES-256-GCM file encryption.
+Next Phantoms HQ is a single-team esports management platform for the Next Phantoms team (part of Next Destiny eSports). It provides training scheduling, scrim management, match tracking, strategy sharing, lineup building, opponent scouting, replay management, MOSS file storage, polls, announcements, wiki, notes, reminders, and availability tracking — all with Discord-based authentication and AES-256-GCM file encryption.
 
 ## Architecture
 
@@ -62,12 +62,13 @@ TRYOUT(-1) < PLAYER(0) < ANALYST(1) < COACH(2) < CAPTAIN(3) < ADMIN(4)
 - `REQUIRED_GUILD_ID` — must be member of this Discord server
 - `ALLOWED_ROLE_IDS` — comma-separated, user needs ANY of these roles
 - `ADMIN_ROLE_IDS` — comma-separated, these Discord roles grant app admin
+- `ADMIN_USER_IDS` — comma-separated Discord user IDs that always get admin access
 
 ### First User
 - First user to log in automatically becomes admin
 
-## Features (9 toggleable)
-training, scrims, strats, matches, lineup, scouting, replays, announcements, polls
+## Features (13 toggleable)
+training, scrims, strats, matches, lineup, scouting, replays, announcements, polls, wiki, notes, reminders, availability
 
 ## Workflow
 - Commit and push to `dev` after changes

@@ -7,7 +7,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
       <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center shadow-2xl">
         <img src="/images/logo_nde.png" alt="Next Destiny" className="mx-auto mb-6 h-24 w-auto" />
-        <h1 className="mb-2 text-3xl font-bold text-[var(--primary)]">NextPhantoms</h1>
+        <h1 className="mb-2 text-3xl font-bold text-[var(--primary)]">Next Phantoms HQ</h1>
         <p className="mb-8 text-[var(--muted-foreground)]">Team Management Platform</p>
         <a
           href={`${API_URL}/api/auth/discord`}

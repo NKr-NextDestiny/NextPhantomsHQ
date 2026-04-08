@@ -1,10 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
-title NextPhantoms - Dev Setup
+cd /d "%~dp0"
+title Next Phantoms HQ - Dev Setup
 color 0A
 
 echo ============================================
-echo   NextPhantoms - Development Setup
+echo   Next Phantoms HQ - Development Setup
 echo ============================================
 echo.
 
@@ -55,20 +56,6 @@ if not exist .env (
         copy .env.example .env >nul
         echo [OK] .env erstellt aus .env.example
         echo [WICHTIG] Bitte .env bearbeiten und Discord Credentials eintragen!
-        echo.
-        echo Benoetigte Werte:
-        echo   - DISCORD_CLIENT_ID
-        echo   - DISCORD_CLIENT_SECRET
-        echo   - REQUIRED_GUILD_ID
-        echo   - ALLOWED_ROLE_IDS (optional)
-        echo   - ADMIN_ROLE_IDS (optional)
-        echo.
-        set /p EDIT_ENV="Moechtest du die .env jetzt bearbeiten? (j/n): "
-        if /i "!EDIT_ENV!"=="j" (
-            notepad .env
-            echo Druecke Enter wenn du fertig bist...
-            pause >nul
-        )
     ) else (
         echo [ERROR] .env.example nicht gefunden!
         pause
@@ -126,7 +113,7 @@ if %DOCKER_AVAILABLE%==1 (
     echo [OK] PostgreSQL laeuft
 ) else (
     echo [WARN] Docker nicht verfuegbar - stelle sicher dass PostgreSQL auf Port 5432 laeuft!
-    echo   DB_USER=phantoms  DB_PASSWORD=changeme  DB_NAME=next_phantoms
+    echo   DB_USER=phantoms  DB_PASSWORD=changeme  DB_NAME=next_phantoms_hq
     pause
 )
 
@@ -135,6 +122,16 @@ echo ============================================
 echo   5. Prisma Setup
 echo ============================================
 echo.
+
+:: Prisma CLI liest DATABASE_URL aus server/.env (mit @localhost fuer lokales Dev).
+:: In Docker wird sie durch die Umgebungsvariable aus docker-compose.yml ueberschrieben.
+:: Falls server/.env nicht existiert, aus Root-.env ableiten:
+if not exist server\.env (
+    for /f "tokens=1,* delims==" %%a in ('findstr /b "DATABASE_URL=" .env') do set "DB_URL=%%b"
+    set "DB_URL=!DB_URL:@postgres:=@localhost:!"
+    echo DATABASE_URL=!DB_URL!> server\.env
+    echo [OK] server\.env erstellt mit localhost-URL
+)
 
 cd server
 call pnpm prisma generate
@@ -148,8 +145,7 @@ echo [OK] Prisma Client generiert
 
 call pnpm prisma migrate dev --name init
 if %ERRORLEVEL% neq 0 (
-    echo [WARN] Migration fehlgeschlagen - pruefe DATABASE_URL in .env
-    echo   Fuer lokales Dev: DATABASE_URL=postgresql://phantoms:changeme@localhost:5432/next_phantoms
+    echo [WARN] Migration fehlgeschlagen - pruefe DATABASE_URL in server\.env
     cd ..
     pause
     exit /b 1
@@ -190,16 +186,18 @@ echo Starte den Dev-Server mit:
 echo   pnpm dev
 echo.
 echo Oder starte jetzt direkt:
-set /p START_DEV="Dev-Server jetzt starten? (j/n): "
-if /i "!START_DEV!"=="j" (
-    echo.
-    echo Starte NextPhantoms...
-    echo   Client: http://localhost:3000
-    echo   Server: http://localhost:4000
-    echo.
-    call pnpm dev
-) else (
-    echo.
-    echo Spaeter starten mit: pnpm dev
-    pause
-)
+set /p START_DEV="Dev-Server jetzt starten? (y/n): "
+if /i "!START_DEV!"=="y" goto :startdev
+if /i "!START_DEV!"=="j" goto :startdev
+echo.
+echo Spaeter starten mit: pnpm dev
+pause
+goto :eof
+
+:startdev
+echo.
+echo Starte Next Phantoms HQ...
+echo   Client: http://localhost:3000
+echo   Server: http://localhost:4000
+echo.
+call pnpm dev

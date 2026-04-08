@@ -80,8 +80,8 @@ export default function AttendancePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
       <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 shadow-2xl">
-        <img src="/images/logo_icon.png" alt="NextPhantoms" className="mx-auto mb-4 h-12 w-12" />
-        <h1 className="mb-6 text-center text-xl font-bold text-[var(--primary)]">NextPhantoms</h1>
+        <img src="/images/logo_icon.png" alt="Next Phantoms HQ" className="mx-auto mb-4 h-12 w-12" />
+        <h1 className="mb-6 text-center text-xl font-bold text-[var(--primary)]">Next Phantoms HQ</h1>
 
         {status === "loading" && (
           <div className="flex flex-col items-center gap-3 py-8">

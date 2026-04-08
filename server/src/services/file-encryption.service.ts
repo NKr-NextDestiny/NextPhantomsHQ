@@ -9,7 +9,7 @@ const MAGIC_HEADER = Buffer.from("NEXE");
 
 function getKey(): Buffer {
   if (!config.fileEncryptionKey) throw new Error("FILE_ENCRYPTION_KEY not set");
-  return crypto.scryptSync(config.fileEncryptionKey, "nextphantoms-salt", 32);
+  return crypto.scryptSync(config.fileEncryptionKey, "nextphantomshq-salt", 32);
 }
 
 export function encryptFile(inputPath: string, outputPath: string): void {
@@ -53,4 +53,30 @@ export function isEncrypted(filePath: string): boolean {
   fs.readSync(fd, buf, 0, MAGIC_HEADER.length, 0);
   fs.closeSync(fd);
   return buf.equals(MAGIC_HEADER);
+}
+
+/** Read a file and decrypt it if it has the NEXE magic header. */
+export function readDecryptedFile(filePath: string): Buffer {
+  return decryptFile(filePath);
+}
+
+/** Encrypt an uploaded file (multer file object) in-place. */
+export function encryptUploadedFile(file: { path?: string; filename: string; destination?: string }): void {
+  const filePath = file.path || (file.destination ? `${file.destination}/${file.filename}` : file.filename);
+  encryptFileOnDisk(filePath);
+}
+
+/** Encrypt a file in-place (read, encrypt, overwrite). */
+export function encryptFileOnDisk(filePath: string): void {
+  if (!config.fileEncryptionKey) return;
+  const key = getKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
+
+  const input = fs.readFileSync(filePath);
+  const encrypted = Buffer.concat([cipher.update(input), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  const output = Buffer.concat([MAGIC_HEADER, iv, authTag, encrypted]);
+  fs.writeFileSync(filePath, output);
 }
