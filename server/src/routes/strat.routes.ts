@@ -9,8 +9,9 @@ import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { upload } from "../middleware/upload.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { parsePagination } from "../middleware/pagination.js";
 import { logAudit } from "../services/audit.service.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 import { config } from "../config/index.js";
 
 export const stratRouter = Router();
@@ -114,7 +115,7 @@ stratRouter.post("/", authenticate, teamContext, requireFeature("strats"), requi
     });
 
     await logAudit(req.user!.id, "CREATE", "strat", strat.id, { title: strat.title }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("strat:created", strat); } catch {}
+    safeEmit(`team:${req.teamId}`, "strat:created", strat);
 
     res.status(201).json({ success: true, data: strat });
   } catch (error) { next(error); }
@@ -168,7 +169,7 @@ stratRouter.put("/:id", authenticate, teamContext, requireFeature("strats"), req
     });
 
     await logAudit(req.user!.id, "UPDATE", "strat", strat.id, { version: newVersion }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("strat:updated", strat); } catch {}
+    safeEmit(`team:${req.teamId}`, "strat:updated", strat);
 
     res.json({ success: true, data: strat });
   } catch (error) { next(error); }
@@ -183,7 +184,7 @@ stratRouter.delete("/:id", authenticate, teamContext, requireFeature("strats"), 
     await prisma.strat.delete({ where: { id: String(req.params.id) } });
 
     await logAudit(req.user!.id, "DELETE", "strat", String(req.params.id), { title: existing.title }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("strat:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "strat:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Strat deleted" });
   } catch (error) { next(error); }

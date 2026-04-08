@@ -6,7 +6,9 @@ import { teamContext, requireTeamRole } from "../middleware/team.js";
 import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
-import { getIO } from "../config/socket.js";
+import { parsePagination } from "../middleware/pagination.js";
+import { safeEmit } from "../config/socket.js";
+import { sendAnnouncementNotification } from "../services/email.service.js";
 
 export const announcementRouter = Router();
 
@@ -91,7 +93,18 @@ announcementRouter.post("/", authenticate, teamContext, requireFeature("announce
       },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("announcement:created", announcement); } catch {}
+    safeEmit(`team:${req.teamId}`, "announcement:created", announcement);
+
+    // Send email notifications
+    const members = await prisma.teamMember.findMany({
+      where: { teamId: req.teamId! },
+      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
+    });
+    await Promise.all(
+      members
+        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
+        .map(m => sendAnnouncementNotification(m.user.email, announcement.title, req.user!.displayName).catch(console.error))
+    );
 
     res.status(201).json({ success: true, data: announcement });
   } catch (error) { next(error); }
@@ -109,7 +122,7 @@ announcementRouter.put("/:id", authenticate, teamContext, requireFeature("announ
       include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("announcement:updated", announcement); } catch {}
+    safeEmit(`team:${req.teamId}`, "announcement:updated", announcement);
 
     res.json({ success: true, data: announcement });
   } catch (error) { next(error); }
@@ -123,7 +136,7 @@ announcementRouter.delete("/:id", authenticate, teamContext, requireFeature("ann
 
     await prisma.announcement.delete({ where: { id: String(req.params.id) } });
 
-    try { getIO().to(`team:${req.teamId}`).emit("announcement:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "announcement:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Announcement deleted" });
   } catch (error) { next(error); }

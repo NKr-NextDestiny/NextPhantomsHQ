@@ -42,3 +42,5 @@ export const uploadReplay = multer({
   storage: replayStorage,
   limits: { fileSize: config.maxFileSizeMb * 1024 * 1024 },
 });
+
+export { validateFileType } from "./fileValidation.js";

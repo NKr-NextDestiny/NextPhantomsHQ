@@ -232,6 +232,19 @@ Der Server führt Datenbankmigrationen automatisch beim Start aus.
 
 ## Backup
 
+Automatisches Backup-Script mit Rotation:
+
+```bash
+# Backup erstellen (Datenbank + Uploads, komprimiert)
+./backup.sh
+
+# Umgebungsvariablen (optional)
+BACKUP_DIR=./backups   # Zielverzeichnis (Standard: ./backups)
+KEEP_DAYS=7            # Aufbewahrung in Tagen (Standard: 7)
+```
+
+Manuell:
+
 ```bash
 # Datenbank-Dump erstellen
 docker compose exec postgres pg_dump -U phantoms next_phantoms_hq > backup_$(date +%Y%m%d).sql

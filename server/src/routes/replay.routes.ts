@@ -13,7 +13,7 @@ import { encryptUploadedFile, readDecryptedFile } from "../services/file-encrypt
 import { encryptFileOnDisk } from "../services/file-encryption.service.js";
 import { extractZip, parseReplayInBackground } from "../services/replay-parser.service.js";
 import { config } from "../config/index.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 
 export const replayRouter = Router();
 
@@ -198,7 +198,7 @@ replayRouter.post("/", authenticate, teamContext, requireFeature("replays"), upl
     res.status(201).json({ success: true, data: replay });
 
     // Fire-and-forget: parse .rec files in background
-    try { getIO().to(`team:${req.teamId}`).emit("replay:created", replay); } catch {}
+    safeEmit(`team:${req.teamId}`, "replay:created", replay);
     parseReplayInBackground(replay.id, req.teamId!, matchId).catch(console.error);
 
   } catch (error) { next(error); }
@@ -308,14 +308,14 @@ replayRouter.delete("/:id", authenticate, teamContext, requireFeature("replays")
     // Delete round files from disk
     const rounds = await prisma.replayRound.findMany({ where: { replayId: String(req.params.id) } });
     for (const round of rounds) {
-      try { fs.unlinkSync(path.join(config.uploadDir, path.basename(round.fileUrl))); } catch {}
+      try { fs.unlinkSync(path.join(config.uploadDir, path.basename(round.fileUrl))); } catch (e) { console.error("[cleanup] Failed to delete round file:", e); }
     }
     // Delete main file
-    try { fs.unlinkSync(path.join(config.uploadDir, path.basename(replay.fileUrl))); } catch {}
+    try { fs.unlinkSync(path.join(config.uploadDir, path.basename(replay.fileUrl))); } catch (e) { console.error("[cleanup] Failed to delete replay file:", e); }
 
     await prisma.replay.delete({ where: { id: String(req.params.id) } });
     await logAudit(req.user!.id, "DELETE", "Replay", String(req.params.id));
-    try { getIO().to(`team:${req.teamId}`).emit("replay:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "replay:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Replay deleted" });
   } catch (error) { next(error); }

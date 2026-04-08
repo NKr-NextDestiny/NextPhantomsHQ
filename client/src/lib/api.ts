@@ -37,6 +37,10 @@ class ApiClient {
     if (teamId) headers["x-team-id"] = teamId;
     if (options.body instanceof FormData) delete headers["Content-Type"];
 
+    // CSRF token from cookie (Double-Submit Cookie pattern)
+    const csrfToken = document.cookie.split("; ").find(c => c.startsWith("csrf-token="))?.split("=")[1];
+    if (csrfToken) headers["x-csrf-token"] = csrfToken;
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       credentials: "include",

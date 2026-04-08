@@ -8,9 +8,9 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 import { notifyTeam } from "../services/notification.service.js";
-import { sendNewEventNotification } from "../services/email.service.js";
+import { sendNewEventNotification, sendEventUpdatedNotification, sendEventDeletedNotification } from "../services/email.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 import { sendWebhookNotification, buildScrimEmbed } from "../services/discord-webhook.service.js";
 
 export const scrimRouter = Router();
@@ -135,14 +135,14 @@ scrimRouter.post("/", authenticate, teamContext, requireFeature("scrims"), requi
       where: { teamId: req.teamId! },
       include: { user: { select: { email: true, emailNotifications: true, id: true } } },
     });
-    for (const m of members) {
-      if (m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications) {
-        sendNewEventNotification(m.user.email, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
-      }
-    }
+    await Promise.all(
+      members
+        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
+        .map(m => sendNewEventNotification(m.user.email, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+    );
 
     await logAudit(req.user!.id, "CREATE", "scrim", scrim.id, { opponent: scrim.opponent }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:created", scrim); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:created", scrim);
     sendWebhookNotification(buildScrimEmbed({ opponent: scrim.opponent, date: scrim.date.toISOString(), format: scrim.format || undefined })).catch(console.error);
 
     res.status(201).json({ success: true, data: scrim });
@@ -182,7 +182,17 @@ scrimRouter.put("/:id", authenticate, teamContext, requireFeature("scrims"), req
     }
 
     await logAudit(req.user!.id, "UPDATE", "scrim", scrim.id, undefined, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:updated", scrim); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:updated", scrim);
+
+    const updateMembers = await prisma.teamMember.findMany({
+      where: { teamId: req.teamId! },
+      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
+    });
+    await Promise.all(
+      updateMembers
+        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
+        .map(m => sendEventUpdatedNotification(m.user.email, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+    );
 
     res.json({ success: true, data: scrim });
   } catch (error) { next(error); }
@@ -195,10 +205,21 @@ scrimRouter.delete("/:id", authenticate, teamContext, requireFeature("scrims"), 
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
     await prisma.eventReminder.deleteMany({ where: { eventType: "SCRIM", eventId: String(req.params.id) } });
+
+    const deleteMembers = await prisma.teamMember.findMany({
+      where: { teamId: req.teamId! },
+      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
+    });
+    await Promise.all(
+      deleteMembers
+        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
+        .map(m => sendEventDeletedNotification(m.user.email, "Scrim", existing.opponent, req.user!.displayName).catch(console.error))
+    );
+
     await prisma.scrim.delete({ where: { id: String(req.params.id) } });
 
     await logAudit(req.user!.id, "DELETE", "scrim", String(req.params.id), { opponent: existing.opponent }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Scrim deleted" });
   } catch (error) { next(error); }
@@ -217,7 +238,7 @@ scrimRouter.post("/:id/vote", authenticate, teamContext, requireFeature("scrims"
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote", { scrimId: String(req.params.id), vote }); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:vote", { scrimId: String(req.params.id), vote });
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -227,7 +248,7 @@ scrimRouter.post("/:id/vote", authenticate, teamContext, requireFeature("scrims"
 scrimRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("scrims"), async (req, res, next) => {
   try {
     await prisma.scrimVote.deleteMany({ where: { userId: req.user!.id, scrimId: String(req.params.id) } });
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote:retracted", { scrimId: String(req.params.id), userId: req.user!.id }); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:vote:retracted", { scrimId: String(req.params.id), userId: req.user!.id });
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
 });
@@ -245,7 +266,7 @@ scrimRouter.post("/:id/result", authenticate, teamContext, requireFeature("scrim
     });
 
     await logAudit(req.user!.id, "UPDATE", "scrim_result", result.id, undefined, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:result", { scrimId: String(req.params.id), result }); } catch {}
+    safeEmit(`team:${req.teamId}`, "scrim:result", { scrimId: String(req.params.id), result });
 
     res.json({ success: true, data: result });
   } catch (error) { next(error); }

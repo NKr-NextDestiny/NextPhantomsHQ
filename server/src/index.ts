@@ -5,15 +5,17 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 
 import { config } from "./config/index.js";
+import { logger } from "./config/logger.js";
 import { initSocket } from "./config/socket.js";
+import { csrfProtection } from "./middleware/csrf.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { ensureTeamExists } from "./services/team.service.js";
 import { startScheduler } from "./services/scheduler.service.js";
 import { decryptFile, isEncrypted } from "./services/file-encryption.service.js";
+import { prisma } from "./config/prisma.js";
 
 // Routes
 import { authRouter } from "./routes/auth.routes.js";
@@ -41,6 +43,7 @@ import { wikiRouter } from "./routes/wiki.routes.js";
 import { notesRouter } from "./routes/notes.routes.js";
 import { searchRouter } from "./routes/search.routes.js";
 import { dashboardRouter } from "./routes/dashboard.routes.js";
+import { exportRouter } from "./routes/export.routes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -57,7 +60,23 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-if (config.nodeEnv !== "test") app.use(morgan("short"));
+
+// Pino HTTP logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    logger.info({
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      ms: Date.now() - start,
+    }, `${req.method} ${req.originalUrl} ${res.statusCode}`);
+  });
+  next();
+});
+
+// CSRF protection (after cookie parser, before routes)
+app.use("/api", csrfProtection);
 
 // Rate limiting on auth routes
 const authLimiter = rateLimit({
@@ -66,6 +85,16 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: "Too many requests, please try again later" },
+});
+
+// Rate limiting on mutation endpoints (POST/PUT/DELETE)
+const mutationLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many requests, please try again later" },
+  skip: (req) => req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS",
 });
 
 // Ensure upload directories exist
@@ -102,30 +131,31 @@ app.get("/api/health", (_req, res) => {
 
 // Routes
 app.use("/api/auth", authLimiter, authRouter);
-app.use("/api/trainings", trainingRouter);
-app.use("/api/scrims", scrimRouter);
-app.use("/api/matches", matchRouter);
-app.use("/api/strats", stratRouter);
-app.use("/api/lineups", lineupRouter);
-app.use("/api/scouting", scoutingRouter);
-app.use("/api/replays", replayRouter);
-app.use("/api/moss", mossRouter);
-app.use("/api/comments", commentRouter);
-app.use("/api/announcements", announcementRouter);
-app.use("/api/polls", pollRouter);
-app.use("/api/notifications", notificationRouter);
-app.use("/api/attendance", attendanceRouter);
-app.use("/api/users", userRouter);
-app.use("/api/team", teamRouter);
-app.use("/api/admin", adminRouter);
-app.use("/api/training-templates", trainingTemplateRouter);
-app.use("/api/matches", matchReviewRouter);
-app.use("/api/availability", availabilityRouter);
-app.use("/api/reminders", reminderRouter);
-app.use("/api/wiki", wikiRouter);
-app.use("/api/notes", notesRouter);
+app.use("/api/trainings", mutationLimiter, trainingRouter);
+app.use("/api/scrims", mutationLimiter, scrimRouter);
+app.use("/api/matches", mutationLimiter, matchRouter);
+app.use("/api/strats", mutationLimiter, stratRouter);
+app.use("/api/lineups", mutationLimiter, lineupRouter);
+app.use("/api/scouting", mutationLimiter, scoutingRouter);
+app.use("/api/replays", mutationLimiter, replayRouter);
+app.use("/api/moss", mutationLimiter, mossRouter);
+app.use("/api/comments", mutationLimiter, commentRouter);
+app.use("/api/announcements", mutationLimiter, announcementRouter);
+app.use("/api/polls", mutationLimiter, pollRouter);
+app.use("/api/notifications", mutationLimiter, notificationRouter);
+app.use("/api/attendance", mutationLimiter, attendanceRouter);
+app.use("/api/users", mutationLimiter, userRouter);
+app.use("/api/team", mutationLimiter, teamRouter);
+app.use("/api/admin", mutationLimiter, adminRouter);
+app.use("/api/training-templates", mutationLimiter, trainingTemplateRouter);
+app.use("/api/matches", mutationLimiter, matchReviewRouter);
+app.use("/api/availability", mutationLimiter, availabilityRouter);
+app.use("/api/reminders", mutationLimiter, reminderRouter);
+app.use("/api/wiki", mutationLimiter, wikiRouter);
+app.use("/api/notes", mutationLimiter, notesRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/export", mutationLimiter, exportRouter);
 
 // Error handler
 app.use(errorHandler);
@@ -137,13 +167,27 @@ async function start() {
     startScheduler();
 
     httpServer.listen(config.port, () => {
-      console.log(`🚀 Next Phantoms HQ running on port ${config.port} (${config.nodeEnv})`);
+      logger.info(`Next Phantoms HQ running on port ${config.port} (${config.nodeEnv})`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    logger.fatal(error, "Failed to start server");
     process.exit(1);
   }
 }
+
+// Graceful shutdown
+async function shutdown(signal: string) {
+  logger.info(`${signal} received — shutting down gracefully`);
+  httpServer.close(() => {
+    logger.info("HTTP server closed");
+  });
+  await prisma.$disconnect();
+  logger.info("Database disconnected");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
 
 start();
 

@@ -54,3 +54,13 @@ export function getIO(): Server {
   if (!io) throw new Error("Socket.io not initialized");
   return io;
 }
+
+/** Safely emit to a room — logs errors instead of throwing */
+export function safeEmit(room: string, event: string, data: unknown): void {
+  try {
+    if (!io) return;
+    io.to(room).emit(event, data);
+  } catch (e) {
+    console.error(`[socket] Failed to emit ${event} to ${room}:`, e);
+  }
+}

@@ -93,7 +93,7 @@ mossRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"), 
     try {
       const filePath = path.resolve(config.uploadDir, "general", path.basename(mossFile.fileUrl));
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch {}
+    } catch (e) { console.error("[cleanup] Failed to delete MOSS file:", e); }
 
     await prisma.mossFile.delete({ where: { id: String(req.params.id) } });
 

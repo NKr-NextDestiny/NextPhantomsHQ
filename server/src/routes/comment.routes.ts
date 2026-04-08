@@ -5,7 +5,7 @@ import { authenticate } from "../middleware/auth.js";
 import { teamContext } from "../middleware/team.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 
 export const commentRouter = Router();
 
@@ -53,10 +53,8 @@ commentRouter.post("/", authenticate, teamContext, validate(createSchema), async
       },
     });
 
-    try {
-      getIO().to(`entity:${req.body.entityId}`).emit("comment:created", comment);
-      getIO().to(`team:${req.teamId}`).emit("comment:created", comment);
-    } catch {}
+    safeEmit(`entity:${req.body.entityId}`, "comment:created", comment);
+    safeEmit(`team:${req.teamId}`, "comment:created", comment);
 
     res.status(201).json({ success: true, data: comment });
   } catch (error) { next(error); }
@@ -75,9 +73,7 @@ commentRouter.delete("/:id", authenticate, teamContext, async (req, res, next) =
 
     await prisma.comment.delete({ where: { id: String(req.params.id) } });
 
-    try {
-      getIO().to(`entity:${comment.entityId}`).emit("comment:deleted", { id: String(req.params.id), entityId: comment.entityId });
-    } catch {}
+    safeEmit(`entity:${comment.entityId}`, "comment:deleted", { id: String(req.params.id), entityId: comment.entityId });
 
     res.json({ success: true, message: "Comment deleted" });
   } catch (error) { next(error); }

@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
@@ -29,6 +31,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "pg": "^8.20.0",
+    "pino": "^10.3.1",
     "shared": "workspace:*",
     "socket.io": "^4.8.3",
     "zod": "^4.3.6"

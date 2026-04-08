@@ -7,7 +7,7 @@ import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 
 export const lineupRouter = Router();
 
@@ -90,7 +90,7 @@ lineupRouter.post("/", authenticate, teamContext, requireFeature("lineup"), requ
     });
 
     await logAudit(req.user!.id, "CREATE", "lineup", lineup.id, { name: lineup.name }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("lineup:created", lineup); } catch {}
+    safeEmit(`team:${req.teamId}`, "lineup:created", lineup);
 
     res.status(201).json({ success: true, data: lineup });
   } catch (error) { next(error); }
@@ -134,7 +134,7 @@ lineupRouter.put("/:id", authenticate, teamContext, requireFeature("lineup"), re
     });
 
     await logAudit(req.user!.id, "UPDATE", "lineup", lineup.id, undefined, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("lineup:updated", lineup); } catch {}
+    safeEmit(`team:${req.teamId}`, "lineup:updated", lineup);
 
     res.json({ success: true, data: lineup });
   } catch (error) { next(error); }
@@ -149,7 +149,7 @@ lineupRouter.delete("/:id", authenticate, teamContext, requireFeature("lineup"),
     await prisma.lineup.delete({ where: { id: String(req.params.id) } });
 
     await logAudit(req.user!.id, "DELETE", "lineup", String(req.params.id), { name: existing.name }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("lineup:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "lineup:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Lineup deleted" });
   } catch (error) { next(error); }

@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { prisma } from "../config/prisma.js";
 import { sendAttendanceReminder } from "./email.service.js";
 import { config } from "../config/index.js";
+import { logger } from "../config/logger.js";
 
 export function startScheduler() {
   cron.schedule("* * * * *", async () => {
@@ -11,21 +12,37 @@ export function startScheduler() {
         where: { scheduledAt: { lte: now }, sentAt: null },
       });
 
+      if (reminders.length === 0) return;
+
+      // Batch-load all referenced trainings and scrims
+      const trainingIds = reminders.filter(r => r.eventType === "TRAINING").map(r => r.eventId);
+      const scrimIds = reminders.filter(r => r.eventType === "SCRIM").map(r => r.eventId);
+
+      const [trainings, scrims] = await Promise.all([
+        trainingIds.length > 0
+          ? prisma.training.findMany({ where: { id: { in: trainingIds } }, include: { team: true } })
+          : [],
+        scrimIds.length > 0
+          ? prisma.scrim.findMany({ where: { id: { in: scrimIds } }, include: { team: true } })
+          : [],
+      ]);
+
+      const trainingMap = new Map(trainings.map(t => [t.id, t]));
+      const scrimMap = new Map(scrims.map(s => [s.id, s]));
+
       for (const reminder of reminders) {
         try {
           let title = "Event";
           let date = now;
-          if (reminder.eventType === "TRAINING") {
-            const t = await prisma.training.findUnique({ where: { id: reminder.eventId }, include: { team: true } });
-            if (t) { title = t.title; date = t.date; }
-          } else if (reminder.eventType === "SCRIM") {
-            const s = await prisma.scrim.findUnique({ where: { id: reminder.eventId }, include: { team: true } });
-            if (s) { title = `Scrim vs ${s.opponent}`; date = s.date; }
-          }
+          let teamId: string | undefined;
 
-          const teamId = reminder.eventType === "TRAINING"
-            ? (await prisma.training.findUnique({ where: { id: reminder.eventId } }))?.teamId
-            : (await prisma.scrim.findUnique({ where: { id: reminder.eventId } }))?.teamId;
+          if (reminder.eventType === "TRAINING") {
+            const t = trainingMap.get(reminder.eventId);
+            if (t) { title = t.title; date = t.date; teamId = t.teamId; }
+          } else if (reminder.eventType === "SCRIM") {
+            const s = scrimMap.get(reminder.eventId);
+            if (s) { title = `Scrim vs ${s.opponent}`; date = s.date; teamId = s.teamId; }
+          }
 
           if (teamId) {
             const members = await prisma.teamMember.findMany({
@@ -33,10 +50,14 @@ export function startScheduler() {
               include: { user: { select: { id: true, email: true, emailNotifications: true } } },
             });
 
+            const team = trainings.find(t => t.teamId === teamId)?.team
+              || scrims.find(s => s.teamId === teamId)?.team;
+
+            const emailPromises: Promise<void>[] = [];
+
             for (const member of members) {
               if (!member.user?.email || !member.user.emailNotifications) continue;
 
-              const team = await prisma.team.findUnique({ where: { id: teamId } });
               let token: string | undefined;
               if (team?.autoEmailEvents) {
                 const at = await prisma.attendanceToken.upsert({
@@ -47,20 +68,24 @@ export function startScheduler() {
                 token = at.token;
               }
 
-              sendAttendanceReminder(member.user.email, reminder.eventType, title, date.toLocaleString("de-DE"), token, config.appUrl).catch(console.error);
+              emailPromises.push(
+                sendAttendanceReminder(member.user.email, reminder.eventType, title, date.toLocaleString("de-DE"), token, config.appUrl).catch(e => logger.error(e, "Failed to send reminder email"))
+              );
             }
+
+            await Promise.all(emailPromises);
           }
 
           await prisma.eventReminder.update({ where: { id: reminder.id }, data: { sentAt: now } });
         } catch (e) {
-          console.error("[scheduler] Error processing reminder:", e);
+          logger.error(e, "[scheduler] Error processing reminder");
         }
       }
     } catch (e) {
-      console.error("[scheduler] Error:", e);
+      logger.error(e, "[scheduler] Error");
     }
   });
-  console.log("⏰ Scheduler started");
+  logger.info("Scheduler started");
 }
 
 export async function createEventReminders(eventType: string, eventId: string, eventDate: Date, intervals: number[], _teamId: string) {

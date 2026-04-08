@@ -6,6 +6,7 @@ import { teamContext, requireTeamRole } from "../middleware/team.js";
 import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { parsePagination } from "../middleware/pagination.js";
 
 export const reminderRouter = Router();
 

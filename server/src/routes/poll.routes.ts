@@ -6,7 +6,8 @@ import { teamContext, requireTeamRole } from "../middleware/team.js";
 import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
-import { getIO } from "../config/socket.js";
+import { parsePagination } from "../middleware/pagination.js";
+import { safeEmit } from "../config/socket.js";
 
 export const pollRouter = Router();
 
@@ -89,7 +90,7 @@ pollRouter.post("/", authenticate, teamContext, requireFeature("polls"), require
       },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:created", poll); } catch {}
+    safeEmit(`team:${req.teamId}`, "poll:created", poll);
 
     res.status(201).json({ success: true, data: poll });
   } catch (error) { next(error); }
@@ -133,7 +134,7 @@ pollRouter.post("/:id/vote", authenticate, teamContext, requireFeature("polls"),
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:vote", { pollId: String(req.params.id), vote }); } catch {}
+    safeEmit(`team:${req.teamId}`, "poll:vote", { pollId: String(req.params.id), vote });
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -164,7 +165,7 @@ pollRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("polls"
       }
     }
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:vote:retracted", { pollId: String(req.params.id), userId: req.user!.id }); } catch {}
+    safeEmit(`team:${req.teamId}`, "poll:vote:retracted", { pollId: String(req.params.id), userId: req.user!.id });
 
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
@@ -183,7 +184,7 @@ pollRouter.delete("/:id", authenticate, teamContext, requireFeature("polls"), re
 
     await prisma.poll.delete({ where: { id: String(req.params.id) } });
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "poll:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Poll deleted" });
   } catch (error) { next(error); }

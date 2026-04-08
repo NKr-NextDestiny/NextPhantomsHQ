@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -26,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <div className="lg:pl-64">
           <Header />
-          <main className="p-6">{children}</main>
+          <main className="p-6"><ErrorBoundary>{children}</ErrorBoundary></main>
         </div>
       </div>
     </ToastProvider>

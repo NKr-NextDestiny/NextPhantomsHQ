@@ -29,6 +29,30 @@ export async function sendNewEventNotification(to: string, eventType: string, ti
      <p>Logge dich ein um abzustimmen.</p>`);
 }
 
+export async function sendEventUpdatedNotification(to: string, eventType: string, title: string, date: string, updatedBy: string) {
+  await sendEmail(to, `[Next Phantoms HQ] ${eventType} aktualisiert: ${title}`,
+    `<p><strong>${updatedBy}</strong> hat das ${eventType} aktualisiert:</p>
+     <p><strong>${title}</strong><br>Datum: ${date}</p>`);
+}
+
+export async function sendEventDeletedNotification(to: string, eventType: string, title: string, deletedBy: string) {
+  await sendEmail(to, `[Next Phantoms HQ] ${eventType} abgesagt: ${title}`,
+    `<p><strong>${deletedBy}</strong> hat das ${eventType} <strong>${title}</strong> abgesagt/gel&ouml;scht.</p>`);
+}
+
+export async function sendAnnouncementNotification(to: string, title: string, createdBy: string) {
+  await sendEmail(to, `[Next Phantoms HQ] Neue Ankündigung: ${title}`,
+    `<p><strong>${createdBy}</strong> hat eine neue Ank&uuml;ndigung erstellt:</p>
+     <p><strong>${title}</strong></p>
+     <p>Logge dich ein um die Ank&uuml;ndigung zu lesen.</p>`);
+}
+
+export async function sendPollResultNotification(to: string, question: string, results: string) {
+  await sendEmail(to, `[Next Phantoms HQ] Poll beendet: ${question}`,
+    `<p>Die Abstimmung <strong>${question}</strong> ist beendet.</p>
+     <p>Ergebnis:</p>${results}`);
+}
+
 export async function sendAttendanceReminder(to: string, eventType: string, title: string, date: string, token?: string, appUrl?: string) {
   const links = token && appUrl ? `
     <p>Schnell abstimmen:</p>

@@ -7,7 +7,7 @@ import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
-import { getIO } from "../config/socket.js";
+import { safeEmit } from "../config/socket.js";
 import { sendWebhookNotification, buildMatchEmbed } from "../services/discord-webhook.service.js";
 
 export const matchRouter = Router();
@@ -139,7 +139,7 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
     });
 
     await logAudit(req.user!.id, "CREATE", "match", match.id, { opponent: match.opponent, map: match.map }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("match:created", full); } catch {}
+    safeEmit(`team:${req.teamId}`, "match:created", full);
     sendWebhookNotification(buildMatchEmbed({ opponent: match.opponent, map: match.map, result: match.result, scoreUs: match.scoreUs, scoreThem: match.scoreThem, competition: match.competition || undefined })).catch(console.error);
 
     res.status(201).json({ success: true, data: full });
@@ -197,7 +197,7 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
     });
 
     await logAudit(req.user!.id, "UPDATE", "match", match.id, undefined, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("match:updated", full); } catch {}
+    safeEmit(`team:${req.teamId}`, "match:updated", full);
 
     res.json({ success: true, data: full });
   } catch (error) { next(error); }
@@ -212,7 +212,7 @@ matchRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"),
     await prisma.match.delete({ where: { id: String(req.params.id) } });
 
     await logAudit(req.user!.id, "DELETE", "match", String(req.params.id), { opponent: existing.opponent }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("match:deleted", { id: String(req.params.id) }); } catch {}
+    safeEmit(`team:${req.teamId}`, "match:deleted", { id: String(req.params.id) });
 
     res.json({ success: true, message: "Match deleted" });
   } catch (error) { next(error); }

@@ -236,6 +236,8 @@ model Training {
   updatedAt DateTime @updatedAt
 
   votes TrainingVote[]
+  @@index([createdById])
+  @@index([teamId, date])
   @@map("trainings")
 }
 
@@ -282,6 +284,8 @@ model Scrim {
   votes   ScrimVote[]
   result  ScrimResult?
   matches Match[] @relation("ScrimMatches")
+  @@index([createdById])
+  @@index([teamId, date])
   @@map("scrims")
 }
 
@@ -343,6 +347,8 @@ model Strat {
 
   versions  StratVersion[]
   playbooks PlaybookStrat[]
+  @@index([createdById])
+  @@index([teamId, updatedAt])
   @@map("strats")
 }
 
@@ -422,6 +428,8 @@ model Match {
   mossFiles   MossFile[]
   review      MatchReview?
   @@index([scrimId])
+  @@index([createdById])
+  @@index([teamId, date])
   @@map("matches")
 }
 
@@ -549,6 +557,8 @@ model Replay {
   rounds     ReplayRound[]
 
   createdAt DateTime @default(now())
+  @@index([uploadedById])
+  @@index([teamId, createdAt])
   @@map("replays")
 }
 
@@ -642,6 +652,8 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   @@index([entityType, entityId])
+  @@index([userId])
+  @@index([teamId, createdAt])
   @@map("comments")
 }
 
@@ -661,6 +673,8 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   dismissals AnnouncementDismiss[]
+  @@index([createdById])
+  @@index([teamId, createdAt])
   @@map("announcements")
 }
 
@@ -703,6 +717,7 @@ model PollOption {
   pollId String
   poll   Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
   votes  PollVote[]
+  @@index([pollId])
   @@map("poll_options")
 }
 
@@ -784,6 +799,8 @@ model AuditLog {
   userId String
   user   User   @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([entity, createdAt])
   @@map("audit_logs")
 }
 
