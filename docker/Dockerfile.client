@@ -25,9 +25,10 @@ RUN pnpm --filter client build
 # Production stage
 FROM node:20-alpine
 WORKDIR /app
+# Standalone in monorepo preserves workspace structure (server.js at client/server.js)
 COPY --from=base /app/client/.next/standalone ./
-COPY --from=base /app/client/.next/static ./.next/static
-COPY --from=base /app/client/public ./public
+COPY --from=base /app/client/.next/static ./client/.next/static
+COPY --from=base /app/client/public ./client/public
 
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "client/server.js"]

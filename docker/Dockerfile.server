@@ -22,6 +22,8 @@ RUN cd server && DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" pn
 
 # Build server
 RUN pnpm --filter server build
+# Fix Prisma ESM imports — generated files lack .js extensions which Node.js ESM requires
+RUN find server/dist/generated -name '*.js' -exec sed -i -E 's|from "(\.\.?/[^"]+)"|from "\1.js"|g' {} +
 
 # Production stage
 FROM node:20-alpine
