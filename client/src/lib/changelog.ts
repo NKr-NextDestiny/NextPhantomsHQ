@@ -8,6 +8,25 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-04-08",
+    tags: ["fix"],
+    title: "Bugfix-Runde: Route-Mismatches & fehlende Endpunkte",
+    changes: [
+      "Dashboard-API hinzugefügt: Stats, nächste Events und Aktivität werden jetzt korrekt geladen",
+      "Scouting: API-Routen und Datenmodell an Server angepasst (Opponent-Modell mit Bedrohungsstufen)",
+      "Scrims-Ergebnis: HTTP-Methode korrigiert (PATCH → POST)",
+      "Ankündigungen Pin/Bestätigen: HTTP-Methode korrigiert (PATCH → POST)",
+      "Attendance-Abstimmung: Route korrigiert (/token/vote → /token)",
+      "Verfügbarkeit: Tab-Buttons werden jetzt korrekt gestylt (primary statt ungültiges default)",
+      "Lineup: Nicht-existierendes Aktivieren-Feature entfernt",
+      "MOSS-Standalone-Seite leitet auf Matches weiter (MOSS ist jetzt pro Match)",
+      "Server: Mitglied-Entfernen-Endpunkt hinzugefügt (DELETE /api/team/members)",
+      "Server: Team-Logo-Upload-Endpunkt hinzugefügt (POST /api/team/logo)",
+      "Letzte Umlaute korrigiert (Aktivitaet → Aktivität)",
+    ],
+  },
+  {
     version: "1.1.0",
     date: "2026-04-08",
     tags: ["feature", "fix", "improvement"],
