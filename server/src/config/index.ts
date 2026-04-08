@@ -1,6 +1,12 @@
 import path from "node:path";
+import fs from "node:fs";
 import { config as dotenvConfig } from "dotenv";
-dotenvConfig({ path: path.resolve(process.cwd(), "..", ".env") });
+
+// Load server/.env first (has localhost DATABASE_URL for local dev), then root .env for everything else
+const serverEnvPath = path.resolve(process.cwd(), ".env");
+const rootEnvPath = path.resolve(process.cwd(), "..", ".env");
+if (fs.existsSync(serverEnvPath)) dotenvConfig({ path: serverEnvPath });
+dotenvConfig({ path: rootEnvPath });
 
 export const config = {
   port: parseInt(process.env.PORT || "4000", 10),

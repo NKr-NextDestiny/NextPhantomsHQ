@@ -5,26 +5,95 @@ title Next Phantoms HQ - Clean / Uninstall
 color 0C
 
 echo ============================================
-echo   Next Phantoms HQ - CLEAN / UNINSTALL
+echo   Next Phantoms HQ - CLEAN
 echo ============================================
 echo.
+echo Was moechtest du loeschen?
+echo.
+echo   [1] Nur Daten (DB-Volumes, Uploads)
+echo   [2] Alles (DB, Uploads, node_modules, Builds, Lock-Datei, Docker Images)
+echo   [3] Abbrechen
+echo.
+
+set /p CHOICE="Auswahl (1/2/3): "
+
+if "!CHOICE!"=="3" goto :cancelled
+if "!CHOICE!"=="1" goto :data_only
+if "!CHOICE!"=="2" goto :full_clean
+echo Ungueltige Auswahl.
+pause
+exit /b 0
+
+:cancelled
+echo Abgebrochen.
+pause
+exit /b 0
+
+:: ============================================
+:: OPTION 1: Nur Daten loeschen
+:: ============================================
+:data_only
+echo.
+echo WARNUNG: Dies loescht die Datenbank und alle Uploads!
+set /p CONFIRM="Bist du sicher? (y/n): "
+if /i "!CONFIRM!"=="y" goto :data_confirmed
+if /i "!CONFIRM!"=="j" goto :data_confirmed
+echo Abgebrochen.
+pause
+exit /b 0
+
+:data_confirmed
+echo.
+
+:: Docker DB Volume loeschen
+where docker >nul 2>&1
+if %ERRORLEVEL%==0 (
+    echo Stoppe und loesche PostgreSQL Container + Volume...
+    docker compose down -v --remove-orphans 2>nul
+    echo [OK] Datenbank geloescht
+) else (
+    echo [INFO] Docker nicht verfuegbar
+)
+
+:: Uploads loeschen
+if exist server\uploads (
+    rmdir /s /q server\uploads
+    echo [OK] Uploads geloescht
+)
+
+echo.
+echo ============================================
+echo   DATEN GELOESCHT
+echo ============================================
+echo.
+echo Datenbank und Uploads wurden entfernt.
+echo Starte dev.bat um alles neu aufzusetzen.
+echo.
+pause
+exit /b 0
+
+:: ============================================
+:: OPTION 2: Alles loeschen
+:: ============================================
+:full_clean
+echo.
 echo WARNUNG: Dies loescht ALLES:
-echo   - Docker Container und Volumes (PostgreSQL Daten!)
-echo   - node_modules
+echo   - Docker Container, Volumes und Images
+echo   - Datenbank (PostgreSQL Daten)
+echo   - node_modules (alle Pakete)
 echo   - Build-Artefakte (.next, dist)
 echo   - Generierte Prisma Dateien
 echo   - Upload-Dateien
 echo   - pnpm Lock-Datei
 echo.
-
 set /p CONFIRM="Bist du sicher? (y/n): "
-if /i "!CONFIRM!"=="y" goto :confirmed
-if /i "!CONFIRM!"=="j" goto :confirmed
+if /i "!CONFIRM!"=="y" goto :full_confirmed
+if /i "!CONFIRM!"=="j" goto :full_confirmed
 echo Abgebrochen.
 pause
 exit /b 0
-:confirmed
 
+:full_confirmed
 echo.
 echo ============================================
 echo   1. Docker Container stoppen und loeschen
@@ -41,7 +110,6 @@ if %ERRORLEVEL%==0 (
         echo [INFO] Keine Docker Container gefunden
     )
 
-    :: Remove dangling images
     echo Entferne Docker Images...
     for /f "tokens=*" %%i in ('docker images -q "nextphantomshq*" 2^>nul') do (
         docker rmi %%i 2>nul
@@ -137,10 +205,10 @@ if exist pnpm-lock.yaml (
 
 echo.
 echo ============================================
-echo   CLEAN ABGESCHLOSSEN!
+echo   ALLES GELOESCHT
 echo ============================================
 echo.
-echo Alles wurde bereinigt. Um neu zu starten:
+echo Komplett bereinigt. Um neu zu starten:
 echo   dev.bat
 echo.
 pause
