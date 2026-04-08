@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Upload, Trash2, Download, Users, Shield, Film, UserPlus, ClipboardList, CheckCircle, XCircle, HelpCircle, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
@@ -95,7 +95,17 @@ export default function MatchDetailPage() {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"stats" | "moss" | "replay" | "review" | "attendance">("stats");
+  const searchParams = useSearchParams();
+  const matchTabs = ["stats", "moss", "replay", "review", "attendance"] as const;
+  type MatchTab = typeof matchTabs[number];
+  const initTab = matchTabs.includes(searchParams.get("tab") as MatchTab) ? (searchParams.get("tab") as MatchTab) : "stats";
+  const [tab, setTabState] = useState<MatchTab>(initTab);
+  const setTab = (t: MatchTab) => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.replaceState({}, "", url.toString());
+  };
 
   // Player form
   const [showAddPlayer, setShowAddPlayer] = useState(false);

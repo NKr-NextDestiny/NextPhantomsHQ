@@ -40,7 +40,8 @@
     "browserNotifications.title": "Flaschenpost aktivieren, Matrose? 🍾",
     "browserNotifications.description": "Kriegst ne Meldung wenn neue Schlachten, Kaperfahrten oder Befehle eintrudeln — auch wenn du grad das Deck schruppst!",
     "browserNotifications.enable": "Her damit!",
-    "browserNotifications.dismiss": "Nee, lass stecken"
+    "browserNotifications.dismiss": "Nee, lass stecken",
+    "unsavedWarning": "Du hast unverbuddelte Änderungen! Einfach über Bord werfen? 🌊"
   },
   "nav": {
     "dashboard": "Kommandobrücke",

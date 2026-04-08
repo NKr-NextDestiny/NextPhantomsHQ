@@ -8,8 +8,8 @@ export async function ensureTeamExists(): Promise<string> {
   const preset = GAME_PRESETS[DEFAULT_GAME as keyof typeof GAME_PRESETS];
   const team = await prisma.team.create({
     data: {
-      name: "Next Phantoms HQ",
-      tag: "NPHQ",
+      name: "Next Phantoms",
+      tag: "nD",
       game: DEFAULT_GAME,
       logoUrl: "/images/logo_nde.png",
     },

@@ -40,15 +40,31 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const { locale, setLocale } = useI18n();
   const { supported, permission, enabled, requestPermission, enable, disable } = useBrowserNotifications();
 
+  const initialForm = useRef({ displayName: "", email: "", phone: "" });
+
   useEffect(() => {
     if (user && open) {
-      setForm({ displayName: user.displayName || "", email: user.email || "", phone: user.phone || "" });
+      const f = { displayName: user.displayName || "", email: user.email || "", phone: user.phone || "" };
+      setForm(f);
+      initialForm.current = f;
     }
   }, [user, open]);
 
+  const hasUnsaved = () => {
+    const i = initialForm.current;
+    return form.displayName !== i.displayName || form.email !== i.email || form.phone !== i.phone;
+  };
+
+  const tryClose = () => {
+    if (hasUnsaved()) {
+      if (!confirm(tc("unsavedWarning"))) return;
+    }
+    setOpen(false);
+  };
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) tryClose();
     }
     if (open) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);

@@ -40,7 +40,8 @@
     "browserNotifications.title": "Enable browser notifications?",
     "browserNotifications.description": "Get push notifications when new events, matches, or announcements are created — even when the tab is in the background.",
     "browserNotifications.enable": "Enable",
-    "browserNotifications.dismiss": "No thanks"
+    "browserNotifications.dismiss": "No thanks",
+    "unsavedWarning": "You have unsaved changes. Discard?"
   },
   "nav": {
     "dashboard": "Dashboard",

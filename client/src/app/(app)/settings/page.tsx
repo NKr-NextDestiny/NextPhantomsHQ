@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Settings, Shield, Save, Trash2, Bell, Monitor } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/provider";
 
 interface TeamSettings {
@@ -90,10 +90,22 @@ function BrowserNotificationSettings() {
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { success, error } = useToast();
   const t = useT("settings");
   const tc = useT("common");
-  const [tab, setTab] = useState<"team" | "notifications" | "members">("team");
+
+  const validTabs = ["team", "notifications", "members"] as const;
+  type Tab = typeof validTabs[number];
+  const initialTab = validTabs.includes(searchParams.get("tab") as Tab) ? (searchParams.get("tab") as Tab) : "team";
+  const [tab, setTabState] = useState<Tab>(initialTab);
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.replaceState({}, "", url.toString());
+  };
+
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [notifyConfig, setNotifyConfig] = useState<NotificationConfig>({ email: false, whatsapp: false });
@@ -101,6 +113,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const [notificationChannel, setNotificationChannel] = useState("NONE");
+  const initialTeamForm = useRef({ name: "", tag: "", description: "", discordWebhookUrl: "" });
+  const initialChannel = useRef("NONE");
 
   // Nur Admins dürfen hier rein
   useEffect(() => {
@@ -119,8 +133,12 @@ export default function SettingsPage() {
       if (teamRes.status === "fulfilled" && teamRes.value.data) {
         const ts = teamRes.value.data;
         setTeamSettings(ts);
-        setTeamForm({ name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" });
-        setNotificationChannel(ts.notificationChannel || "NONE");
+        const form = { name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" };
+        setTeamForm(form);
+        initialTeamForm.current = form;
+        const ch = ts.notificationChannel || "NONE";
+        setNotificationChannel(ch);
+        initialChannel.current = ch;
       }
       if (membersRes.status === "fulfilled" && membersRes.value.data) {
         setMembers(membersRes.value.data);
@@ -136,6 +154,23 @@ export default function SettingsPage() {
   }, [user, error]);
 
   useEffect(() => { load(); }, [load]);
+
+  const hasUnsavedChanges = () => {
+    const tf = initialTeamForm.current;
+    const teamDirty = teamForm.name !== tf.name || teamForm.tag !== tf.tag || teamForm.description !== tf.description || teamForm.discordWebhookUrl !== tf.discordWebhookUrl;
+    const channelDirty = notificationChannel !== initialChannel.current;
+    return teamDirty || channelDirty;
+  };
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  });
 
   const saveTeam = async () => {
     setSaving(true);
@@ -316,9 +351,9 @@ export default function SettingsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-[var(--foreground)]">{m.user.displayName}</span>
-                      {m.user.isAdmin && <Badge variant="default">Admin</Badge>}
-                      <Badge variant="outline">{m.role}</Badge>
-                      <Badge variant="outline">{m.status}</Badge>
+                      {m.user.isAdmin && m.role !== "ADMIN" && <Badge variant="default">Admin</Badge>}
+                      <Badge variant={m.role === "ADMIN" ? "default" : "outline"}>{m.role}</Badge>
+                      {m.status !== "ACTIVE" && <Badge variant="outline">{m.status}</Badge>}
                     </div>
                     <span className="text-xs text-[var(--muted-foreground)]">@{m.user.username}</span>
                   </div>

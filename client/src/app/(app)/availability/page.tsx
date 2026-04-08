@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { useT } from "@/i18n/provider";
+import { useSearchParams } from "next/navigation";
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
@@ -30,7 +31,15 @@ export default function AvailabilityPage() {
   const [heatmap, setHeatmap] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"my" | "team">("my");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") === "team" ? "team" : "my") as "my" | "team";
+  const [tab, setTabState] = useState<"my" | "team">(initialTab);
+  const setTab = (t: "my" | "team") => {
+    setTabState(t);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", t);
+    window.history.replaceState({}, "", url.toString());
+  };
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {

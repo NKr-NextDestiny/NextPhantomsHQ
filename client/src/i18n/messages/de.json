@@ -40,7 +40,8 @@
     "browserNotifications.title": "Browser-Benachrichtigungen aktivieren?",
     "browserNotifications.description": "Erhalte Push-Benachrichtigungen wenn neue Events, Matches oder Ankündigungen erstellt werden — auch wenn der Tab im Hintergrund ist.",
     "browserNotifications.enable": "Aktivieren",
-    "browserNotifications.dismiss": "Nein danke"
+    "browserNotifications.dismiss": "Nein danke",
+    "unsavedWarning": "Du hast ungespeicherte Änderungen. Verwerfen?"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -8,18 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
-    version: "1.9.0",
+    version: "2.0.0",
     date: "2026-04-09",
     tags: ["feature", "improvement", "fix"],
-    title: "Profil-Dropdown, Login-Fix & Piratensprache 2.0",
+    title: "Profil-Dropdown, Tab-Persistenz & UX-Verbesserungen",
     changes: [
       "Persönliche Einstellungen (Name, E-Mail, Telefon, Sprache, Browser-Notifications) jetzt im Profil-Dropdown oben rechts — für alle Benutzer zugänglich",
       "Einstellungen-Seite ist jetzt rein Admin-only (kein persönlicher Tab mehr)",
+      "Tab-Persistenz: Aktiver Tab bleibt nach Reload erhalten (Einstellungen, Verfügbarkeit, Match-Detail) — URL-Parameter ?tab=...",
+      "Ungespeicherte Änderungen: Warnung beim Verlassen wenn Formularfelder geändert aber nicht gespeichert wurden",
+      "Mitglieder-Badges: Kein doppeltes Admin-Badge mehr, ACTIVE-Status wird nicht mehr angezeigt (da Standard)",
+      "Standard-Team: Name 'Next Phantoms' und Tag 'nD' statt 'Next Phantoms HQ' / 'NPHQ'",
       "Login-Fix: Admin-User (ADMIN_USER_IDS) können sich jetzt auch ohne Discord-Server-Mitgliedschaft einloggen",
-      "Login-Fix: Discord OAuth fragt jetzt immer nach Berechtigung (prompt=consent statt prompt=none) — behebt Scope-Probleme bei bestehenden Autorisierungen",
-      "Logging: Guild- und Rollen-Prüfung loggt jetzt Fehler mit Status-Codes für einfacheres Debugging",
-      "Piratensprache komplett auf Deutsch umgeschrieben mit viel mehr Memes und Emojis 🏴‍☠️",
-      "features.html komplett überarbeitet und auf Stand gebracht (Browser-Notifications, i18n, WhatsApp, Admin-Rechte, Profil-Dropdown, Tech Stack)",
+      "Login-Fix: Discord OAuth fragt jetzt immer nach Berechtigung — behebt Scope-Probleme bei bestehenden Autorisierungen",
+      "Piratensprache komplett auf Deutsch umgeschrieben mit Memes und Emojis",
+      "features.html komplett überarbeitet und auf Stand gebracht",
     ],
   },
   {
