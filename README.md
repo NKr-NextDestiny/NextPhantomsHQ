@@ -16,7 +16,7 @@ Komplette Anleitung von einem frischen Debian 13 Server bis zur laufenden App.
 apt update && apt upgrade -y
 
 # Grundlegende Pakete
-apt install -y curl git wget gnupg2 ca-certificates lsb-release software-properties-common
+apt install -y curl git wget gnupg2 ca-certificates lsb-release
 ```
 
 ### 2. Docker & Docker Compose installieren
