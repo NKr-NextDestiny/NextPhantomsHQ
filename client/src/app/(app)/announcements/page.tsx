@@ -74,7 +74,7 @@ export default function AnnouncementsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Ankuendigung wirklich loeschen?")) return;
+    if (!confirm("Ankündigung wirklich löschen?")) return;
     try {
       await api.delete(`/api/announcements/${id}`);
       load();
@@ -137,18 +137,18 @@ export default function AnnouncementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Ankuendigungen</h1>
-          <p className="text-[var(--muted-foreground)]">Team-Ankuendigungen und Neuigkeiten</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Ankündigungen</h1>
+          <p className="text-[var(--muted-foreground)]">Team-Ankündigungen und Neuigkeiten</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Ankuendigung
+          <Plus className="h-4 w-4" /> Neue Ankündigung
         </Button>
       </div>
 
       {sorted.length === 0 ? (
         <Card className="py-12 text-center">
           <Megaphone className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Ankuendigungen.</p>
+          <p className="text-[var(--muted-foreground)]">Noch keine Ankündigungen.</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -182,7 +182,7 @@ export default function AnnouncementsPage() {
                   <button
                     onClick={() => handlePin(a.id)}
                     className={`rounded p-1.5 transition-colors ${a.isPinned ? "text-[var(--primary)]" : "text-[var(--muted-foreground)] hover:text-[var(--primary)]"}`}
-                    title={a.isPinned ? "Loesung aufheben" : "Anpinnen"}
+                    title={a.isPinned ? "Lösung aufheben" : "Anpinnen"}
                   >
                     <Pin className="h-4 w-4" />
                   </button>
@@ -206,11 +206,11 @@ export default function AnnouncementsPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Ankuendigung bearbeiten" : "Neue Ankuendigung"}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Ankündigung bearbeiten" : "Neue Ankündigung"}>
         <div className="space-y-4">
           <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Betreff" />
           <Select
-            label="Prioritaet"
+            label="Priorität"
             value={form.priority}
             onChange={(e) => setForm({ ...form, priority: e.target.value })}
             options={[
@@ -220,7 +220,7 @@ export default function AnnouncementsPage() {
               { value: "urgent", label: "Dringend" },
             ]}
           />
-          <Textarea label="Inhalt" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder="Ankuendigung schreiben..." />
+          <Textarea label="Inhalt" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder="Ankündigung schreiben..." />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
             <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>

@@ -98,7 +98,7 @@ export default function PollsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Umfrage wirklich loeschen?")) return;
+    if (!confirm("Umfrage wirklich löschen?")) return;
     try {
       await api.delete(`/api/polls/${id}`);
       load();
@@ -230,7 +230,7 @@ export default function PollsPage() {
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={addOption}>
-                <Plus className="h-3.5 w-3.5" /> Option hinzufuegen
+                <Plus className="h-3.5 w-3.5" /> Option hinzufügen
               </Button>
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function PollsPage() {
               onChange={(e) => setForm({ ...form, allowMultiple: e.target.checked })}
               className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
             />
-            <label htmlFor="allowMultiple" className="text-sm text-[var(--foreground)]">Mehrere Optionen waehlbar</label>
+            <label htmlFor="allowMultiple" className="text-sm text-[var(--foreground)]">Mehrere Optionen wählbar</label>
           </div>
 
           <Input label="Ablaufdatum (optional)" type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />

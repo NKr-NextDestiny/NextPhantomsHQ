@@ -93,8 +93,8 @@ export default function AvailabilityPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Verfuegbarkeit</h1>
-          <p className="text-[var(--muted-foreground)]">Wann bist du verfuegbar?</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Verfügbarkeit</h1>
+          <p className="text-[var(--muted-foreground)]">Wann bist du verfügbar?</p>
         </div>
         <div className="flex gap-2">
           <Button variant={tab === "my" ? "default" : "outline"} onClick={() => setTab("my")}>

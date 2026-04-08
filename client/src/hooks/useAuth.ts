@@ -14,7 +14,7 @@ export function useAuth() {
         const res = await api.get<any>("/api/auth/me");
         if (res.data) {
           setUser(res.data);
-          const teamRes = await api.get<any>("/api/teams");
+          const teamRes = await api.get<any>("/api/team");
           if (teamRes.data) setTeamId(teamRes.data.id);
         }
       } catch {

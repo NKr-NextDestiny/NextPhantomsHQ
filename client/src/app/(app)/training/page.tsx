@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Dumbbell, Calendar, CheckCircle, XCircle, HelpCircle, Trash2, Edit2 } from "lucide-react";
+import { Plus, Dumbbell, Calendar, Clock, CheckCircle, XCircle, HelpCircle, Trash2, Edit2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/Card";
@@ -10,14 +10,36 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
 
+interface Vote {
+  id: string;
+  status: string;
+  user: { id: string; displayName: string; avatarUrl?: string };
+}
+
 interface Training {
   id: string;
   title: string;
   type: string;
-  description?: string;
+  meetTime: string;
   date: string;
-  duration?: number;
-  votes?: { available: number; unavailable: number; maybe: number; userVote?: string };
+  endDate?: string;
+  notes?: string;
+  location?: string;
+  votes: Vote[];
+  createdBy: { id: string; displayName: string };
+}
+
+const TRAINING_TYPES = [
+  { value: "RANKED", label: "Ranked" },
+  { value: "CUSTOM", label: "Custom" },
+  { value: "AIM_TRAINING", label: "Aim Training" },
+  { value: "VOD_REVIEW", label: "VOD Review" },
+  { value: "STRAT_PRACTICE", label: "Strat Übung" },
+  { value: "OTHER", label: "Sonstiges" },
+];
+
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function TrainingPage() {
@@ -26,10 +48,10 @@ export default function TrainingPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", type: "practice", description: "", date: "", duration: "90" });
+  const [form, setForm] = useState({ title: "", type: "RANKED", meetTime: "", date: "", endDate: "", notes: "", location: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  const loadTrainings = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       const res = await api.get<Training[]>("/api/trainings");
       if (res.data) setTrainings(res.data);
@@ -40,11 +62,11 @@ export default function TrainingPage() {
     }
   }, []);
 
-  useEffect(() => { loadTrainings(); }, [loadTrainings]);
+  useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ title: "", type: "practice", description: "", date: "", duration: "90" });
+    setForm({ title: "", type: "RANKED", meetTime: "", date: "", endDate: "", notes: "", location: "" });
     setShowModal(true);
   };
 
@@ -53,9 +75,11 @@ export default function TrainingPage() {
     setForm({
       title: t.title,
       type: t.type,
-      description: t.description || "",
+      meetTime: t.meetTime ? new Date(t.meetTime).toISOString().slice(0, 16) : "",
       date: t.date ? new Date(t.date).toISOString().slice(0, 16) : "",
-      duration: String(t.duration || 90),
+      endDate: t.endDate ? new Date(t.endDate).toISOString().slice(0, 16) : "",
+      notes: t.notes || "",
+      location: t.location || "",
     });
     setShowModal(true);
   };
@@ -63,14 +87,22 @@ export default function TrainingPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const body = { ...form, duration: parseInt(form.duration) || 90 };
+      const body = {
+        title: form.title,
+        type: form.type,
+        meetTime: form.meetTime,
+        date: form.date,
+        endDate: form.endDate || null,
+        notes: form.notes || null,
+        location: form.location || null,
+      };
       if (editingId) {
         await api.put(`/api/trainings/${editingId}`, body);
       } else {
         await api.post("/api/trainings", body);
       }
       setShowModal(false);
-      loadTrainings();
+      load();
     } catch {
       // ignore
     } finally {
@@ -79,23 +111,25 @@ export default function TrainingPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Training wirklich loeschen?")) return;
+    if (!confirm("Training wirklich löschen?")) return;
     try {
       await api.delete(`/api/trainings/${id}`);
-      loadTrainings();
+      load();
     } catch {
       // ignore
     }
   };
 
-  const handleVote = async (trainingId: string, vote: string) => {
+  const handleVote = async (trainingId: string, status: string) => {
     try {
-      await api.post(`/api/trainings/${trainingId}/vote`, { vote });
-      loadTrainings();
+      await api.post(`/api/trainings/${trainingId}/vote`, { status });
+      load();
     } catch {
       // ignore
     }
   };
+
+  const getUserVote = (t: Training) => t.votes.find(v => v.user.id === user?.id)?.status;
 
   if (loading) {
     return (
@@ -124,78 +158,85 @@ export default function TrainingPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {trainings.map((t) => (
-            <Card key={t.id} hover>
-              <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-[var(--foreground)]">{t.title}</h3>
-                  <Badge variant="info" className="mt-1">{t.type}</Badge>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => openEdit(t)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(t.id)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              {t.description && (
-                <p className="mb-3 text-sm text-[var(--muted-foreground)]">{t.description}</p>
-              )}
-              <div className="mb-3 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                <Calendar className="h-4 w-4" />
-                {formatDate(t.date)}
-                {t.duration && <span>({t.duration} Min)</span>}
-              </div>
+          {trainings.map((t) => {
+            const userVote = getUserVote(t);
+            const available = t.votes.filter(v => v.status === "AVAILABLE").length;
+            const maybe = t.votes.filter(v => v.status === "MAYBE").length;
+            const unavailable = t.votes.filter(v => v.status === "UNAVAILABLE").length;
 
-              {/* Vote buttons */}
-              <div className="flex gap-2 border-t border-[var(--border)] pt-3">
-                <button
-                  onClick={() => handleVote(t.id, "available")}
-                  className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${t.votes?.userVote === "available" ? "bg-green-500/20 text-green-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-green-500/10 hover:text-green-400"}`}
-                >
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Ja {t.votes?.available ? `(${t.votes.available})` : ""}
-                </button>
-                <button
-                  onClick={() => handleVote(t.id, "maybe")}
-                  className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${t.votes?.userVote === "maybe" ? "bg-yellow-500/20 text-yellow-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-yellow-500/10 hover:text-yellow-400"}`}
-                >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  Vllt {t.votes?.maybe ? `(${t.votes.maybe})` : ""}
-                </button>
-                <button
-                  onClick={() => handleVote(t.id, "unavailable")}
-                  className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${t.votes?.userVote === "unavailable" ? "bg-red-500/20 text-red-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-red-500/10 hover:text-red-400"}`}
-                >
-                  <XCircle className="h-3.5 w-3.5" />
-                  Nein {t.votes?.unavailable ? `(${t.votes.unavailable})` : ""}
-                </button>
-              </div>
-            </Card>
-          ))}
+            return (
+              <Card key={t.id} hover>
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-[var(--foreground)]">{t.title}</h3>
+                    <Badge variant="info" className="mt-1">{TRAINING_TYPES.find(tt => tt.value === t.type)?.label || t.type}</Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => openEdit(t)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDelete(t.id)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-3 space-y-1 text-sm text-[var(--muted-foreground)]">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(t.date)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Treffen: {formatTime(t.meetTime)} · Beginn: {formatTime(t.date)}
+                    {t.endDate && <> · Ende: {formatTime(t.endDate)}</>}
+                  </div>
+                  {t.location && <div className="text-xs">📍 {t.location}</div>}
+                </div>
+
+                {t.notes && <p className="mb-3 text-sm text-[var(--muted-foreground)]">{t.notes}</p>}
+
+                {/* Vote buttons */}
+                <div className="flex gap-2 border-t border-[var(--border)] pt-3">
+                  <button
+                    onClick={() => handleVote(t.id, "AVAILABLE")}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${userVote === "AVAILABLE" ? "bg-green-500/20 text-green-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-green-500/10 hover:text-green-400"}`}
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Ja {available > 0 && `(${available})`}
+                  </button>
+                  <button
+                    onClick={() => handleVote(t.id, "MAYBE")}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${userVote === "MAYBE" ? "bg-yellow-500/20 text-yellow-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-yellow-500/10 hover:text-yellow-400"}`}
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    Vllt {maybe > 0 && `(${maybe})`}
+                  </button>
+                  <button
+                    onClick={() => handleVote(t.id, "UNAVAILABLE")}
+                    className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all ${userVote === "UNAVAILABLE" ? "bg-red-500/20 text-red-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-red-500/10 hover:text-red-400"}`}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Nein {unavailable > 0 && `(${unavailable})`}
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Training bearbeiten" : "Neues Training"}>
         <div className="space-y-4">
           <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Taktik Training" />
-          <Select
-            label="Typ"
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value })}
-            options={[
-              { value: "practice", label: "Uebung" },
-              { value: "review", label: "Review" },
-              { value: "scrimmage", label: "Scrimmage" },
-              { value: "aim_training", label: "Aim Training" },
-              { value: "strat_review", label: "Strat Review" },
-            ]}
-          />
-          <Input label="Datum & Zeit" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <Input label="Dauer (Minuten)" type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
-          <Textarea label="Beschreibung" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional..." />
+          <Select label="Typ" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={TRAINING_TYPES} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Treffzeit *" type="datetime-local" value={form.meetTime} onChange={(e) => setForm({ ...form, meetTime: e.target.value })} />
+            <Input label="Beginn *" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <Input label="Ende (optional)" type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+          <Input label="Ort" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="z.B. Discord Channel" />
+          <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
             <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>

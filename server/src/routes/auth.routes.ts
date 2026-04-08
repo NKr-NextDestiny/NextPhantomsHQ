@@ -15,8 +15,9 @@ function generateTokens(userId: string) {
 }
 
 function setTokenCookies(res: any, token: string, refreshToken: string) {
-  res.cookie("token", token, { httpOnly: true, secure: config.nodeEnv === "production", sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 });
-  res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: config.nodeEnv === "production", sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 });
+  const isHttps = config.appUrl.startsWith("https://");
+  res.cookie("token", token, { httpOnly: true, secure: isHttps, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 });
+  res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: isHttps, sameSite: "lax", maxAge: 30 * 24 * 60 * 60 * 1000 });
 }
 
 authRouter.get("/discord", (_req, res) => {
@@ -91,8 +92,6 @@ authRouter.get("/discord/callback", async (req, res) => {
     let user = await prisma.user.findUnique({ where: { discordId: discordUser.id } });
     if (!user) {
       const numericId = await generateUniqueNumericId();
-      const userCount = await prisma.user.count({ where: { isActive: true } });
-      const isAdmin = userCount === 0 || isDiscordAdmin;
 
       user = await prisma.user.create({
         data: {
@@ -101,7 +100,7 @@ authRouter.get("/discord/callback", async (req, res) => {
           username: discordUser.username,
           displayName: discordUser.global_name || discordUser.username,
           email: discordUser.email || null,
-          isAdmin,
+          isAdmin: isDiscordAdmin,
           avatarUrl: discordUser.avatar
             ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.${discordUser.avatar.startsWith("a_") ? "gif" : "png"}`
             : null,
@@ -109,7 +108,7 @@ authRouter.get("/discord/callback", async (req, res) => {
         },
       });
 
-      const role = isAdmin ? "ADMIN" : "PLAYER";
+      const role = isDiscordAdmin ? "ADMIN" : "PLAYER";
       await prisma.teamMember.create({ data: { userId: user.id, teamId, role: role as any } });
     } else {
       const updateData: any = {

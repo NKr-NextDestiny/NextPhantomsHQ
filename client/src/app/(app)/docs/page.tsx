@@ -95,7 +95,7 @@ export default function DocsPage() {
           ) : (
             <Card className="py-12 text-center">
               <BookOpen className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-              <p className="text-[var(--muted-foreground)]">Waehle einen Abschnitt aus der Navigation.</p>
+              <p className="text-[var(--muted-foreground)]">Wähle einen Abschnitt aus der Navigation.</p>
             </Card>
           )}
         </div>

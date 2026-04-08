@@ -83,7 +83,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-[var(--foreground)]">
           Willkommen, {user?.displayName}!
         </h1>
-        <p className="text-[var(--muted-foreground)]">Hier ist dein Team-Ueberblick.</p>
+        <p className="text-[var(--muted-foreground)]">Hier ist dein Team-Überblick.</p>
       </div>
 
       {/* Stats */}

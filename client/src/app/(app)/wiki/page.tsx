@@ -78,7 +78,7 @@ export default function WikiPageList() {
   };
 
   const handleDelete = async (slug: string) => {
-    if (!confirm("Wiki-Seite wirklich loeschen?")) return;
+    if (!confirm("Wiki-Seite wirklich löschen?")) return;
     try {
       await api.delete(`/api/wiki/${slug}`);
       load();

@@ -81,7 +81,7 @@ export default function RemindersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Erinnerung wirklich loeschen?")) return;
+    if (!confirm("Erinnerung wirklich löschen?")) return;
     try {
       await api.delete(`/api/reminders/${id}`);
       load();
@@ -151,7 +151,7 @@ export default function RemindersPage() {
                       <span className={!r.done && isOverdue(r.deadline) ? "font-bold text-[var(--destructive)]" : ""}>
                         {formatDate(r.deadline)}
                       </span>
-                      {!r.done && isOverdue(r.deadline) && <Badge variant="destructive">Ueberfaellig</Badge>}
+                      {!r.done && isOverdue(r.deadline) && <Badge variant="destructive">Überfällig</Badge>}
                     </div>
                   )}
                   <span>von {r.createdBy.displayName}</span>

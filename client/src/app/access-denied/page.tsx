@@ -8,6 +8,9 @@ function AccessDeniedContent() {
   const reason = params.get("reason");
 
   const reasonMessages: Record<string, string> = {
+    login_failed: "Die Anmeldung bei Discord ist fehlgeschlagen. Versuche es erneut.",
+    not_in_server: "Du bist nicht auf dem erforderlichen Discord-Server.",
+    missing_role: "Dir fehlt die benötigte Discord-Rolle für den Zugriff.",
     not_member: "Du bist kein Mitglied dieses Teams.",
     banned: "Du wurdest vom Team ausgeschlossen.",
     inactive: "Dein Account wurde deaktiviert.",
@@ -27,7 +30,7 @@ function AccessDeniedContent() {
           href="/auth/login"
           className="inline-flex rounded-lg bg-[var(--primary)] px-6 py-3 font-semibold text-white transition-all hover:bg-orange-600"
         >
-          Zurueck zum Login
+          Zurück zum Login
         </a>
       </div>
     </div>

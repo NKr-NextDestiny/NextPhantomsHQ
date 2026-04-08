@@ -17,6 +17,7 @@ export const scrimRouter = Router();
 
 const createSchema = z.object({
   opponent: z.string().min(1).max(200),
+  meetTime: z.string().transform(s => new Date(s)).optional().nullable(),
   date: z.string().transform(s => new Date(s)),
   endDate: z.string().transform(s => new Date(s)).optional().nullable(),
   mapPool: z.array(z.string()).optional().default([]),
@@ -97,6 +98,7 @@ scrimRouter.post("/", authenticate, teamContext, requireFeature("scrims"), requi
     const scrim = await prisma.scrim.create({
       data: {
         opponent: data.opponent,
+        meetTime: data.meetTime || null,
         date: data.date,
         endDate: data.endDate || null,
         mapPool: data.mapPool,

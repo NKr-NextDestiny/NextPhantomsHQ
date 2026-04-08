@@ -89,7 +89,7 @@ export default function ScrimsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Scrim wirklich loeschen?")) return;
+    if (!confirm("Scrim wirklich löschen?")) return;
     try {
       await api.delete(`/api/scrims/${id}`);
       load();
