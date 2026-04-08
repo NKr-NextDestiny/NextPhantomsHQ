@@ -111,7 +111,7 @@ export default function ScrimsPage() {
     if (!resultModal) return;
     setSubmitting(true);
     try {
-      await api.patch(`/api/scrims/${resultModal}/result`, {
+      await api.post(`/api/scrims/${resultModal}/result`, {
         us: parseInt(resultForm.us),
         them: parseInt(resultForm.them),
       });

@@ -11,22 +11,22 @@ import { formatDate } from "@/lib/utils";
 
 interface ScoutingEntry {
   id: string;
-  opponentName: string;
-  threatLevel: "low" | "medium" | "high" | "critical";
+  name: string;
+  teamTag?: string;
+  threatLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   notes?: string;
   strengths?: string;
   weaknesses?: string;
-  preferredMaps?: string[];
-  players?: { name: string; role: string; notes?: string }[];
-  lastUpdated: string;
-  author?: { displayName: string };
+  playstyle?: string;
+  updatedAt: string;
+  _count?: { scoutingNotes: number };
 }
 
 const THREAT_LEVELS = [
-  { value: "low", label: "Niedrig", color: "success", icon: Shield },
-  { value: "medium", label: "Mittel", color: "warning", icon: AlertTriangle },
-  { value: "high", label: "Hoch", color: "destructive", icon: AlertTriangle },
-  { value: "critical", label: "Kritisch", color: "destructive", icon: Skull },
+  { value: "LOW", label: "Niedrig", color: "success", icon: Shield },
+  { value: "MEDIUM", label: "Mittel", color: "warning", icon: AlertTriangle },
+  { value: "HIGH", label: "Hoch", color: "destructive", icon: AlertTriangle },
+  { value: "CRITICAL", label: "Kritisch", color: "destructive", icon: Skull },
 ] as const;
 
 export default function ScoutingPage() {
@@ -36,17 +36,15 @@ export default function ScoutingPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    opponentName: "", threatLevel: "medium" as ScoutingEntry["threatLevel"],
-    notes: "", strengths: "", weaknesses: "", preferredMaps: [] as string[],
-    players: [] as { name: string; role: string; notes: string }[],
+    name: "", threatLevel: "MEDIUM" as ScoutingEntry["threatLevel"],
+    notes: "", strengths: "", weaknesses: "", playstyle: "",
+    teamTag: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const CS_MAPS = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2", "Vertigo"];
-
   const load = useCallback(async () => {
     try {
-      const res = await api.get<ScoutingEntry[]>("/api/scouting");
+      const res = await api.get<ScoutingEntry[]>("/api/scouting/opponents");
       if (res.data) setEntries(res.data);
     } catch {
       // ignore
@@ -59,20 +57,20 @@ export default function ScoutingPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ opponentName: "", threatLevel: "medium", notes: "", strengths: "", weaknesses: "", preferredMaps: [], players: [] });
+    setForm({ name: "", threatLevel: "MEDIUM", notes: "", strengths: "", weaknesses: "", playstyle: "", teamTag: "" });
     setShowModal(true);
   };
 
   const openEdit = (e: ScoutingEntry) => {
     setEditingId(e.id);
     setForm({
-      opponentName: e.opponentName,
+      name: e.name,
       threatLevel: e.threatLevel,
       notes: e.notes || "",
       strengths: e.strengths || "",
       weaknesses: e.weaknesses || "",
-      preferredMaps: e.preferredMaps || [],
-      players: e.players?.map((p) => ({ ...p, notes: p.notes || "" })) || [],
+      playstyle: e.playstyle || "",
+      teamTag: e.teamTag || "",
     });
     setShowModal(true);
   };
@@ -81,9 +79,9 @@ export default function ScoutingPage() {
     setSubmitting(true);
     try {
       if (editingId) {
-        await api.put(`/api/scouting/${editingId}`, form);
+        await api.put(`/api/scouting/opponents/${editingId}`, form);
       } else {
-        await api.post("/api/scouting", form);
+        await api.post("/api/scouting/opponents", form);
       }
       setShowModal(false);
       load();
@@ -97,23 +95,11 @@ export default function ScoutingPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Scouting-Eintrag wirklich löschen?")) return;
     try {
-      await api.delete(`/api/scouting/${id}`);
+      await api.delete(`/api/scouting/opponents/${id}`);
       load();
     } catch {
       // ignore
     }
-  };
-
-  const addPlayer = () => {
-    setForm({ ...form, players: [...form.players, { name: "", role: "", notes: "" }] });
-  };
-
-  const removePlayer = (idx: number) => {
-    setForm({ ...form, players: form.players.filter((_, i) => i !== idx) });
-  };
-
-  const updatePlayer = (idx: number, field: string, value: string) => {
-    setForm({ ...form, players: form.players.map((p, i) => (i === idx ? { ...p, [field]: value } : p)) });
   };
 
   const threatInfo = (level: string) => THREAT_LEVELS.find((t) => t.value === level) || THREAT_LEVELS[1];
@@ -157,16 +143,15 @@ export default function ScoutingPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-[var(--foreground)]">{e.opponentName}</h3>
+                      <h3 className="font-semibold text-[var(--foreground)]">{e.name}</h3>
+                      {e.teamTag && <Badge variant="outline">{e.teamTag}</Badge>}
                       <Badge variant={threat.color as any}>{threat.label}</Badge>
                     </div>
-                    <p className="text-xs text-[var(--muted-foreground)]">Aktualisiert: {formatDate(e.lastUpdated)}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Aktualisiert: {formatDate(e.updatedAt)}
+                      {e._count && ` · ${e._count.scoutingNotes} Notizen`}
+                    </p>
                   </div>
-                  {e.preferredMaps && e.preferredMaps.length > 0 && (
-                    <div className="hidden gap-1 md:flex">
-                      {e.preferredMaps.map((m) => <Badge key={m} variant="outline">{m}</Badge>)}
-                    </div>
-                  )}
                   <div className="flex gap-1">
                     <button onClick={() => setExpandedId(isExpanded ? null : e.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                       {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -182,6 +167,12 @@ export default function ScoutingPage() {
 
                 {isExpanded && (
                   <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
+                    {e.playstyle && (
+                      <div>
+                        <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">Spielstil</h4>
+                        <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.playstyle}</p>
+                      </div>
+                    )}
                     {e.notes && (
                       <div>
                         <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">Notizen</h4>
@@ -202,20 +193,6 @@ export default function ScoutingPage() {
                         </div>
                       )}
                     </div>
-                    {e.players && e.players.length > 0 && (
-                      <div>
-                        <h4 className="mb-2 text-sm font-medium text-[var(--foreground)]">Spieler</h4>
-                        <div className="space-y-1">
-                          {e.players.map((p, i) => (
-                            <div key={i} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-2">
-                              <span className="text-sm font-medium text-[var(--foreground)]">{p.name}</span>
-                              {p.role && <Badge variant="outline">{p.role}</Badge>}
-                              {p.notes && <span className="text-xs text-[var(--muted-foreground)]">{p.notes}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </Card>
@@ -227,49 +204,20 @@ export default function ScoutingPage() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Scouting bearbeiten" : "Neuer Scouting-Eintrag"} size="lg">
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Gegner" value={form.opponentName} onChange={(e) => setForm({ ...form, opponentName: e.target.value })} />
-            <Select
-              label="Bedrohungsstufe"
-              value={form.threatLevel}
-              onChange={(e) => setForm({ ...form, threatLevel: e.target.value as any })}
-              options={THREAT_LEVELS.map((t) => ({ value: t.value, label: t.label }))}
-            />
+            <Input label="Gegner" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input label="Team-Tag" value={form.teamTag} onChange={(e) => setForm({ ...form, teamTag: e.target.value })} />
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--foreground)]">Bevorzugte Maps</label>
-            <div className="flex flex-wrap gap-2">
-              {CS_MAPS.map((map) => (
-                <button
-                  key={map}
-                  onClick={() => setForm({ ...form, preferredMaps: form.preferredMaps.includes(map) ? form.preferredMaps.filter((m) => m !== map) : [...form.preferredMaps, map] })}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${form.preferredMaps.includes(map) ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}
-                >
-                  {map}
-                </button>
-              ))}
-            </div>
-          </div>
+          <Select
+            label="Bedrohungsstufe"
+            value={form.threatLevel}
+            onChange={(e) => setForm({ ...form, threatLevel: e.target.value as any })}
+            options={THREAT_LEVELS.map((t) => ({ value: t.value, label: t.label }))}
+          />
+          <Textarea label="Spielstil" value={form.playstyle} onChange={(e) => setForm({ ...form, playstyle: e.target.value })} />
           <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="grid gap-4 sm:grid-cols-2">
             <Textarea label="Stärken" value={form.strengths} onChange={(e) => setForm({ ...form, strengths: e.target.value })} />
             <Textarea label="Schwächen" value={form.weaknesses} onChange={(e) => setForm({ ...form, weaknesses: e.target.value })} />
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-[var(--foreground)]">Spieler</label>
-              <Button variant="outline" size="sm" onClick={addPlayer}><Plus className="h-3.5 w-3.5" /> Spieler</Button>
-            </div>
-            <div className="space-y-2">
-              {form.players.map((p, idx) => (
-                <div key={idx} className="flex gap-2 rounded-lg bg-[var(--secondary)] p-2">
-                  <input value={p.name} onChange={(e) => updatePlayer(idx, "name", e.target.value)} placeholder="Name" className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)]" />
-                  <input value={p.role} onChange={(e) => updatePlayer(idx, "role", e.target.value)} placeholder="Rolle" className="w-24 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)]" />
-                  <input value={p.notes} onChange={(e) => updatePlayer(idx, "notes", e.target.value)} placeholder="Notiz" className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)]" />
-                  <button onClick={() => removePlayer(idx)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--destructive)]"><Trash2 className="h-4 w-4" /></button>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

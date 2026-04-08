@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Users, Trash2, Edit2, GripVertical, Save } from "lucide-react";
+import { Plus, Users, Trash2, Edit2, GripVertical } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +23,6 @@ interface Lineup {
   game?: string;
   players: { playerId: string; role: string; position: number; player?: Player }[];
   createdAt: string;
-  isActive: boolean;
 }
 
 const ROLES = ["IGL", "Entry", "AWP", "Support", "Lurker", "Rifler", "Coach", "Substitute"];
@@ -112,15 +111,6 @@ export default function LineupPage() {
     }
   };
 
-  const toggleActive = async (id: string) => {
-    try {
-      await api.patch(`/api/lineups/${id}/activate`);
-      load();
-    } catch {
-      // ignore
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -154,16 +144,10 @@ export default function LineupPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-[var(--foreground)]">{l.name}</h3>
-                    {l.isActive && <Badge variant="success">Aktiv</Badge>}
                   </div>
                   {l.description && <p className="mt-1 text-sm text-[var(--muted-foreground)]">{l.description}</p>}
                 </div>
                 <div className="flex gap-1">
-                  {!l.isActive && (
-                    <button onClick={() => toggleActive(l.id)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-green-400" title="Aktivieren">
-                      <Save className="h-4 w-4" />
-                    </button>
-                  )}
                   <button onClick={() => openEdit(l)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                     <Edit2 className="h-4 w-4" />
                   </button>

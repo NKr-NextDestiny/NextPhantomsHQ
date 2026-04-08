@@ -5,6 +5,7 @@ import { authenticate } from "../middleware/auth.js";
 import { teamContext, requireTeamRole } from "../middleware/team.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
+import { upload } from "../middleware/upload.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 
@@ -130,5 +131,36 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
     await logAudit(req.user!.id, "UPDATE", "team_member", membership.id, { userId: req.params.uid, role: req.body.role }, req.teamId);
 
     res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+// Remove member (admin only)
+teamRouter.delete("/members/:uid", authenticate, teamContext, requireAdmin, async (req, res, next) => {
+  try {
+    const membership = await prisma.teamMember.findUnique({
+      where: { userId_teamId: { userId: req.params.uid, teamId: req.teamId! } },
+    });
+    if (!membership) throw new AppError(404, "Member not found");
+
+    await prisma.teamMember.delete({ where: { id: membership.id } });
+
+    await logAudit(req.user!.id, "DELETE", "team_member", membership.id, { userId: req.params.uid }, req.teamId);
+    res.json({ success: true, message: "Member removed" });
+  } catch (error) { next(error); }
+});
+
+// Upload team logo (admin only)
+teamRouter.post("/logo", authenticate, teamContext, requireAdmin, upload.single("file"), async (req, res, next) => {
+  try {
+    if (!req.file) throw new AppError(400, "No file uploaded");
+
+    const logoUrl = `/uploads/general/${req.file.filename}`;
+    const team = await prisma.team.update({
+      where: { id: req.teamId! },
+      data: { logoUrl },
+    });
+
+    await logAudit(req.user!.id, "UPDATE", "team", team.id, { logoUrl }, req.teamId);
+    res.json({ success: true, data: team });
   } catch (error) { next(error); }
 });

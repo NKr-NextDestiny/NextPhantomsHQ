@@ -52,7 +52,7 @@ export default function AttendancePage() {
   const handleVote = async (vote: string) => {
     setStatus("submitting");
     try {
-      const res = await fetch(`${API_URL}/api/attendance/${token}/vote`, {
+      const res = await fetch(`${API_URL}/api/attendance/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vote }),

@@ -85,7 +85,7 @@ export default function AnnouncementsPage() {
 
   const handlePin = async (id: string) => {
     try {
-      await api.patch(`/api/announcements/${id}/pin`);
+      await api.post(`/api/announcements/${id}/pin`);
       load();
     } catch {
       // ignore
@@ -94,7 +94,7 @@ export default function AnnouncementsPage() {
 
   const handleDismiss = async (id: string) => {
     try {
-      await api.patch(`/api/announcements/${id}/dismiss`);
+      await api.post(`/api/announcements/${id}/dismiss`);
       load();
     } catch {
       // ignore
