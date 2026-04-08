@@ -6,11 +6,7 @@
 
 --- SICHERHEIT (HOCH) ---
 
-1. .env aus Git entfernen
-   - Deine echten Secrets (DB-Passwort, JWT-Secret, SMTP, Discord, Encryption Key)
-     sind im öffentlichen Repo sichtbar!
-   - Fix: .env in .gitignore aufnehmen, Secrets rotieren, nur .env.example committen
-   - Aufwand: 10 Min (aber alle Secrets müssen danach neu generiert werden!)
+1. ✓ .env ist bereits in .gitignore — korrekt umgesetzt
 
 2. CSRF-Schutz fehlt
    - JWT sitzt in httpOnly Cookies, aber es gibt keinen CSRF-Token
