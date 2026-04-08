@@ -22,7 +22,6 @@ export const changelog: ChangelogEntry[] = [
       "Login-Fix: Admin-User (ADMIN_USER_IDS) können sich jetzt auch ohne Discord-Server-Mitgliedschaft einloggen",
       "Login-Fix: Discord OAuth fragt jetzt immer nach Berechtigung — behebt Scope-Probleme bei bestehenden Autorisierungen",
       "Piratensprache komplett auf Deutsch umgeschrieben mit Memes und Emojis",
-      "features.html komplett überarbeitet und auf Stand gebracht",
     ],
   },
   {

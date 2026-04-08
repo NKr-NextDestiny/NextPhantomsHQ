@@ -14,6 +14,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
 
 log()  { echo -e "${CYAN}[UPDATE]${NC} $1"; }
@@ -45,6 +46,72 @@ command -v docker compose >/dev/null 2>&1 || err "docker compose not found"
 command -v git >/dev/null 2>&1           || err "git not found"
 [ -f ".env" ]                            || err ".env file missing"
 [ -f "docker-compose.yml" ]              || err "docker-compose.yml missing"
+
+# ─── Menu ───
+echo ""
+echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}  Next Phantoms HQ — Update${NC}"
+echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "  ${GREEN}1)${NC} Update           — Code pullen, Container neu bauen"
+echo -e "  ${RED}2)${NC} Reset & Update   — ${RED}ALLES löschen${NC} (DB, Volumes, Images) und neu aufsetzen"
+echo -e "  ${CYAN}3)${NC} Abbrechen"
+echo ""
+read -rp "Auswahl [1/2/3]: " CHOICE
+
+case "$CHOICE" in
+  1)
+    log "Normales Update gestartet..."
+    ;;
+  2)
+    echo ""
+    echo -e "  ${RED}${BOLD}WARNUNG: Das löscht ALLES!${NC}"
+    echo -e "  ${RED}• Datenbank (alle Daten, Benutzer, Matches, Trainings, ...)${NC}"
+    echo -e "  ${RED}• Alle Docker Volumes (Uploads, DB-Daten)${NC}"
+    echo -e "  ${RED}• Alle Docker Images werden neu gebaut${NC}"
+    echo ""
+    read -rp "$(echo -e "${RED}Wirklich alles löschen? Tippe 'RESET' zum Bestätigen: ${NC}")" CONFIRM1
+    if [ "$CONFIRM1" != "RESET" ]; then
+      echo "Abgebrochen."
+      exit 0
+    fi
+    read -rp "$(echo -e "${RED}Bist du WIRKLICH sicher? (ja/nein): ${NC}")" CONFIRM2
+    if [ "$CONFIRM2" != "ja" ]; then
+      echo "Abgebrochen."
+      exit 0
+    fi
+    echo ""
+    log "Reset gestartet — alles wird gelöscht..."
+
+    # Backup before destroying (safety net)
+    if docker compose ps postgres --status running --quiet 2>/dev/null | grep -q .; then
+      mkdir -p "$BACKUP_DIR"
+      DB_USER=$(grep -oP '^DB_USER=\K.*' .env 2>/dev/null || echo "phantoms")
+      DB_NAME=$(grep -oP '^DB_NAME=\K.*' .env 2>/dev/null || echo "next_phantoms_hq")
+      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+      BACKUP_FILE="$BACKUP_DIR/db_backup_pre_reset_${TIMESTAMP}.sql.gz"
+      docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE" 2>/dev/null || true
+      ok "Sicherheits-Backup erstellt: $BACKUP_FILE"
+    fi
+
+    log "Container und Volumes werden entfernt..."
+    docker compose down -v --remove-orphans 2>/dev/null || true
+
+    log "Alte Images werden entfernt..."
+    docker compose down --rmi local 2>/dev/null || true
+
+    SKIP_BACKUP=true  # DB is gone, no backup needed
+    ok "Reset abgeschlossen — Neuaufbau startet..."
+    echo ""
+    ;;
+  3|"")
+    echo "Abgebrochen."
+    exit 0
+    ;;
+  *)
+    err "Ungültige Auswahl: $CHOICE"
+    ;;
+esac
 
 # ─── Show current vs remote version ───
 log "Fetching latest changes from origin/$BRANCH..."
