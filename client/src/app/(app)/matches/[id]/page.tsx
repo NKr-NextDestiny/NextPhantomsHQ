@@ -11,13 +11,10 @@ import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 import Link from "next/link";
 
 type MatchType = "SCRIM" | "TOURNAMENT" | "LEAGUE" | "FRIENDLY" | "OTHER";
-
-const TYPE_LABELS: Record<MatchType, string> = {
-  SCRIM: "Scrim", TOURNAMENT: "Turnier", LEAGUE: "Liga", FRIENDLY: "Freundschaftlich", OTHER: "Sonstige",
-};
 
 interface PlayerStat {
   id: string;
@@ -90,6 +87,8 @@ interface TeamMember {
 }
 
 export default function MatchDetailPage() {
+  const t = useT("matches");
+  const tc = useT("common");
   const params = useParams();
   const matchId = params.id as string;
   const { user } = useAuthStore();
@@ -129,7 +128,7 @@ export default function MatchDetailPage() {
       if (matchRes.status === "fulfilled" && matchRes.value.data) setMatch(matchRes.value.data);
       if (membersRes.status === "fulfilled" && membersRes.value.data) setMembers(membersRes.value.data);
     } catch {
-      toastError("Fehler beim Laden");
+      toastError(tc("loadError"));
     } finally {
       setLoading(false);
     }
@@ -162,19 +161,19 @@ export default function MatchDetailPage() {
         improvements: reviewForm.improvements || null, notes: reviewForm.notes || null,
       });
       setReviewExists(true);
-      toastSuccess("Review gespeichert.");
-    } catch { toastError("Fehler beim Speichern des Reviews."); }
+      toastSuccess(t("detail.reviewSaved"));
+    } catch { toastError(t("detail.reviewSaveError")); }
     finally { setReviewSubmitting(false); }
   };
 
   const deleteReview = async () => {
-    if (!confirm("Review wirklich löschen?")) return;
+    if (!confirm(t("detail.confirmDeleteReview"))) return;
     try {
       await api.delete(`/api/matches/${matchId}/review`);
       setReviewExists(false);
       setReviewForm({ positives: "", negatives: "", improvements: "", notes: "" });
-      toastSuccess("Review gelöscht.");
-    } catch { toastError("Fehler beim Löschen des Reviews."); }
+      toastSuccess(t("detail.reviewDeleted"));
+    } catch { toastError(t("detail.reviewDeleteError")); }
   };
 
   const addPlayerStat = async () => {
@@ -183,22 +182,22 @@ export default function MatchDetailPage() {
       const stats = [{ userId: playerForm.userId || null, externalName: playerForm.externalName || null, kills: parseInt(playerForm.kills), deaths: parseInt(playerForm.deaths), assists: parseInt(playerForm.assists), headshots: parseInt(playerForm.headshots) }];
       const existing = match?.playerStats.map(ps => ({ userId: ps.user?.id || null, externalName: ps.externalName || null, kills: ps.kills, deaths: ps.deaths, assists: ps.assists, headshots: ps.headshots })) || [];
       await api.put(`/api/matches/${matchId}`, { playerStats: [...existing, ...stats] });
-      toastSuccess("Gespeichert");
+      toastSuccess(tc("saved"));
       setShowAddPlayer(false);
       setPlayerForm({ userId: "", externalName: "", kills: "0", deaths: "0", assists: "0", headshots: "0" });
       load();
-    } catch { toastError("Fehler beim Speichern"); }
+    } catch { toastError(tc("saveError")); }
     finally { setSubmitting(false); }
   };
 
   const removePlayerStat = async (statToRemove: PlayerStat) => {
-    if (!confirm("Spieler-Statistik entfernen?")) return;
+    if (!confirm(t("detail.confirmRemoveStat"))) return;
     try {
       const remaining = match?.playerStats.filter(ps => ps.id !== statToRemove.id).map(ps => ({ userId: ps.user?.id || null, externalName: ps.externalName || null, kills: ps.kills, deaths: ps.deaths, assists: ps.assists, headshots: ps.headshots })) || [];
       await api.put(`/api/matches/${matchId}`, { playerStats: remaining });
-      toastSuccess("Gelöscht");
+      toastSuccess(tc("deleted"));
       load();
-    } catch { toastError("Fehler beim Löschen"); }
+    } catch { toastError(tc("deleteError")); }
   };
 
   const uploadMoss = async (file: File) => {
@@ -208,17 +207,17 @@ export default function MatchDetailPage() {
       formData.append("file", file);
       if (mossPlayerName) formData.append("playerName", mossPlayerName);
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/moss/match/${matchId}`, { method: "POST", credentials: "include", body: formData });
-      toastSuccess("MOSS hochgeladen");
+      toastSuccess(t("detail.mossUploaded"));
       setMossPlayerName("");
       load();
-    } catch { toastError("Fehler beim Hochladen"); }
+    } catch { toastError(t("detail.uploadError")); }
     finally { setUploading(false); }
   };
 
   const deleteMoss = async (id: string) => {
-    if (!confirm("MOSS-Datei löschen?")) return;
-    try { await api.delete(`/api/moss/${id}`); toastSuccess("Gelöscht"); load(); }
-    catch { toastError("Fehler beim Löschen"); }
+    if (!confirm(t("detail.confirmDeleteMoss"))) return;
+    try { await api.delete(`/api/moss/${id}`); toastSuccess(tc("deleted")); load(); }
+    catch { toastError(tc("deleteError")); }
   };
 
   const uploadReplay = async (file: File) => {
@@ -233,24 +232,24 @@ export default function MatchDetailPage() {
         formData.append("matchDate", match.date);
       }
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/replays`, { method: "POST", credentials: "include", body: formData });
-      toastSuccess("Replay hochgeladen");
+      toastSuccess(t("detail.replayUploaded"));
       load();
-    } catch { toastError("Fehler beim Hochladen"); }
+    } catch { toastError(t("detail.uploadError")); }
     finally { setUploading(false); }
   };
 
   const deleteReplay = async (id: string) => {
-    if (!confirm("Replay löschen?")) return;
-    try { await api.delete(`/api/replays/${id}`); toastSuccess("Gelöscht"); load(); }
-    catch { toastError("Fehler beim Löschen"); }
+    if (!confirm(t("detail.confirmDeleteReplay"))) return;
+    try { await api.delete(`/api/replays/${id}`); toastSuccess(tc("deleted")); load(); }
+    catch { toastError(tc("deleteError")); }
   };
 
   const handleVote = async (status: "AVAILABLE" | "UNAVAILABLE" | "MAYBE") => {
     try {
       await api.post(`/api/matches/${matchId}/vote`, { status });
-      toastSuccess("Abstimmung gespeichert");
+      toastSuccess(t("voteSaved"));
       load();
-    } catch { toastError("Fehler beim Abstimmen"); }
+    } catch { toastError(t("detail.voteError")); }
   };
 
   const handleResultSubmit = async () => {
@@ -263,10 +262,10 @@ export default function MatchDetailPage() {
         communicationRating: resultForm.communicationRating ? parseInt(resultForm.communicationRating) : null,
         punctualityRating: resultForm.punctualityRating ? parseInt(resultForm.punctualityRating) : null,
       });
-      toastSuccess("Ergebnis eingetragen");
+      toastSuccess(t("detail.resultEntered"));
       setShowResultModal(false);
       load();
-    } catch { toastError("Fehler beim Speichern"); }
+    } catch { toastError(tc("saveError")); }
     finally { setResultSubmitting(false); }
   };
 
@@ -282,9 +281,9 @@ export default function MatchDetailPage() {
     return (
       <div className="space-y-4">
         <Link href="/matches" className="inline-flex items-center gap-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-          <ArrowLeft className="h-4 w-4" /> Zurück zu Matches
+          <ArrowLeft className="h-4 w-4" /> {t("detail.back")}
         </Link>
-        <p className="text-[var(--muted-foreground)]">Match nicht gefunden.</p>
+        <p className="text-[var(--muted-foreground)]">{t("detail.notFound")}</p>
       </div>
     );
   }
@@ -296,17 +295,17 @@ export default function MatchDetailPage() {
   const myVote = match.votes?.find(v => v.userId === user?.id);
 
   const tabs = [
-    { id: "stats" as const, label: "Spieler", icon: Users },
-    ...(isScrim ? [{ id: "attendance" as const, label: "Teilnahme", icon: CheckCircle }] : []),
-    { id: "moss" as const, label: "MOSS", icon: Shield },
-    { id: "replay" as const, label: "Replays", icon: Film },
-    { id: "review" as const, label: "Review", icon: ClipboardList },
+    { id: "stats" as const, label: t("detail.playersTab"), icon: Users },
+    ...(isScrim ? [{ id: "attendance" as const, label: t("detail.attendanceTab"), icon: CheckCircle }] : []),
+    { id: "moss" as const, label: t("detail.mossTab"), icon: Shield },
+    { id: "replay" as const, label: t("detail.replaysTab"), icon: Film },
+    { id: "review" as const, label: t("detail.reviewTab"), icon: ClipboardList },
   ];
 
   return (
     <div className="space-y-6">
       <Link href="/matches" className="inline-flex items-center gap-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-        <ArrowLeft className="h-4 w-4" /> Zurück zu Matches
+        <ArrowLeft className="h-4 w-4" /> {t("detail.back")}
       </Link>
 
       {/* Match Header */}
@@ -315,7 +314,7 @@ export default function MatchDetailPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-[var(--foreground)]">vs. {match.opponent}</h1>
-              <Badge variant={isScrim ? "info" : "warning"}>{TYPE_LABELS[match.type]}</Badge>
+              <Badge variant={isScrim ? "info" : "warning"}>{t(`types.${match.type}`)}</Badge>
             </div>
             <div className="mt-1 flex items-center gap-2 text-sm text-[var(--muted-foreground)] flex-wrap">
               {match.map && <Badge variant="outline">{match.map}</Badge>}
@@ -329,9 +328,9 @@ export default function MatchDetailPage() {
             {/* Scrim-specific info */}
             {isScrim && (match.meetTime || match.contactInfo || match.serverRegion) && (
               <div className="mt-2 flex gap-4 text-xs text-[var(--muted-foreground)]">
-                {match.meetTime && <span>Treffzeit: {formatDate(match.meetTime)}</span>}
-                {match.serverRegion && <span>Region: {match.serverRegion}</span>}
-                {match.contactInfo && <span>Kontakt: {match.contactInfo}</span>}
+                {match.meetTime && <span>{t("detail.meetTimeLabel")}: {formatDate(match.meetTime)}</span>}
+                {match.serverRegion && <span>{t("detail.regionLabel")}: {match.serverRegion}</span>}
+                {match.contactInfo && <span>{t("detail.contactLabel")}: {match.contactInfo}</span>}
               </div>
             )}
           </div>
@@ -340,11 +339,11 @@ export default function MatchDetailPage() {
               <>
                 <p className={`text-4xl font-bold ${resultColor}`}>{match.scoreUs} : {match.scoreThem}</p>
                 <Badge variant={match.result === "WIN" ? "default" : match.result === "LOSS" ? "destructive" : "outline"}>
-                  {match.result === "WIN" ? "Sieg" : match.result === "LOSS" ? "Niederlage" : "Unentschieden"}
+                  {match.result === "WIN" ? t("detail.win") : match.result === "LOSS" ? t("detail.loss") : t("detail.draw")}
                 </Badge>
               </>
             ) : (
-              <Button size="sm" onClick={() => setShowResultModal(true)}>Ergebnis eintragen</Button>
+              <Button size="sm" onClick={() => setShowResultModal(true)}>{t("detail.enterResult")}</Button>
             )}
           </div>
         </div>
@@ -353,24 +352,24 @@ export default function MatchDetailPage() {
         {/* Ratings */}
         {(match.skillRating || match.communicationRating || match.punctualityRating) && (
           <div className="mt-3 flex gap-4 text-xs">
-            {match.skillRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-yellow-400" /> Skill: {match.skillRating}/5</span>}
-            {match.communicationRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-blue-400" /> Kommunikation: {match.communicationRating}/5</span>}
-            {match.punctualityRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-green-400" /> Pünktlichkeit: {match.punctualityRating}/5</span>}
+            {match.skillRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-yellow-400" /> {t("detail.ratingSkill")}: {match.skillRating}/5</span>}
+            {match.communicationRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-blue-400" /> {t("detail.ratingCommunication")}: {match.communicationRating}/5</span>}
+            {match.punctualityRating != null && <span className="flex items-center gap-1 text-[var(--muted-foreground)]"><Star className="h-3 w-3 text-green-400" /> {t("detail.ratingPunctuality")}: {match.punctualityRating}/5</span>}
           </div>
         )}
 
         {/* Quick vote buttons for scrims */}
         {isScrim && !hasResult && (
           <div className="mt-3 flex items-center gap-2 border-t border-[var(--border)]/30 pt-3">
-            <span className="text-xs text-[var(--muted-foreground)]">Teilnahme:</span>
+            <span className="text-xs text-[var(--muted-foreground)]">{t("detail.attendanceLabel")}:</span>
             <button onClick={() => handleVote("AVAILABLE")} className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-all ${myVote?.status === "AVAILABLE" ? "bg-green-500/20 text-green-400" : "bg-[var(--background)] text-[var(--muted-foreground)] hover:text-green-400"}`}>
-              <CheckCircle className="h-3.5 w-3.5" /> Dabei
+              <CheckCircle className="h-3.5 w-3.5" /> {t("detail.available")}
             </button>
             <button onClick={() => handleVote("MAYBE")} className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-all ${myVote?.status === "MAYBE" ? "bg-yellow-500/20 text-yellow-400" : "bg-[var(--background)] text-[var(--muted-foreground)] hover:text-yellow-400"}`}>
-              <HelpCircle className="h-3.5 w-3.5" /> Vielleicht
+              <HelpCircle className="h-3.5 w-3.5" /> {tc("maybe")}
             </button>
             <button onClick={() => handleVote("UNAVAILABLE")} className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-all ${myVote?.status === "UNAVAILABLE" ? "bg-red-500/20 text-red-400" : "bg-[var(--background)] text-[var(--muted-foreground)] hover:text-red-400"}`}>
-              <XCircle className="h-3.5 w-3.5" /> Nein
+              <XCircle className="h-3.5 w-3.5" /> {tc("no")}
             </button>
           </div>
         )}
@@ -378,13 +377,13 @@ export default function MatchDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1 overflow-x-auto">
-        {tabs.map((t) => (
+        {tabs.map((tb) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${tab === t.id ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+            key={tb.id}
+            onClick={() => setTab(tb.id)}
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all whitespace-nowrap ${tab === tb.id ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
           >
-            <t.icon className="h-4 w-4" /> {t.label}
+            <tb.icon className="h-4 w-4" /> {tb.label}
           </button>
         ))}
       </div>
@@ -392,9 +391,9 @@ export default function MatchDetailPage() {
       {/* Attendance Tab (Scrims) */}
       {tab === "attendance" && isScrim && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Teilnahme-Übersicht</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("detail.attendanceOverview")}</h2>
           {(!match.votes || match.votes.length === 0) ? (
-            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Noch keine Abstimmungen.</p>
+            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">{t("detail.noVotes")}</p>
           ) : (
             <div className="space-y-2">
               {(["AVAILABLE", "MAYBE", "UNAVAILABLE"] as const).map(status => {
@@ -402,7 +401,7 @@ export default function MatchDetailPage() {
                 if (votes.length === 0) return null;
                 const color = status === "AVAILABLE" ? "text-green-400" : status === "MAYBE" ? "text-yellow-400" : "text-red-400";
                 const bg = status === "AVAILABLE" ? "bg-green-500/10" : status === "MAYBE" ? "bg-yellow-500/10" : "bg-red-500/10";
-                const label = status === "AVAILABLE" ? "Dabei" : status === "MAYBE" ? "Vielleicht" : "Nicht dabei";
+                const label = status === "AVAILABLE" ? t("detail.available") : status === "MAYBE" ? tc("maybe") : t("detail.unavailable");
                 return (
                   <div key={status}>
                     <p className={`mb-1 text-sm font-medium ${color}`}>{label} ({votes.length})</p>
@@ -433,20 +432,20 @@ export default function MatchDetailPage() {
       {tab === "stats" && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Spieler-Statistiken</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("detail.playerStats")}</h2>
             <Button size="sm" onClick={() => setShowAddPlayer(true)}>
-              <UserPlus className="h-4 w-4" /> Spieler hinzufügen
+              <UserPlus className="h-4 w-4" /> {t("detail.addPlayer")}
             </Button>
           </div>
 
           {match.playerStats.length === 0 ? (
-            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Keine Spieler-Statistiken vorhanden.</p>
+            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">{t("detail.noPlayerStats")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
-                    <th className="pb-2 pr-4">Spieler</th>
+                    <th className="pb-2 pr-4">{t("detail.playersTab")}</th>
                     <th className="pb-2 pr-4 text-center">K</th>
                     <th className="pb-2 pr-4 text-center">D</th>
                     <th className="pb-2 pr-4 text-center">A</th>
@@ -467,8 +466,8 @@ export default function MatchDetailPage() {
                               {(ps.user?.displayName || ps.externalName || "?").charAt(0)}
                             </div>
                           )}
-                          <span className="font-medium text-[var(--foreground)]">{ps.user?.displayName || ps.externalName || "Unbekannt"}</span>
-                          {ps.externalName && !ps.user && <Badge variant="outline" className="text-xs">Extern</Badge>}
+                          <span className="font-medium text-[var(--foreground)]">{ps.user?.displayName || ps.externalName || tc("unknown")}</span>
+                          {ps.externalName && !ps.user && <Badge variant="outline" className="text-xs">{t("detail.external")}</Badge>}
                         </div>
                       </td>
                       <td className="py-2 pr-4 text-center text-[var(--foreground)]">{ps.kills}</td>
@@ -492,21 +491,21 @@ export default function MatchDetailPage() {
 
           {showAddPlayer && (
             <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--secondary)] p-4 space-y-3">
-              <h3 className="font-medium text-[var(--foreground)]">Spieler hinzufügen</h3>
+              <h3 className="font-medium text-[var(--foreground)]">{t("detail.addPlayer")}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm text-[var(--muted-foreground)]">Team-Mitglied</label>
+                  <label className="mb-1 block text-sm text-[var(--muted-foreground)]">{t("detail.teamMember")}</label>
                   <select
                     value={playerForm.userId}
                     onChange={(e) => setPlayerForm({ ...playerForm, userId: e.target.value, externalName: "" })}
                     className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]"
                   >
-                    <option value="">— Extern / Aushilfe —</option>
+                    <option value="">{t("detail.externalSub")}</option>
                     {members.map(m => (<option key={m.user.id} value={m.user.id}>{m.user.displayName}</option>))}
                   </select>
                 </div>
                 {!playerForm.userId && (
-                  <Input label="Externer Name" value={playerForm.externalName} onChange={(e) => setPlayerForm({ ...playerForm, externalName: e.target.value })} placeholder="Name des Aushilfsspielers" />
+                  <Input label={t("detail.externalName")} value={playerForm.externalName} onChange={(e) => setPlayerForm({ ...playerForm, externalName: e.target.value })} placeholder={t("detail.externalNamePlaceholder")} />
                 )}
               </div>
               <div className="grid gap-3 sm:grid-cols-4">
@@ -516,8 +515,8 @@ export default function MatchDetailPage() {
                 <Input label="Headshots" type="number" value={playerForm.headshots} onChange={(e) => setPlayerForm({ ...playerForm, headshots: e.target.value })} />
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={addPlayerStat} isLoading={submitting}>Hinzufügen</Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowAddPlayer(false)}>Abbrechen</Button>
+                <Button size="sm" onClick={addPlayerStat} isLoading={submitting}>{t("detail.add")}</Button>
+                <Button size="sm" variant="ghost" onClick={() => setShowAddPlayer(false)}>{tc("cancel")}</Button>
               </div>
             </div>
           )}
@@ -527,18 +526,18 @@ export default function MatchDetailPage() {
       {/* MOSS Tab */}
       {tab === "moss" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">MOSS-Dateien</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("detail.mossFiles")}</h2>
           <div className="mb-4 flex items-end gap-3 rounded-lg border border-dashed border-[var(--border)] p-4">
-            <Input label="Spielername" value={mossPlayerName} onChange={(e) => setMossPlayerName(e.target.value)} placeholder="Welcher Spieler?" className="flex-1" />
+            <Input label={t("detail.playerName")} value={mossPlayerName} onChange={(e) => setMossPlayerName(e.target.value)} placeholder={t("detail.playerNamePlaceholder")} className="flex-1" />
             <div>
               <input type="file" id="moss-upload" className="hidden" onChange={(e) => e.target.files?.[0] && uploadMoss(e.target.files[0])} />
               <Button size="sm" onClick={() => document.getElementById("moss-upload")?.click()} isLoading={uploading}>
-                <Upload className="h-4 w-4" /> MOSS hochladen
+                <Upload className="h-4 w-4" /> {t("detail.uploadMoss")}
               </Button>
             </div>
           </div>
           {match.mossFiles.length === 0 ? (
-            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Keine MOSS-Dateien vorhanden.</p>
+            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">{t("detail.noMossFiles")}</p>
           ) : (
             <div className="space-y-2">
               {match.mossFiles.map((f) => (
@@ -569,10 +568,10 @@ export default function MatchDetailPage() {
       {tab === "review" && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Match Review</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("detail.review")}</h2>
             {reviewExists && (
               <Button size="sm" variant="destructive" onClick={deleteReview}>
-                <Trash2 className="h-4 w-4" /> Review löschen
+                <Trash2 className="h-4 w-4" /> {t("detail.deleteReview")}
               </Button>
             )}
           </div>
@@ -582,12 +581,12 @@ export default function MatchDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <Textarea label="Positives" value={reviewForm.positives} onChange={(e) => setReviewForm({ ...reviewForm, positives: e.target.value })} placeholder="Was lief gut?" rows={3} />
-              <Textarea label="Negatives" value={reviewForm.negatives} onChange={(e) => setReviewForm({ ...reviewForm, negatives: e.target.value })} placeholder="Was lief schlecht?" rows={3} />
-              <Textarea label="Verbesserungen" value={reviewForm.improvements} onChange={(e) => setReviewForm({ ...reviewForm, improvements: e.target.value })} placeholder="Was kann verbessert werden?" rows={3} />
-              <Textarea label="Notizen" value={reviewForm.notes} onChange={(e) => setReviewForm({ ...reviewForm, notes: e.target.value })} placeholder="Weitere Notizen..." rows={3} />
+              <Textarea label={t("detail.positives")} value={reviewForm.positives} onChange={(e) => setReviewForm({ ...reviewForm, positives: e.target.value })} placeholder={t("detail.positivesPlaceholder")} rows={3} />
+              <Textarea label={t("detail.negatives")} value={reviewForm.negatives} onChange={(e) => setReviewForm({ ...reviewForm, negatives: e.target.value })} placeholder={t("detail.negativesPlaceholder")} rows={3} />
+              <Textarea label={t("detail.improvements")} value={reviewForm.improvements} onChange={(e) => setReviewForm({ ...reviewForm, improvements: e.target.value })} placeholder={t("detail.improvementsPlaceholder")} rows={3} />
+              <Textarea label={t("form.notes")} value={reviewForm.notes} onChange={(e) => setReviewForm({ ...reviewForm, notes: e.target.value })} placeholder={t("detail.notesPlaceholder")} rows={3} />
               <div className="flex justify-end pt-2">
-                <Button onClick={saveReview} isLoading={reviewSubmitting}>{reviewExists ? "Review aktualisieren" : "Review speichern"}</Button>
+                <Button onClick={saveReview} isLoading={reviewSubmitting}>{reviewExists ? t("detail.updateReview") : t("detail.saveReview")}</Button>
               </div>
             </div>
           )}
@@ -597,7 +596,7 @@ export default function MatchDetailPage() {
       {/* Replay Tab */}
       {tab === "replay" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Replay</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("detail.replayTitle")}</h2>
           {match.replay ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
@@ -605,7 +604,7 @@ export default function MatchDetailPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[var(--foreground)]">{match.replay.fileName}</p>
                   <p className="text-xs text-[var(--muted-foreground)]">
-                    {match.replay.parsed ? `${match.replay.rounds?.length || 0} Runden geparst` : "Wird geparst..."}
+                    {match.replay.parsed ? t("detail.roundsParsed").replace("{count}", String(match.replay.rounds?.length || 0)) : t("detail.parsing")}
                   </p>
                 </div>
                 <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/replays/${match.replay.id}/download`} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
@@ -619,10 +618,10 @@ export default function MatchDetailPage() {
           ) : (
             <div className="rounded-lg border border-dashed border-[var(--border)] p-6 text-center">
               <Film className="mx-auto mb-2 h-8 w-8 text-[var(--muted-foreground)]" />
-              <p className="mb-3 text-sm text-[var(--muted-foreground)]">Kein Replay vorhanden. Lade eine .rec oder .zip Datei hoch.</p>
+              <p className="mb-3 text-sm text-[var(--muted-foreground)]">{t("detail.noReplay")}</p>
               <input type="file" id="replay-upload" accept=".rec,.zip" className="hidden" onChange={(e) => e.target.files?.[0] && uploadReplay(e.target.files[0])} />
               <Button size="sm" onClick={() => document.getElementById("replay-upload")?.click()} isLoading={uploading}>
-                <Upload className="h-4 w-4" /> Replay hochladen
+                <Upload className="h-4 w-4" /> {t("detail.uploadReplay")}
               </Button>
             </div>
           )}
@@ -630,20 +629,20 @@ export default function MatchDetailPage() {
       )}
 
       {/* Result Modal */}
-      <Modal open={showResultModal} onClose={() => setShowResultModal(false)} title="Ergebnis eintragen" size="md">
+      <Modal open={showResultModal} onClose={() => setShowResultModal(false)} title={t("detail.resultTitle")} size="md">
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Unser Score" type="number" value={resultForm.scoreUs} onChange={(e) => setResultForm({ ...resultForm, scoreUs: e.target.value })} />
-            <Input label="Gegner Score" type="number" value={resultForm.scoreThem} onChange={(e) => setResultForm({ ...resultForm, scoreThem: e.target.value })} />
+            <Input label={t("form.ourScore")} type="number" value={resultForm.scoreUs} onChange={(e) => setResultForm({ ...resultForm, scoreUs: e.target.value })} />
+            <Input label={t("form.opponentScore")} type="number" value={resultForm.scoreThem} onChange={(e) => setResultForm({ ...resultForm, scoreThem: e.target.value })} />
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input label="Skill (1-5)" type="number" min="1" max="5" value={resultForm.skillRating} onChange={(e) => setResultForm({ ...resultForm, skillRating: e.target.value })} />
-            <Input label="Kommunikation (1-5)" type="number" min="1" max="5" value={resultForm.communicationRating} onChange={(e) => setResultForm({ ...resultForm, communicationRating: e.target.value })} />
-            <Input label="Pünktlichkeit (1-5)" type="number" min="1" max="5" value={resultForm.punctualityRating} onChange={(e) => setResultForm({ ...resultForm, punctualityRating: e.target.value })} />
+            <Input label={`${t("detail.ratingSkill")} (1-5)`} type="number" min="1" max="5" value={resultForm.skillRating} onChange={(e) => setResultForm({ ...resultForm, skillRating: e.target.value })} />
+            <Input label={`${t("detail.ratingCommunication")} (1-5)`} type="number" min="1" max="5" value={resultForm.communicationRating} onChange={(e) => setResultForm({ ...resultForm, communicationRating: e.target.value })} />
+            <Input label={`${t("detail.ratingPunctuality")} (1-5)`} type="number" min="1" max="5" value={resultForm.punctualityRating} onChange={(e) => setResultForm({ ...resultForm, punctualityRating: e.target.value })} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowResultModal(false)}>Abbrechen</Button>
-            <Button onClick={handleResultSubmit} isLoading={resultSubmitting}>Speichern</Button>
+            <Button variant="ghost" onClick={() => setShowResultModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleResultSubmit} isLoading={resultSubmitting}>{tc("save")}</Button>
           </div>
         </div>
       </Modal>

@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
+import { useT } from "@/i18n/provider";
 
 interface Notification {
   id: string;
@@ -29,6 +30,7 @@ export function Header() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const { error } = useToast();
+  const t = useT("header");
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -84,7 +86,7 @@ export function Header() {
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch {
-        error("Benachrichtigung konnte nicht als gelesen markiert werden.");
+        error(t("markReadError"));
       }
     }
     if (notification.link) {
@@ -101,7 +103,7 @@ export function Header() {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch {
-      error("Alle als gelesen markieren fehlgeschlagen.");
+      error(t("markAllReadError"));
     } finally {
       setLoading(false);
     }
@@ -128,7 +130,7 @@ export function Header() {
           <button
             onClick={handleBellClick}
             className="relative rounded-lg p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
-            aria-label="Benachrichtigungen"
+            aria-label={t("notifications")}
           >
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
@@ -146,7 +148,7 @@ export function Header() {
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
                 <span className="text-sm font-semibold text-[var(--foreground)]">
-                  Benachrichtigungen
+                  {t("notifications")}
                 </span>
                 {unreadCount > 0 && (
                   <button
@@ -155,7 +157,7 @@ export function Header() {
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--foreground)] disabled:opacity-50"
                   >
                     <Check className="h-3 w-3" />
-                    Alle gelesen
+                    {t("markAllRead")}
                   </button>
                 )}
               </div>
@@ -164,7 +166,7 @@ export function Header() {
               <div className="max-h-96 overflow-y-auto">
                 {notifications.length === 0 ? (
                   <p className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">
-                    Keine Benachrichtigungen
+                    {t("noNotifications")}
                   </p>
                 ) : (
                   notifications.map((n) => (
@@ -244,7 +246,7 @@ export function Header() {
         <button
           onClick={handleLogout}
           className="rounded-lg p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--secondary)] hover:text-[var(--destructive)]"
-          title="Abmelden"
+          title={t("logout")}
         >
           <LogOut className="h-5 w-5" />
         </button>

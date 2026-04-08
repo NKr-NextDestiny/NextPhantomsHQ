@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, StickyNote, Trash2, Edit3, Lock, Globe } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -24,6 +25,8 @@ interface Note {
 export default function NotesPage() {
   const { user } = useAuthStore();
   const { success, error } = useToast();
+  const t = useT("notes");
+  const tc = useT("common");
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -37,7 +40,7 @@ export default function NotesPage() {
       const res = await api.get<Note[]>("/api/notes");
       if (res.data) setNotes(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally { setLoading(false); }
   }, [error]);
 
@@ -60,27 +63,27 @@ export default function NotesPage() {
     try {
       if (editNote) {
         await api.put(`/api/notes/${editNote.id}`, form);
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
         await api.post("/api/notes", form);
-        success("Notiz erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       setEditNote(null);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Notiz wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/notes/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -96,18 +99,18 @@ export default function NotesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Notizen</h1>
-          <p className="text-[var(--muted-foreground)]">Persönliche und Team-Notizen</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Notiz
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {notes.length === 0 ? (
         <Card className="py-12 text-center">
           <StickyNote className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Notizen erstellt.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -118,9 +121,9 @@ export default function NotesPage() {
                   <h3 className="font-semibold text-[var(--foreground)]">{note.title}</h3>
                   <div className="mt-1 flex items-center gap-2">
                     {note.isPrivate ? (
-                      <Badge variant="outline"><Lock className="mr-1 h-3 w-3" />Privat</Badge>
+                      <Badge variant="outline"><Lock className="mr-1 h-3 w-3" />{tc("private")}</Badge>
                     ) : (
-                      <Badge variant="success"><Globe className="mr-1 h-3 w-3" />Team</Badge>
+                      <Badge variant="success"><Globe className="mr-1 h-3 w-3" />{tc("team")}</Badge>
                     )}
                   </div>
                 </div>
@@ -150,24 +153,24 @@ export default function NotesPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               {viewNote.isPrivate ? (
-                <Badge variant="outline"><Lock className="mr-1 h-3 w-3" />Privat</Badge>
+                <Badge variant="outline"><Lock className="mr-1 h-3 w-3" />{tc("private")}</Badge>
               ) : (
-                <Badge variant="success"><Globe className="mr-1 h-3 w-3" />Team</Badge>
+                <Badge variant="success"><Globe className="mr-1 h-3 w-3" />{tc("team")}</Badge>
               )}
             </div>
             <div className="whitespace-pre-wrap text-sm text-[var(--foreground)]">{viewNote.content}</div>
             <p className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
-              Von {viewNote.createdBy.displayName} - {formatDate(viewNote.updatedAt)}
+              {tc("from")} {viewNote.createdBy.displayName} - {formatDate(viewNote.updatedAt)}
             </p>
           </div>
         )}
       </Modal>
 
       {/* Create/Edit modal */}
-      <Modal open={showModal} onClose={() => { setShowModal(false); setEditNote(null); }} title={editNote ? "Notiz bearbeiten" : "Neue Notiz"}>
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditNote(null); }} title={editNote ? t("editTitle") : t("createTitle")}>
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Notiz-Titel" />
-          <Textarea label="Inhalt" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
+          <Textarea label={t("form.content")} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={8} />
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -176,11 +179,11 @@ export default function NotesPage() {
               onChange={(e) => setForm({ ...form, isPrivate: e.target.checked })}
               className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
             />
-            <label htmlFor="isPrivate" className="text-sm text-[var(--foreground)]">Privat (nur für mich sichtbar)</label>
+            <label htmlFor="isPrivate" className="text-sm text-[var(--foreground)]">{t("privateNote")}</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => { setShowModal(false); setEditNote(null); }}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editNote ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => { setShowModal(false); setEditNote(null); }}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editNote ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>

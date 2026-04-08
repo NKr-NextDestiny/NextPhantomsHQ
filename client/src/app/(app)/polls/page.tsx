@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, BarChart3, Trash2, Check, Clock, Users } from "lucide-react";
 import { api } from "@/lib/api";
+import { useT } from "@/i18n/provider";
 import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +33,8 @@ interface Poll {
 }
 
 export default function PollsPage() {
+  const t = useT("polls");
+  const tc = useT("common");
   const { user } = useAuthStore();
   const { success, error } = useToast();
   const [polls, setPolls] = useState<Poll[]>([]);
@@ -45,11 +48,11 @@ export default function PollsPage() {
       const res = await api.get<Poll[]>("/api/polls");
       if (res.data) setPolls(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -81,11 +84,11 @@ export default function PollsPage() {
         expiresAt: form.expiresAt || undefined,
         options: form.options.filter((o) => o.trim()),
       });
-      success("Umfrage erstellt");
+      success(t("created"));
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSubmitting(false);
     }
@@ -94,21 +97,21 @@ export default function PollsPage() {
   const handleVote = async (pollId: string, optionId: string) => {
     try {
       await api.post(`/api/polls/${pollId}/vote`, { optionId });
-      success("Abstimmung gespeichert");
+      success(t("voteSaved"));
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Umfrage wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/polls/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -124,18 +127,18 @@ export default function PollsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Umfragen</h1>
-          <p className="text-[var(--muted-foreground)]">Team-Umfragen erstellen und abstimmen</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Umfrage
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {polls.length === 0 ? (
         <Card className="py-12 text-center">
           <BarChart3 className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Umfragen erstellt.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -148,11 +151,11 @@ export default function PollsPage() {
                     <h3 className="font-semibold text-[var(--foreground)]">{poll.title}</h3>
                     <div className="mt-1 flex items-center gap-2">
                       {poll.isExpired ? (
-                        <Badge variant="destructive">Abgelaufen</Badge>
+                        <Badge variant="destructive">{t("expired")}</Badge>
                       ) : (
-                        <Badge variant="success">Aktiv</Badge>
+                        <Badge variant="success">{t("active")}</Badge>
                       )}
-                      {poll.allowMultiple && <Badge variant="outline">Mehrfach</Badge>}
+                      {poll.allowMultiple && <Badge variant="outline">{t("multiple")}</Badge>}
                     </div>
                   </div>
                   <button onClick={() => handleDelete(poll.id)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
@@ -192,7 +195,7 @@ export default function PollsPage() {
 
                 <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
                   <div className="flex items-center gap-1">
-                    <Users className="h-3.5 w-3.5" /> {poll.totalVotes} Stimmen
+                    <Users className="h-3.5 w-3.5" /> {poll.totalVotes} {tc("votes")}
                   </div>
                   <div className="flex items-center gap-1">
                     {poll.expiresAt && (
@@ -203,7 +206,7 @@ export default function PollsPage() {
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-[var(--muted-foreground)]">
-                  Von {poll.createdBy.displayName} - {formatDate(poll.createdAt)}
+                  {tc("from")} {poll.createdBy.displayName} - {formatDate(poll.createdAt)}
                 </p>
               </Card>
             );
@@ -211,20 +214,20 @@ export default function PollsPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Neue Umfrage">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={t("createTitle")}>
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Worum geht es?" />
-          <Textarea label="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
+          <Textarea label={t("form.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Optionen</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">{t("form.options")}</label>
             <div className="space-y-2">
               {form.options.map((opt, idx) => (
                 <div key={idx} className="flex gap-2">
                   <input
                     value={opt}
                     onChange={(e) => updateOption(idx, e.target.value)}
-                    placeholder={`Option ${idx + 1}`}
+                    placeholder={`${tc("option")} ${idx + 1}`}
                     className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:outline-none"
                   />
                   {form.options.length > 2 && (
@@ -235,7 +238,7 @@ export default function PollsPage() {
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={addOption}>
-                <Plus className="h-3.5 w-3.5" /> Option hinzufügen
+                <Plus className="h-3.5 w-3.5" /> {t("form.addOption")}
               </Button>
             </div>
           </div>
@@ -248,14 +251,14 @@ export default function PollsPage() {
               onChange={(e) => setForm({ ...form, allowMultiple: e.target.checked })}
               className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
             />
-            <label htmlFor="allowMultiple" className="text-sm text-[var(--foreground)]">Mehrere Optionen wählbar</label>
+            <label htmlFor="allowMultiple" className="text-sm text-[var(--foreground)]">{t("form.multipleChoice")}</label>
           </div>
 
-          <Input label="Ablaufdatum (optional)" type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />
+          <Input label={t("form.expiresAt")} type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} />
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleCreate} isLoading={submitting}>Erstellen</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleCreate} isLoading={submitting}>{tc("create")}</Button>
           </div>
         </div>
       </Modal>

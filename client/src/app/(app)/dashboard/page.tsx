@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
+import { useT } from "@/i18n/provider";
 
 interface Stats {
   upcomingTrainings: number;
@@ -31,37 +32,11 @@ interface Activity {
   user?: { displayName: string };
 }
 
-function formatActivity(action: string, entity: string): string {
-  const entities: Record<string, string> = {
-    training: "Training",
-    match: "Match",
-    strat: "Strategie",
-    lineup: "Lineup",
-    opponent: "Gegner",
-    moss_file: "MOSS-Datei",
-    replay: "Replay",
-    announcement: "Ankündigung",
-    poll: "Umfrage",
-    wiki_page: "Wiki-Seite",
-    note: "Notiz",
-    reminder: "Erinnerung",
-    team: "Team-Einstellungen",
-    team_member: "Mitglied",
-    game_config: "Spielkonfiguration",
-  };
-  const actions: Record<string, string> = {
-    CREATE: "erstellt",
-    UPDATE: "bearbeitet",
-    DELETE: "gelöscht",
-  };
-  const e = entities[entity.toLowerCase()] || entity;
-  const a = actions[action] || action;
-  return `${e} ${a}`;
-}
-
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { error: showError } = useToast();
+  const t = useT("dashboard");
+  const tc = useT("common");
   const [stats, setStats] = useState<Stats>({ upcomingTrainings: 0, upcomingMatches: 0, totalMatches: 0, teamMembers: 0 });
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -79,7 +54,7 @@ export default function DashboardPage() {
         if (eventsRes.status === "fulfilled" && eventsRes.value.data) setEvents(eventsRes.value.data);
         if (activityRes.status === "fulfilled" && activityRes.value.data) setActivity(activityRes.value.data);
       } catch {
-        showError("Fehler beim Laden des Dashboards");
+        showError(t("loadError"));
       } finally {
         setLoading(false);
       }
@@ -87,11 +62,17 @@ export default function DashboardPage() {
     load();
   }, []);
 
+  function formatActivity(action: string, entity: string): string {
+    const e = t(`entities.${entity.toLowerCase()}`) || entity;
+    const a = t(`actions.${action}`) || action;
+    return `${e} ${a}`;
+  }
+
   const statCards = [
-    { label: "Trainings", value: stats.upcomingTrainings, icon: Dumbbell, color: "text-green-400" },
-    { label: "Anstehend", value: stats.upcomingMatches, icon: Trophy, color: "text-blue-400" },
-    { label: "Matches Gesamt", value: stats.totalMatches, icon: Trophy, color: "text-yellow-400" },
-    { label: "Mitglieder", value: stats.teamMembers, icon: Users, color: "text-purple-400" },
+    { label: t("trainings"), value: stats.upcomingTrainings, icon: Dumbbell, color: "text-green-400" },
+    { label: t("upcoming"), value: stats.upcomingMatches, icon: Trophy, color: "text-blue-400" },
+    { label: t("totalMatches"), value: stats.totalMatches, icon: Trophy, color: "text-yellow-400" },
+    { label: t("members"), value: stats.teamMembers, icon: Users, color: "text-purple-400" },
   ];
 
   const eventTypeIcons: Record<string, typeof Dumbbell> = {
@@ -111,9 +92,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">
-          Willkommen, {user?.displayName}!
+          {t("welcome", { name: user?.displayName || "" })}
         </h1>
-        <p className="text-[var(--muted-foreground)]">Hier ist dein Team-Überblick.</p>
+        <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
       </div>
 
       {/* Stats */}
@@ -136,10 +117,10 @@ export default function DashboardPage() {
         <Card>
           <div className="mb-4 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[var(--primary)]" />
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Nächste Events</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("upcomingEvents")}</h2>
           </div>
           {events.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">Keine anstehenden Events.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{t("noEvents")}</p>
           ) : (
             <div className="space-y-3">
               {events.map((e) => {
@@ -152,7 +133,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-[var(--muted-foreground)]">{formatDate(e.date)}</p>
                     </div>
                     <Badge variant={e.type === "match" ? "info" : "success"}>
-                      {e.type === "training" ? "Training" : e.matchType === "SCRIM" ? "Scrim" : "Match"}
+                      {e.type === "training" ? t("training") : e.matchType === "SCRIM" ? t("scrim") : t("match")}
                     </Badge>
                   </div>
                 );
@@ -165,10 +146,10 @@ export default function DashboardPage() {
         <Card>
           <div className="mb-4 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[var(--primary)]" />
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Letzte Aktivität</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("recentActivity")}</h2>
           </div>
           {activity.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">Keine aktuelle Aktivität.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{t("noActivity")}</p>
           ) : (
             <div className="space-y-3">
               {activity.map((a) => {
@@ -178,7 +159,7 @@ export default function DashboardPage() {
                 return (
                   <div key={a.id} className="rounded-lg bg-[var(--secondary)] p-3">
                     <p className="text-sm text-[var(--foreground)]">
-                      {a.user?.displayName ? `${a.user.displayName} hat ` : ""}{readable}
+                      {a.user?.displayName ? t("activityPrefix", { name: a.user.displayName }) : ""}{readable}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       {formatDate(a.createdAt)}

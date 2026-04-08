@@ -4,6 +4,7 @@ import { History, Tag, ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { changelog } from "@/lib/changelog";
+import { useT } from "@/i18n/provider";
 
 const tagColors: Record<string, "default" | "success" | "destructive" | "outline"> = {
   feature: "success",
@@ -12,14 +13,8 @@ const tagColors: Record<string, "default" | "success" | "destructive" | "outline
   breaking: "destructive",
 };
 
-const tagLabels: Record<string, string> = {
-  feature: "Feature",
-  fix: "Bugfix",
-  improvement: "Verbesserung",
-  breaking: "Breaking Change",
-};
-
 export default function ChangelogPage() {
+  const t = useT("changelog");
   const [expanded, setExpanded] = useState<Set<string>>(new Set([changelog[0]?.version]));
 
   const toggle = (version: string) => {
@@ -34,8 +29,8 @@ export default function ChangelogPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Changelog</h1>
-        <p className="text-[var(--muted-foreground)]">Alle Änderungen und Updates</p>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+        <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
       </div>
 
       <div className="relative space-y-4">
@@ -62,7 +57,7 @@ export default function ChangelogPage() {
                       {entry.tags.map((tag) => (
                         <Badge key={tag} variant={tagColors[tag] || "outline"}>
                           <Tag className="mr-1 h-3 w-3" />
-                          {tagLabels[tag] || tag}
+                          {t(`tags.${tag}`) || tag}
                         </Badge>
                       ))}
                     </div>

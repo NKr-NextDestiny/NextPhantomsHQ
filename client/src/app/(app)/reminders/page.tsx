@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, Bell, Trash2, Edit3, CheckCircle2, Circle, Clock } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -24,6 +25,8 @@ interface Reminder {
 export default function RemindersPage() {
   const { user } = useAuthStore();
   const { success, error } = useToast();
+  const t = useT("reminders");
+  const tc = useT("common");
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -36,7 +39,7 @@ export default function RemindersPage() {
       const res = await api.get<Reminder[]>("/api/reminders");
       if (res.data) setReminders(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally { setLoading(false); }
   }, [error]);
 
@@ -68,16 +71,16 @@ export default function RemindersPage() {
       };
       if (editReminder) {
         await api.put(`/api/reminders/${editReminder.id}`, body);
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
         await api.post("/api/reminders", body);
-        success("Erinnerung erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       setEditReminder(null);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally { setSubmitting(false); }
   };
 
@@ -86,18 +89,18 @@ export default function RemindersPage() {
       await api.patch(`/api/reminders/${id}/toggle`);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Erinnerung wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/reminders/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -118,18 +121,18 @@ export default function RemindersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Erinnerungen</h1>
-          <p className="text-[var(--muted-foreground)]">Team-Erinnerungen und Deadlines</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Erinnerung
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {reminders.length === 0 ? (
         <Card className="py-12 text-center">
           <Bell className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Keine Erinnerungen vorhanden.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -164,10 +167,10 @@ export default function RemindersPage() {
                       <span className={!r.done && isOverdue(r.deadline) ? "font-bold text-[var(--destructive)]" : ""}>
                         {formatDate(r.deadline)}
                       </span>
-                      {!r.done && isOverdue(r.deadline) && <Badge variant="destructive">Überfällig</Badge>}
+                      {!r.done && isOverdue(r.deadline) && <Badge variant="destructive">{t("overdue")}</Badge>}
                     </div>
                   )}
-                  <span>von {r.createdBy.displayName}</span>
+                  <span>{tc("by")} {r.createdBy.displayName}</span>
                 </div>
               </div>
             </Card>
@@ -175,14 +178,14 @@ export default function RemindersPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => { setShowModal(false); setEditReminder(null); }} title={editReminder ? "Erinnerung bearbeiten" : "Neue Erinnerung"}>
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditReminder(null); }} title={editReminder ? t("editTitle") : t("createTitle")}>
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Was soll erinnert werden?" />
-          <Textarea label="Details (optional)" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-          <Input label="Deadline (optional)" type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
+          <Textarea label={t("form.details")} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+          <Input label={t("form.deadline")} type="datetime-local" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => { setShowModal(false); setEditReminder(null); }}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editReminder ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => { setShowModal(false); setEditReminder(null); }}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editReminder ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>

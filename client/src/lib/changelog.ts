@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.7.0",
+    date: "2026-04-08",
+    tags: ["feature"],
+    title: "Mehrsprachigkeit (i18n): Deutsch, Englisch & Piratensprache",
+    changes: [
+      "Komplette i18n-Infrastruktur: React Context Provider, namespaced Translation-Keys, Fallback auf Deutsch",
+      "3 Sprachen: Deutsch (Standard), Englisch, Piratensprache (Meme-Sprache)",
+      "Sprachauswahl in persönlichen Einstellungen — wird im Profil und localStorage gespeichert",
+      "Automatische Erkennung der Browser-Sprache für neue Nutzer",
+      "Alle Seiten übersetzt: Dashboard, Training, Matches, Strategien, Lineup, Scouting, Umfragen, Ankündigungen, Wiki, Notizen, Erinnerungen, Verfügbarkeit, Replays, Einstellungen",
+      "Navigation, Header, Benachrichtigungen und Login-Seite übersetzt",
+      "HTML lang-Attribut wird dynamisch aktualisiert",
+    ],
+  },
+  {
     version: "1.6.0",
     date: "2026-04-08",
     tags: ["feature"],

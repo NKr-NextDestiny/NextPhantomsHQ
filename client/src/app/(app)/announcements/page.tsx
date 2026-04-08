@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, Megaphone, Pin, Trash2, Edit2, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -26,6 +27,8 @@ interface Announcement {
 export default function AnnouncementsPage() {
   const { user } = useAuthStore();
   const { success, error } = useToast();
+  const t = useT("announcements");
+  const tc = useT("common");
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -38,11 +41,11 @@ export default function AnnouncementsPage() {
       const res = await api.get<Announcement[]>("/api/announcements");
       if (res.data) setAnnouncements(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -63,28 +66,28 @@ export default function AnnouncementsPage() {
     try {
       if (editingId) {
         await api.put(`/api/announcements/${editingId}`, form);
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
         await api.post("/api/announcements", form);
-        success("Ankündigung erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Ankündigung wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/announcements/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -93,7 +96,7 @@ export default function AnnouncementsPage() {
       await api.post(`/api/announcements/${id}/pin`);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     }
   };
 
@@ -102,7 +105,7 @@ export default function AnnouncementsPage() {
       await api.post(`/api/announcements/${id}/dismiss`);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     }
   };
 
@@ -117,10 +120,10 @@ export default function AnnouncementsPage() {
 
   const priorityLabel = (p: string) => {
     switch (p) {
-      case "urgent": return "Dringend";
-      case "high": return "Hoch";
-      case "normal": return "Normal";
-      default: return "Niedrig";
+      case "urgent": return t("priority.urgent");
+      case "high": return t("priority.high");
+      case "normal": return t("priority.normal");
+      default: return t("priority.low");
     }
   };
 
@@ -142,18 +145,18 @@ export default function AnnouncementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Ankündigungen</h1>
-          <p className="text-[var(--muted-foreground)]">Team-Ankündigungen und Neuigkeiten</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Ankündigung
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {sorted.length === 0 ? (
         <Card className="py-12 text-center">
           <Megaphone className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Ankündigungen.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -187,14 +190,14 @@ export default function AnnouncementsPage() {
                   <button
                     onClick={() => handlePin(a.id)}
                     className={`rounded p-1.5 transition-colors ${a.isPinned ? "text-[var(--primary)]" : "text-[var(--muted-foreground)] hover:text-[var(--primary)]"}`}
-                    title={a.isPinned ? "Lösung aufheben" : "Anpinnen"}
+                    title={a.isPinned ? t("unpin") : t("pin")}
                   >
                     <Pin className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDismiss(a.id)}
                     className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                    title={a.isDismissed ? "Wieder anzeigen" : "Ausblenden"}
+                    title={a.isDismissed ? t("show") : t("hide")}
                   >
                     {a.isDismissed ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   </button>
@@ -211,24 +214,24 @@ export default function AnnouncementsPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Ankündigung bearbeiten" : "Neue Ankündigung"}>
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")}>
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Betreff" />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
           <Select
-            label="Priorität"
+            label={t("form.priority")}
             value={form.priority}
             onChange={(e) => setForm({ ...form, priority: e.target.value })}
             options={[
-              { value: "low", label: "Niedrig" },
-              { value: "normal", label: "Normal" },
-              { value: "high", label: "Hoch" },
-              { value: "urgent", label: "Dringend" },
+              { value: "low", label: t("priority.low") },
+              { value: "normal", label: t("priority.normal") },
+              { value: "high", label: t("priority.high") },
+              { value: "urgent", label: t("priority.urgent") },
             ]}
           />
-          <Textarea label="Inhalt" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder="Ankündigung schreiben..." />
+          <Textarea label={t("form.content")} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder={t("form.contentPlaceholder")} />
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>

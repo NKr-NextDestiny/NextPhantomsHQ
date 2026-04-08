@@ -5,8 +5,9 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { useT } from "@/i18n/provider";
 
-const DAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 interface Slot {
@@ -22,6 +23,8 @@ interface HeatmapData {
 }
 
 export default function AvailabilityPage() {
+  const t = useT("availability");
+  const tc = useT("common");
   const { success, error } = useToast();
   const [mySlots, setMySlots] = useState<Slot[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapData | null>(null);
@@ -44,7 +47,7 @@ export default function AvailabilityPage() {
       }
       if (heatRes.data) setHeatmap(heatRes.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally { setLoading(false); }
   }, [error]);
 
@@ -71,10 +74,10 @@ export default function AvailabilityPage() {
         slots.push({ dayOfWeek, startTime, endTime });
       }
       await api.put("/api/availability/me", { slots });
-      success("Gespeichert");
+      success(tc("saved"));
       loadData();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally { setSaving(false); }
   };
 
@@ -100,15 +103,15 @@ export default function AvailabilityPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Verfügbarkeit</h1>
-          <p className="text-[var(--muted-foreground)]">Wann bist du verfügbar?</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant={tab === "my" ? "primary" : "outline"} onClick={() => setTab("my")}>
-            <Calendar className="h-4 w-4" /> Meine
+            <Calendar className="h-4 w-4" /> {t("mine")}
           </Button>
           <Button variant={tab === "team" ? "primary" : "outline"} onClick={() => setTab("team")}>
-            <Users className="h-4 w-4" /> Team
+            <Users className="h-4 w-4" /> {t("team")}
           </Button>
         </div>
       </div>
@@ -118,9 +121,9 @@ export default function AvailabilityPage() {
           <table className="w-full text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 bg-[var(--card)] px-2 py-1 text-left text-[var(--muted-foreground)]">Zeit</th>
-                {DAYS.map((day, i) => (
-                  <th key={i} className="px-2 py-1 text-center text-[var(--muted-foreground)]">{day.slice(0, 2)}</th>
+                <th className="sticky left-0 bg-[var(--card)] px-2 py-1 text-left text-[var(--muted-foreground)]">{t("time")}</th>
+                {DAY_KEYS.map((key, i) => (
+                  <th key={i} className="px-2 py-1 text-center text-[var(--muted-foreground)]">{t(`days.${key}`)}</th>
                 ))}
               </tr>
             </thead>
@@ -128,7 +131,7 @@ export default function AvailabilityPage() {
               {HOURS.map((hour) => (
                 <tr key={hour}>
                   <td className="sticky left-0 bg-[var(--card)] px-2 py-0.5 text-[var(--muted-foreground)]">{hour}</td>
-                  {DAYS.map((_, dayIdx) => {
+                  {DAY_KEYS.map((_, dayIdx) => {
                     const key = `${dayIdx}-${hour}`;
                     if (tab === "my") {
                       const isSelected = selected.has(key);
@@ -161,7 +164,7 @@ export default function AvailabilityPage() {
         {tab === "my" && (
           <div className="mt-4 flex justify-end border-t border-[var(--border)] pt-4">
             <Button onClick={handleSave} isLoading={saving}>
-              <Save className="h-4 w-4" /> Speichern
+              <Save className="h-4 w-4" /> {tc("save")}
             </Button>
           </div>
         )}

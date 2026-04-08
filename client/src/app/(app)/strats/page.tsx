@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Map, Upload, Download, Trash2, Edit2, Filter, Clock, FileText } from "lucide-react";
 import { api } from "@/lib/api";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -27,6 +28,8 @@ interface Strat {
 }
 
 export default function StratsPage() {
+  const t = useT("strats");
+  const tc = useT("common");
   const { success, error } = useToast();
   const [strats, setStrats] = useState<Strat[]>([]);
   const [maps, setMaps] = useState<string[]>([]);
@@ -58,11 +61,11 @@ export default function StratsPage() {
       const res = await api.get<Strat[]>(`/api/strats${q ? `?${q}` : ""}`);
       if (res.data) setStrats(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [filterMap, filterSide, error]);
+  }, [filterMap, filterSide, error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -99,33 +102,33 @@ export default function StratsPage() {
         }
       }
       if (editingId) {
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
-        success("Strategie erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Strategie wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/strats/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
   const sideLabel = (side: string) => {
-    if (side === "ATTACK") return "Angriff";
-    if (side === "DEFENSE") return "Verteidigung";
+    if (side === "ATTACK") return t("attack");
+    if (side === "DEFENSE") return t("defense");
     return side;
   };
 
@@ -141,11 +144,11 @@ export default function StratsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Strategien</h1>
-          <p className="text-[var(--muted-foreground)]">Taktiken und Strategien verwalten</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neue Strategie
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
@@ -155,16 +158,16 @@ export default function StratsPage() {
           <Filter className="h-4 w-4 text-[var(--muted-foreground)]" />
           <span className="text-sm text-[var(--muted-foreground)]">Map:</span>
           <div className="flex flex-wrap gap-1">
-            <button onClick={() => setFilterMap("")} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${!filterMap ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>Alle</button>
+            <button onClick={() => setFilterMap("")} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${!filterMap ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>{tc("all")}</button>
             {maps.map((m) => (
               <button key={m} onClick={() => setFilterMap(m)} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${filterMap === m ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>{m}</button>
             ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--muted-foreground)]">Seite:</span>
+          <span className="text-sm text-[var(--muted-foreground)]">{t("side")}:</span>
           <div className="flex gap-1">
-            {[{ v: "", l: "Alle" }, { v: "ATTACK", l: "Angriff" }, { v: "DEFENSE", l: "Verteidigung" }].map((o) => (
+            {[{ v: "", l: tc("all") }, { v: "ATTACK", l: t("attack") }, { v: "DEFENSE", l: t("defense") }].map((o) => (
               <button key={o.v} onClick={() => setFilterSide(o.v)} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${filterSide === o.v ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>{o.l}</button>
             ))}
           </div>
@@ -174,7 +177,7 @@ export default function StratsPage() {
       {strats.length === 0 ? (
         <Card className="py-12 text-center">
           <Map className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Strategien erstellt.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -206,14 +209,14 @@ export default function StratsPage() {
               <div className="mt-3 flex gap-2 border-t border-[var(--border)] pt-3">
                 {s.fileUrl && (
                   <a href={s.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-all hover:text-[var(--foreground)]">
-                    <Download className="h-3.5 w-3.5" /> Download
+                    <Download className="h-3.5 w-3.5" /> {tc("download")}
                   </a>
                 )}
                 <button
                   onClick={() => setVersionModal(s)}
                   className="flex items-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] transition-all hover:text-[var(--foreground)]"
                 >
-                  <Clock className="h-3.5 w-3.5" /> Versionen
+                  <Clock className="h-3.5 w-3.5" /> {t("versions")}
                 </button>
               </div>
             </Card>
@@ -222,35 +225,35 @@ export default function StratsPage() {
       )}
 
       {/* Create/Edit Modal */}
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Strategie bearbeiten" : "Neue Strategie"} size="lg">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")} size="lg">
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Clubhouse Keller Push" />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
-            <Select label="Seite" value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value as "ATTACK" | "DEFENSE" })} options={[{ value: "ATTACK", label: "Angriff" }, { value: "DEFENSE", label: "Verteidigung" }]} />
+            <Select label={t("form.map")} value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
+            <Select label={t("form.side")} value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value as "ATTACK" | "DEFENSE" })} options={[{ value: "ATTACK", label: t("attack") }, { value: "DEFENSE", label: t("defense") }]} />
           </div>
-          <Textarea label="Beschreibung" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <Textarea label="Inhalt / Anleitung" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder="Detaillierte Strategie-Beschreibung..." />
+          <Textarea label={t("form.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <Textarea label={t("form.content")} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder={t("form.contentPlaceholder")} />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--foreground)]">Datei hochladen</label>
+            <label className="block text-sm font-medium text-[var(--foreground)]">{t("form.uploadFile")}</label>
             <input type="file" onChange={(e) => setUploadFile(e.target.files?.[0] || null)} className="w-full text-sm text-[var(--muted-foreground)] file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-orange-600" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>
 
       {/* Version History Modal */}
-      <Modal open={!!versionModal} onClose={() => setVersionModal(null)} title={`Versionen: ${versionModal?.title}`}>
+      <Modal open={!!versionModal} onClose={() => setVersionModal(null)} title={`${t("versions")}: ${versionModal?.title}`}>
         <div className="space-y-2">
           {versionModal?.versions && versionModal.versions.length > 0 ? (
             versionModal.versions.map((v) => (
               <div key={v.version} className="flex items-center justify-between rounded-lg bg-[var(--secondary)] p-3">
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4 text-[var(--primary)]" />
-                  <span className="text-sm font-medium text-[var(--foreground)]">Version {v.version}</span>
+                  <span className="text-sm font-medium text-[var(--foreground)]">{tc("version")} {v.version}</span>
                 </div>
                 <div className="text-xs text-[var(--muted-foreground)]">
                   {formatDate(v.createdAt)}
@@ -258,7 +261,7 @@ export default function StratsPage() {
               </div>
             ))
           ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">Keine Versionshistorie verfügbar.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{t("noVersions")}</p>
           )}
         </div>
       </Modal>

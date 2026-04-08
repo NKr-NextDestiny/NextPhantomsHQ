@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 
 type MatchType = "SCRIM" | "TOURNAMENT" | "LEAGUE" | "FRIENDLY" | "OTHER";
 
@@ -45,14 +46,6 @@ interface GameConfig {
   maps: string[];
 }
 
-const TYPE_LABELS: Record<MatchType, string> = {
-  SCRIM: "Scrim",
-  TOURNAMENT: "Turnier",
-  LEAGUE: "Liga",
-  FRIENDLY: "Freundschaftlich",
-  OTHER: "Sonstige",
-};
-
 const TYPE_COLORS: Record<MatchType, string> = {
   SCRIM: "info",
   TOURNAMENT: "warning",
@@ -70,6 +63,8 @@ function calcResult(us: number, them: number): "WIN" | "LOSS" | "DRAW" {
 export default function MatchesPage() {
   const { success, error } = useToast();
   const { user } = useAuthStore();
+  const t = useT("matches");
+  const tc = useT("common");
   const [matches, setMatches] = useState<Match[]>([]);
   const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +79,14 @@ export default function MatchesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const TYPE_LABELS: Record<MatchType, string> = {
+    SCRIM: t("types.SCRIM"),
+    TOURNAMENT: t("types.TOURNAMENT"),
+    LEAGUE: t("types.LEAGUE"),
+    FRIENDLY: t("types.FRIENDLY"),
+    OTHER: t("types.OTHER"),
+  };
+
   const load = useCallback(async () => {
     try {
       const params = filterType ? `?type=${filterType}` : "";
@@ -93,14 +96,14 @@ export default function MatchesPage() {
       ]);
 
       if (matchRes.status === "fulfilled" && matchRes.value.data) setMatches(matchRes.value.data);
-      else if (matchRes.status === "rejected") error("Fehler beim Laden");
+      else if (matchRes.status === "rejected") error(tc("loadError"));
       if (configRes.status === "fulfilled" && configRes.value.data) setMaps(configRes.value.data.maps);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [filterType, error]);
+  }, [filterType, error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -154,7 +157,6 @@ export default function MatchesPage() {
         notes: form.notes || null,
       };
 
-      // Scrim-specific fields
       if (form.type === "SCRIM") {
         body.meetTime = form.meetTime || null;
         body.endDate = form.endDate || null;
@@ -166,38 +168,38 @@ export default function MatchesPage() {
 
       if (editingId) {
         await api.put(`/api/matches/${editingId}`, body);
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
         await api.post("/api/matches", body);
-        success("Match erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Match wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/matches/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
   const handleVote = async (matchId: string, status: "AVAILABLE" | "UNAVAILABLE" | "MAYBE") => {
     try {
       await api.post(`/api/matches/${matchId}/vote`, { status });
-      success("Abstimmung gespeichert");
+      success(t("voteSaved"));
       load();
     } catch {
-      error("Fehler beim Abstimmen");
+      error(t("voteError"));
     }
   };
 
@@ -208,7 +210,6 @@ export default function MatchesPage() {
     }));
   };
 
-  // Stats based on filtered matches (only those with results)
   const matchesWithResult = matches.filter(m => m.result);
   const wins = matchesWithResult.filter(m => m.result === "WIN").length;
   const losses = matchesWithResult.filter(m => m.result === "LOSS").length;
@@ -227,30 +228,30 @@ export default function MatchesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Matches</h1>
-          <p className="text-[var(--muted-foreground)]">Match-Historie, Scrims und Statistiken</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neues Match
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {/* Stats Bar */}
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="p-4 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">Gesamt</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{t("total")}</p>
           <p className="text-2xl font-bold text-[var(--foreground)]">{matches.length}</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">Siege</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{t("wins")}</p>
           <p className="text-2xl font-bold text-green-400">{wins}</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">Niederlagen</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{t("losses")}</p>
           <p className="text-2xl font-bold text-red-400">{losses}</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-sm text-[var(--muted-foreground)]">Winrate</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{t("winrate")}</p>
           <p className={`text-2xl font-bold ${winRate >= 50 ? "text-green-400" : "text-red-400"}`}>{winRate}%</p>
         </Card>
       </div>
@@ -261,7 +262,7 @@ export default function MatchesPage() {
           onClick={() => setFilterType("")}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${!filterType ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
         >
-          Alle
+          {tc("all")}
         </button>
         {(Object.entries(TYPE_LABELS) as [MatchType, string][]).map(([type, label]) => (
           <button
@@ -278,7 +279,7 @@ export default function MatchesPage() {
       {matches.length === 0 ? (
         <Card className="py-12 text-center">
           <Trophy className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Matches eingetragen.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -303,7 +304,7 @@ export default function MatchesPage() {
                       <Badge variant={TYPE_COLORS[m.type] as any}>{TYPE_LABELS[m.type]}</Badge>
                       {m.map && <Badge variant="outline">{m.map}</Badge>}
                       {m.mapPool && m.mapPool.length > 0 && !m.map && (
-                        <span className="text-xs text-[var(--muted-foreground)]">{m.mapPool.length} Maps</span>
+                        <span className="text-xs text-[var(--muted-foreground)]">{m.mapPool.length} {t("maps")}</span>
                       )}
                       {m.competition && <Badge variant="info">{m.competition}</Badge>}
                     </div>
@@ -316,7 +317,6 @@ export default function MatchesPage() {
                       </span>
                     </div>
                   )}
-                  {/* Vote counts for scrims */}
                   {m.type === "SCRIM" && m.votes && m.votes.length > 0 && (
                     <div className="flex gap-2 text-xs">
                       <span className="text-green-400">{m.votes.filter(v => v.status === "AVAILABLE").length} ✓</span>
@@ -336,27 +336,26 @@ export default function MatchesPage() {
                     </button>
                   </div>
                 </div>
-                {/* Quick vote for scrims without result */}
                 {m.type === "SCRIM" && !hasResult && (
                   <div className="mt-3 flex items-center gap-2 border-t border-[var(--border)] pt-3">
-                    <span className="text-xs text-[var(--muted-foreground)]">Teilnahme:</span>
+                    <span className="text-xs text-[var(--muted-foreground)]">{t("attendance")}:</span>
                     <button
                       onClick={() => handleVote(m.id, "AVAILABLE")}
                       className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-all ${myVote?.status === "AVAILABLE" ? "bg-green-500/20 text-green-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-green-400"}`}
                     >
-                      <CheckCircle className="h-3.5 w-3.5" /> Dabei
+                      <CheckCircle className="h-3.5 w-3.5" /> {t("present")}
                     </button>
                     <button
                       onClick={() => handleVote(m.id, "MAYBE")}
                       className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-all ${myVote?.status === "MAYBE" ? "bg-yellow-500/20 text-yellow-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-yellow-400"}`}
                     >
-                      <HelpCircle className="h-3.5 w-3.5" /> Vielleicht
+                      <HelpCircle className="h-3.5 w-3.5" /> {t("maybeComing")}
                     </button>
                     <button
                       onClick={() => handleVote(m.id, "UNAVAILABLE")}
                       className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-all ${myVote?.status === "UNAVAILABLE" ? "bg-red-500/20 text-red-400" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-red-400"}`}
                     >
-                      <XCircle className="h-3.5 w-3.5" /> Nein
+                      <XCircle className="h-3.5 w-3.5" /> {tc("no")}
                     </button>
                   </div>
                 )}
@@ -366,37 +365,34 @@ export default function MatchesPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Match bearbeiten" : "Neues Match"} size="lg">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")} size="lg">
         <div className="space-y-4">
-          {/* Type selection */}
           <Select
-            label="Typ"
+            label={t("form.type")}
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value as MatchType })}
             options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Gegner" value={form.opponent} onChange={(e) => setForm({ ...form, opponent: e.target.value })} />
-            <Input label="Datum & Zeit" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            <Input label={t("form.opponent")} value={form.opponent} onChange={(e) => setForm({ ...form, opponent: e.target.value })} />
+            <Input label={t("form.dateTime")} type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
 
-          {/* Scrim-specific fields */}
           {form.type === "SCRIM" && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Treffzeit" type="datetime-local" value={form.meetTime} onChange={(e) => setForm({ ...form, meetTime: e.target.value })} />
-                <Input label="Ende" type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+                <Input label={t("form.meetTime")} type="datetime-local" value={form.meetTime} onChange={(e) => setForm({ ...form, meetTime: e.target.value })} />
+                <Input label={t("form.end")} type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Format" value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} placeholder="z.B. BO3" />
-                <Input label="Server-Region" value={form.serverRegion} onChange={(e) => setForm({ ...form, serverRegion: e.target.value })} placeholder="z.B. EU West" />
+                <Input label={t("form.format")} value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} placeholder={t("form.formatPlaceholder")} />
+                <Input label={t("form.serverRegion")} value={form.serverRegion} onChange={(e) => setForm({ ...form, serverRegion: e.target.value })} placeholder={t("form.serverRegionPlaceholder")} />
               </div>
-              <Input label="Kontakt" value={form.contactInfo} onChange={(e) => setForm({ ...form, contactInfo: e.target.value })} placeholder="Discord o.ä." />
-              {/* Map Pool */}
+              <Input label={t("form.contact")} value={form.contactInfo} onChange={(e) => setForm({ ...form, contactInfo: e.target.value })} placeholder={t("form.contactPlaceholder")} />
               {maps.length > 0 && (
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-[var(--foreground)]">Map-Pool</label>
+                  <label className="block text-sm font-medium text-[var(--foreground)]">{t("form.mapPool")}</label>
                   <div className="flex flex-wrap gap-2">
                     {maps.map((map) => (
                       <button
@@ -414,21 +410,20 @@ export default function MatchesPage() {
             </>
           )}
 
-          {/* Score fields (optional for scrims, shown for all types) */}
           {form.type !== "SCRIM" && (
             <div className="grid gap-4 sm:grid-cols-3">
-              <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={[{ value: "", label: "— Keine —" }, ...maps.map(m => ({ value: m, label: m }))]} />
-              <Input label="Unser Score" type="number" value={form.scoreUs} onChange={(e) => setForm({ ...form, scoreUs: e.target.value })} />
-              <Input label="Gegner Score" type="number" value={form.scoreThem} onChange={(e) => setForm({ ...form, scoreThem: e.target.value })} />
+              <Select label={t("form.map")} value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={[{ value: "", label: t("form.noMap") }, ...maps.map(m => ({ value: m, label: m }))]} />
+              <Input label={t("form.ourScore")} type="number" value={form.scoreUs} onChange={(e) => setForm({ ...form, scoreUs: e.target.value })} />
+              <Input label={t("form.opponentScore")} type="number" value={form.scoreThem} onChange={(e) => setForm({ ...form, scoreThem: e.target.value })} />
             </div>
           )}
 
-          <Input label="Wettbewerb" value={form.competition} onChange={(e) => setForm({ ...form, competition: e.target.value })} placeholder="z.B. Faceit League" />
-          <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <Input label={t("form.competition")} value={form.competition} onChange={(e) => setForm({ ...form, competition: e.target.value })} placeholder={t("form.competitionPlaceholder")} />
+          <Textarea label={t("form.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>

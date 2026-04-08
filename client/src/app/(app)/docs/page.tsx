@@ -4,8 +4,10 @@ import { BookOpen, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { docs } from "@/lib/docs";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/provider";
 
 export default function DocsPage() {
+  const t = useT("docs");
   const [activeSection, setActiveSection] = useState(docs[0]?.id || "");
 
   const active = docs.find((d) => d.id === activeSection);
@@ -54,8 +56,8 @@ export default function DocsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Dokumentation</h1>
-        <p className="text-[var(--muted-foreground)]">Anleitung und Hilfe zu allen Funktionen</p>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+        <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -95,7 +97,7 @@ export default function DocsPage() {
           ) : (
             <Card className="py-12 text-center">
               <BookOpen className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-              <p className="text-[var(--muted-foreground)]">Wähle einen Abschnitt aus der Navigation.</p>
+              <p className="text-[var(--muted-foreground)]">{t("selectSection")}</p>
             </Card>
           )}
         </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Users, Trash2, Edit2, GripVertical } from "lucide-react";
 import { api } from "@/lib/api";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -29,6 +30,8 @@ interface Lineup {
 const ROLES = ["IGL", "Entry", "AWP", "Support", "Lurker", "Rifler", "Coach", "Substitute"];
 
 export default function LineupPage() {
+  const t = useT("lineup");
+  const tc = useT("common");
   const { success, error } = useToast();
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -46,14 +49,14 @@ export default function LineupPage() {
         api.get<Player[]>("/api/users"),
       ]);
       if (linRes.status === "fulfilled" && linRes.value.data) setLineups(linRes.value.data);
-      else if (linRes.status === "rejected") error("Fehler beim Laden");
+      else if (linRes.status === "rejected") error(tc("loadError"));
       if (plRes.status === "fulfilled" && plRes.value.data) setPlayers(plRes.value.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -92,28 +95,28 @@ export default function LineupPage() {
       };
       if (editingId) {
         await api.put(`/api/lineups/${editingId}`, body);
-        success("Gespeichert");
+        success(tc("saved"));
       } else {
         await api.post("/api/lineups", body);
-        success("Lineup erstellt");
+        success(t("created"));
       }
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Lineup wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/lineups/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -129,18 +132,18 @@ export default function LineupPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Lineups</h1>
-          <p className="text-[var(--muted-foreground)]">Team-Lineups zusammenstellen</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neues Lineup
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {lineups.length === 0 ? (
         <Card className="py-12 text-center">
           <Users className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Lineups erstellt.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -172,30 +175,30 @@ export default function LineupPage() {
                         {p.player?.displayName?.charAt(0) || "?"}
                       </div>
                     )}
-                    <span className="flex-1 text-sm font-medium text-[var(--foreground)]">{p.player?.displayName || "Unbekannt"}</span>
+                    <span className="flex-1 text-sm font-medium text-[var(--foreground)]">{p.player?.displayName || tc("unknown")}</span>
                     <Badge variant="outline">{p.role}</Badge>
                   </div>
                 ))}
                 {l.players.length === 0 && (
-                  <p className="text-sm text-[var(--muted-foreground)]">Keine Spieler zugewiesen.</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">{t("noPlayers")}</p>
                 )}
               </div>
-              <p className="mt-3 text-xs text-[var(--muted-foreground)]">Erstellt: {formatDate(l.createdAt)}</p>
+              <p className="mt-3 text-xs text-[var(--muted-foreground)]">{tc("created")}: {formatDate(l.createdAt)}</p>
             </Card>
           ))}
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Lineup bearbeiten" : "Neues Lineup"} size="lg">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")} size="lg">
         <div className="space-y-4">
-          <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="z.B. Main Roster" />
-          <Textarea label="Beschreibung" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <Input label={t("form.name")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("form.namePlaceholder")} />
+          <Textarea label={t("form.description")} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-[var(--foreground)]">Spieler</label>
+              <label className="text-sm font-medium text-[var(--foreground)]">{t("players")}</label>
               <Button variant="outline" size="sm" onClick={addSlot}>
-                <Plus className="h-3.5 w-3.5" /> Slot
+                <Plus className="h-3.5 w-3.5" /> {t("slot")}
               </Button>
             </div>
             <div className="space-y-2">
@@ -207,7 +210,7 @@ export default function LineupPage() {
                     onChange={(e) => updateSlot(idx, "playerId", e.target.value)}
                     className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)]"
                   >
-                    <option value="">Spieler wählen...</option>
+                    <option value="">{t("choosePlayer")}</option>
                     {players.map((p) => (
                       <option key={p.id} value={p.id}>{p.displayName}</option>
                     ))}
@@ -227,14 +230,14 @@ export default function LineupPage() {
                 </div>
               ))}
               {lineup.length === 0 && (
-                <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Noch keine Slots. Klicke &quot;+ Slot&quot; um Spieler hinzuzufügen.</p>
+                <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">{t("noSlots")}</p>
               )}
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useT } from "@/i18n/provider";
 
 interface Replay {
   id: string;
@@ -26,6 +27,8 @@ interface Replay {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function ReplaysPage() {
+  const t = useT("replays");
+  const tc = useT("common");
   const { success, error: showError } = useToast();
   const [replays, setReplays] = useState<Replay[]>([]);
   const [maps, setMaps] = useState<string[]>([]);
@@ -45,7 +48,7 @@ export default function ReplaysPage() {
       const res = await api.get<Replay[]>("/api/replays");
       if (res.data) setReplays(res.data);
     } catch {
-      showError("Fehler beim Laden");
+      showError(tc("loadError"));
     } finally {
       setLoading(false);
     }
@@ -64,25 +67,25 @@ export default function ReplaysPage() {
         date: form.date,
         notes: form.notes,
       });
-      success("Replay hochgeladen");
+      success(t("uploaded"));
       setShowUpload(false);
       setFile(null);
       load();
     } catch {
-      showError("Fehler beim Hochladen");
+      showError(t("uploadError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Replay wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/replays/${id}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      showError("Fehler beim Löschen");
+      showError(tc("deleteError"));
     }
   };
 
@@ -105,18 +108,18 @@ export default function ReplaysPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Replays</h1>
-          <p className="text-[var(--muted-foreground)]">Demo-Dateien verwalten und analysieren</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={() => { setForm({ title: "", map: maps[0] || "", opponent: "", date: "", notes: "" }); setFile(null); setShowUpload(true); }}>
-          <Upload className="h-4 w-4" /> Replay hochladen
+          <Upload className="h-4 w-4" /> {t("upload")}
         </Button>
       </div>
 
       {replays.length === 0 ? (
         <Card className="py-12 text-center">
           <Film className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Replays hochgeladen.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -138,7 +141,7 @@ export default function ReplaysPage() {
               <div className="mb-3 space-y-1 text-sm text-[var(--muted-foreground)]">
                 <p>{formatDate(r.date)}</p>
                 {r.fileSize && <p>{formatFileSize(r.fileSize)}</p>}
-                {r.uploadedBy && <p>Von: {r.uploadedBy.displayName}</p>}
+                {r.uploadedBy && <p>{tc("by")}: {r.uploadedBy.displayName}</p>}
               </div>
 
               {r.notes && <p className="mb-3 text-sm text-[var(--muted-foreground)]">{r.notes}</p>}
@@ -149,7 +152,7 @@ export default function ReplaysPage() {
                     href={`${API_URL}${r.fileUrl}`}
                     className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-medium text-white transition-all hover:bg-orange-600"
                   >
-                    <Download className="h-3.5 w-3.5" /> Download
+                    <Download className="h-3.5 w-3.5" /> {tc("download")}
                   </a>
                 )}
                 {r.rounds && r.rounds.length > 0 && (
@@ -157,7 +160,7 @@ export default function ReplaysPage() {
                     onClick={() => setDetailReplay(r)}
                     className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-2 text-xs font-medium text-[var(--muted-foreground)] transition-all hover:text-[var(--foreground)]"
                   >
-                    <Play className="h-3.5 w-3.5" /> Runden
+                    <Play className="h-3.5 w-3.5" /> {t("rounds")}
                   </button>
                 )}
               </div>
@@ -167,17 +170,17 @@ export default function ReplaysPage() {
       )}
 
       {/* Upload Modal */}
-      <Modal open={showUpload} onClose={() => setShowUpload(false)} title="Replay hochladen" size="lg">
+      <Modal open={showUpload} onClose={() => setShowUpload(false)} title={t("uploadTitle")} size="lg">
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Liga Match vs. Team X" />
+          <Input label={t("form.title")} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("form.titlePlaceholder")} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
-            <Input label="Gegner" value={form.opponent} onChange={(e) => setForm({ ...form, opponent: e.target.value })} />
+            <Select label={t("form.map")} value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
+            <Input label={t("form.opponent")} value={form.opponent} onChange={(e) => setForm({ ...form, opponent: e.target.value })} />
           </div>
-          <Input label="Datum" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <Input label={t("form.date")} type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          <Textarea label={t("form.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-[var(--foreground)]">Demo-Datei</label>
+            <label className="block text-sm font-medium text-[var(--foreground)]">{t("demoFile")}</label>
             <div className="rounded-lg border-2 border-dashed border-[var(--border)] p-6 text-center">
               <FileVideo className="mx-auto mb-2 h-8 w-8 text-[var(--muted-foreground)]" />
               <input type="file" accept=".dem,.demo,.zip,.rar" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full text-sm text-[var(--muted-foreground)] file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
@@ -185,20 +188,20 @@ export default function ReplaysPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowUpload(false)}>Abbrechen</Button>
-            <Button onClick={handleUpload} isLoading={submitting} disabled={!file}>Hochladen</Button>
+            <Button variant="ghost" onClick={() => setShowUpload(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleUpload} isLoading={submitting} disabled={!file}>{tc("upload")}</Button>
           </div>
         </div>
       </Modal>
 
       {/* Round Browser */}
-      <Modal open={!!detailReplay} onClose={() => setDetailReplay(null)} title={`Runden: ${detailReplay?.title}`} size="lg">
+      <Modal open={!!detailReplay} onClose={() => setDetailReplay(null)} title={t("roundsTitle", { title: detailReplay?.title ?? "" })} size="lg">
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
           {detailReplay?.rounds?.map((r) => (
             <div key={r.number} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
               <span className="w-8 text-center text-sm font-bold text-[var(--foreground)]">{r.number}</span>
               <Badge variant={r.winner === "us" ? "success" : "destructive"}>
-                {r.winner === "us" ? "Sieg" : "Niederlage"}
+                {r.winner === "us" ? t("win") : t("loss")}
               </Badge>
               {r.highlight && <span className="text-sm text-[var(--muted-foreground)]">{r.highlight}</span>}
             </div>

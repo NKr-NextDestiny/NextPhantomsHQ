@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Settings, Shield, User, Save, Upload, Trash2, Bell } from "lucide-react";
+import { Settings, Shield, User, Save, Upload, Trash2, Bell, Globe } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
+import { useT, useI18n } from "@/i18n/provider";
+import { locales, localeNames, type Locale } from "@/i18n";
 
 interface TeamSettings {
   id: string;
@@ -47,6 +49,10 @@ export default function SettingsPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const { success, error } = useToast();
+  const t = useT("settings");
+  const tc = useT("common");
+  const tl = useT("language");
+  const { locale, setLocale } = useI18n();
   const [tab, setTab] = useState<"personal" | "team" | "notifications" | "members">("personal");
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
@@ -87,7 +93,7 @@ export default function SettingsPage() {
         setPersonalForm({ displayName: user.displayName, email: user.email || "", phone: (user as any).phone || "" });
       }
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
@@ -99,10 +105,10 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await api.put("/api/team", teamForm);
-      success("Gespeichert");
+      success(tc("saved"));
       load();
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSaving(false);
     }
@@ -112,22 +118,22 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await api.put("/api/users/me", { ...personalForm, phone: personalForm.phone || null });
-      success("Gespeichert");
+      success(tc("saved"));
     } catch {
-      error("Fehler beim Speichern");
+      error(tc("saveError"));
     } finally {
       setSaving(false);
     }
   };
 
   const removeMember = async (userId: string) => {
-    if (!confirm("Mitglied wirklich entfernen?")) return;
+    if (!confirm(t("members.confirmRemove"))) return;
     try {
       await api.delete(`/api/team/members/${userId}`);
-      success("Gelöscht");
+      success(tc("deleted"));
       load();
     } catch {
-      error("Fehler beim Löschen");
+      error(tc("deleteError"));
     }
   };
 
@@ -144,24 +150,24 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">Einstellungen</h1>
-        <p className="text-[var(--muted-foreground)]">Team- und persönliche Einstellungen</p>
+        <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+        <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1">
         {[
-          { id: "personal" as const, label: "Persönlich", icon: User },
-          { id: "team" as const, label: "Team", icon: Settings },
-          { id: "notifications" as const, label: "Benachrichtigungen", icon: Bell },
-          { id: "members" as const, label: "Mitglieder", icon: Shield },
-        ].map((t) => (
+          { id: "personal" as const, label: t("tabs.personal"), icon: User },
+          { id: "team" as const, label: t("tabs.team"), icon: Settings },
+          { id: "notifications" as const, label: t("tabs.notifications"), icon: Bell },
+          { id: "members" as const, label: t("tabs.members"), icon: Shield },
+        ].map((tb) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${tab === t.id ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+            key={tb.id}
+            onClick={() => setTab(tb.id)}
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${tab === tb.id ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
           >
-            <t.icon className="h-4 w-4" /> {t.label}
+            <tb.icon className="h-4 w-4" /> {tb.label}
           </button>
         ))}
       </div>
@@ -169,7 +175,7 @@ export default function SettingsPage() {
       {/* Personal Settings */}
       {tab === "personal" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Persönliche Einstellungen</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("personal.title")}</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               {user?.avatarUrl ? (
@@ -184,11 +190,35 @@ export default function SettingsPage() {
                 <p className="text-sm text-[var(--muted-foreground)]">@{user?.username}</p>
               </div>
             </div>
-            <Input label="Anzeigename" value={personalForm.displayName} onChange={(e) => setPersonalForm({ ...personalForm, displayName: e.target.value })} />
-            <Input label="E-Mail" type="email" value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
-            <Input label="Telefon (WhatsApp)" value={personalForm.phone} onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })} placeholder="+491234567890" />
+            <Input label={t("personal.displayName")} value={personalForm.displayName} onChange={(e) => setPersonalForm({ ...personalForm, displayName: e.target.value })} />
+            <Input label={t("personal.email")} type="email" value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
+            <Input label={t("personal.phone")} value={personalForm.phone} onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })} placeholder="+491234567890" />
+
+            {/* Language Switcher */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+                <Globe className="mr-1.5 inline h-4 w-4" />
+                {t("personal.language")}
+              </label>
+              <div className="flex gap-2">
+                {locales.map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLocale(l)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+                      locale === l
+                        ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
+                        : "border-[var(--border)] bg-[var(--secondary)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/50 hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {localeNames[l]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Button onClick={savePersonal} isLoading={saving}>
-              <Save className="h-4 w-4" /> Speichern
+              <Save className="h-4 w-4" /> {tc("save")}
             </Button>
           </div>
         </Card>
@@ -197,7 +227,7 @@ export default function SettingsPage() {
       {/* Team Settings */}
       {tab === "team" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Team-Einstellungen</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("team.title")}</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               {teamSettings?.logoUrl ? (
@@ -208,7 +238,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-[var(--foreground)]">Team-Logo</label>
+                <label className="block text-sm font-medium text-[var(--foreground)]">{t("team.teamLogo")}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -225,13 +255,13 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Teamname" value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} />
-              <Input label="Team-Tag" value={teamForm.tag} onChange={(e) => setTeamForm({ ...teamForm, tag: e.target.value })} placeholder="z.B. NP" />
+              <Input label={t("team.teamName")} value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} />
+              <Input label={t("team.teamTag")} value={teamForm.tag} onChange={(e) => setTeamForm({ ...teamForm, tag: e.target.value })} placeholder={t("team.teamTagPlaceholder")} />
             </div>
-            <Textarea label="Beschreibung" value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
-            <Input label="Discord Webhook URL" value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder="https://discord.com/api/webhooks/..." />
+            <Textarea label={t("team.description")} value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
+            <Input label={t("team.webhookUrl")} value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder={t("team.webhookPlaceholder")} />
             <Button onClick={saveTeam} isLoading={saving}>
-              <Save className="h-4 w-4" /> Speichern
+              <Save className="h-4 w-4" /> {tc("save")}
             </Button>
           </div>
         </Card>
@@ -240,16 +270,15 @@ export default function SettingsPage() {
       {/* Notification Channel */}
       {tab === "notifications" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Benachrichtigungs-Kanal</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("notifications.title")}</h2>
           <p className="mb-4 text-sm text-[var(--muted-foreground)]">
-            Wähle wie Teammitglieder über neue Events, Änderungen und Erinnerungen benachrichtigt werden.
-            Discord-Webhooks funktionieren unabhängig davon immer, wenn konfiguriert.
+            {t("notifications.description")}
           </p>
           <div className="space-y-3">
             {([
-              { value: "NONE", label: "Aus", desc: "Keine externen Benachrichtigungen", available: true },
-              { value: "EMAIL", label: "E-Mail (SMTP)", desc: "Benachrichtigungen per E-Mail. Mitglieder brauchen eine E-Mail-Adresse.", available: notifyConfig.email },
-              { value: "WHATSAPP", label: "WhatsApp (WAHA)", desc: "Benachrichtigungen per WhatsApp. Mitglieder brauchen eine Telefonnummer. Erfordert eine laufende WAHA-Instanz.", available: notifyConfig.whatsapp },
+              { value: "NONE", label: t("notifications.off"), desc: t("notifications.offDesc"), available: true },
+              { value: "EMAIL", label: t("notifications.email"), desc: t("notifications.emailDesc"), available: notifyConfig.email },
+              { value: "WHATSAPP", label: t("notifications.whatsapp"), desc: t("notifications.whatsappDesc"), available: notifyConfig.whatsapp },
             ] as const).map((opt) => (
               <button
                 key={opt.value}
@@ -269,7 +298,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-[var(--muted-foreground)]">{opt.desc}</p>
                   </div>
                   {!opt.available && (
-                    <Badge variant="outline">Nicht konfiguriert</Badge>
+                    <Badge variant="outline">{tc("notConfigured")}</Badge>
                   )}
                   {notificationChannel === opt.value && opt.available && (
                     <div className="h-3 w-3 rounded-full bg-[var(--primary)]" />
@@ -283,11 +312,11 @@ export default function SettingsPage() {
               setSaving(true);
               try {
                 await api.put("/api/team", { notificationChannel });
-                success("Gespeichert");
-              } catch { error("Fehler beim Speichern"); }
+                success(tc("saved"));
+              } catch { error(tc("saveError")); }
               finally { setSaving(false); }
             }} isLoading={saving}>
-              <Save className="h-4 w-4" /> Speichern
+              <Save className="h-4 w-4" /> {tc("save")}
             </Button>
           </div>
         </Card>
@@ -296,9 +325,9 @@ export default function SettingsPage() {
       {/* Members Management */}
       {tab === "members" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Mitglieder ({members.length})</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("members.title")} ({members.length})</h2>
           {members.length === 0 ? (
-            <p className="text-[var(--muted-foreground)]">Noch keine Mitglieder. Sobald sich jemand über Discord anmeldet, erscheint er hier.</p>
+            <p className="text-[var(--muted-foreground)]">{t("members.empty")}</p>
           ) : (
             <div className="space-y-2">
               {members.map((m) => (

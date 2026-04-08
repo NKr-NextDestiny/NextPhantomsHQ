@@ -24,33 +24,36 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
+import { useT } from "@/i18n/provider";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/training", label: "Training", icon: Dumbbell },
-
-  { href: "/matches", label: "Matches", icon: Trophy },
-  { href: "/strats", label: "Strategien", icon: Map },
-  { href: "/lineup", label: "Lineups", icon: Users },
-  { href: "/scouting", label: "Scouting", icon: Eye },
-  { href: "/polls", label: "Umfragen", icon: BarChart3 },
-  { href: "/announcements", label: "Ankündigungen", icon: Megaphone },
-  { href: "/wiki", label: "Wiki", icon: BookOpen },
-  { href: "/notes", label: "Notizen", icon: StickyNote },
-  { href: "/reminders", label: "Erinnerungen", icon: Bell },
-  { href: "/availability", label: "Verfügbarkeit", icon: Calendar },
-  { href: "/docs", label: "Dokumentation", icon: HelpCircle },
-  { href: "/changelog", label: "Changelog", icon: History },
+const navItemDefs = [
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { href: "/training", key: "training", icon: Dumbbell },
+  { href: "/matches", key: "matches", icon: Trophy },
+  { href: "/strats", key: "strats", icon: Map },
+  { href: "/lineup", key: "lineup", icon: Users },
+  { href: "/scouting", key: "scouting", icon: Eye },
+  { href: "/polls", key: "polls", icon: BarChart3 },
+  { href: "/announcements", key: "announcements", icon: Megaphone },
+  { href: "/wiki", key: "wiki", icon: BookOpen },
+  { href: "/notes", key: "notes", icon: StickyNote },
+  { href: "/reminders", key: "reminders", icon: Bell },
+  { href: "/availability", key: "availability", icon: Calendar },
+  { href: "/docs", key: "docs", icon: HelpCircle },
+  { href: "/changelog", key: "changelog", icon: History },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
+  const t = useT("nav");
+
+  const navItems = navItemDefs.map((item) => ({ ...item, label: t(item.key) }));
 
   const items = [
     ...navItems,
-    ...(user?.isAdmin ? [{ href: "/settings", label: "Einstellungen", icon: Settings }] : []),
+    ...(user?.isAdmin ? [{ href: "/settings", label: t("settings"), key: "settings", icon: Settings }] : []),
   ];
 
   const navContent = (

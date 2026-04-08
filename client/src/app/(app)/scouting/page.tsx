@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Eye, Trash2, Edit2, AlertTriangle, Shield, Skull, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { api } from "@/lib/api";
+import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -47,13 +48,15 @@ interface ScoutingEntry {
 }
 
 const THREAT_LEVELS = [
-  { value: "LOW", label: "Niedrig", color: "success", icon: Shield },
-  { value: "MEDIUM", label: "Mittel", color: "warning", icon: AlertTriangle },
-  { value: "HIGH", label: "Hoch", color: "destructive", icon: AlertTriangle },
-  { value: "CRITICAL", label: "Kritisch", color: "destructive", icon: Skull },
+  { value: "LOW", color: "success", icon: Shield },
+  { value: "MEDIUM", color: "warning", icon: AlertTriangle },
+  { value: "HIGH", color: "destructive", icon: AlertTriangle },
+  { value: "CRITICAL", color: "destructive", icon: Skull },
 ] as const;
 
 export default function ScoutingPage() {
+  const t = useT("scouting");
+  const tc = useT("common");
   const { success, error } = useToast();
   const [entries, setEntries] = useState<ScoutingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,11 +81,11 @@ export default function ScoutingPage() {
       const res = await api.get<ScoutingEntry[]>("/api/scouting/opponents");
       if (res.data) setEntries(res.data);
     } catch {
-      error("Fehler beim Laden");
+      error(tc("loadError"));
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, tc]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -100,11 +103,11 @@ export default function ScoutingPage() {
       const res = await api.get<ScoutingEntryDetail>(`/api/scouting/opponents/${id}`);
       if (res.data) setExpandedDetail(res.data);
     } catch {
-      error("Fehler beim Laden der Details.");
+      error(t("detailLoadError"));
     } finally {
       setDetailLoading(false);
     }
-  }, [error]);
+  }, [error, t]);
 
   const toggleExpand = (id: string) => {
     if (expandedId === id) {
@@ -144,32 +147,32 @@ export default function ScoutingPage() {
     try {
       if (editingId) {
         await api.put(`/api/scouting/opponents/${editingId}`, form);
-        success("Eintrag gespeichert.");
+        success(t("entrySaved"));
       } else {
         await api.post("/api/scouting/opponents", form);
-        success("Eintrag erstellt.");
+        success(t("entryCreated"));
       }
       setShowModal(false);
       load();
     } catch {
-      error("Fehler beim Speichern.");
+      error(t("saveError"));
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Scouting-Eintrag wirklich löschen?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     try {
       await api.delete(`/api/scouting/opponents/${id}`);
-      success("Eintrag gelöscht.");
+      success(t("entryDeleted"));
       if (expandedId === id) {
         setExpandedId(null);
         setExpandedDetail(null);
       }
       load();
     } catch {
-      error("Fehler beim Löschen.");
+      error(tc("deleteError"));
     }
   };
 
@@ -182,13 +185,13 @@ export default function ScoutingPage() {
         map: noteForm.map || undefined,
         category: noteForm.category || undefined,
       });
-      success("Notiz hinzugefügt.");
+      success(t("noteAdded"));
       setNoteForm({ content: "", map: "", category: "" });
       setShowNoteForm(false);
       loadDetail(expandedId);
       load();
     } catch {
-      error("Fehler beim Hinzufügen der Notiz.");
+      error(t("noteAddError"));
     } finally {
       setNoteSubmitting(false);
     }
@@ -196,14 +199,14 @@ export default function ScoutingPage() {
 
   const handleDeleteNote = async (noteId: string) => {
     if (!expandedId) return;
-    if (!confirm("Notiz wirklich löschen?")) return;
+    if (!confirm(t("confirmDeleteNote"))) return;
     try {
       await api.delete(`/api/scouting/notes/${noteId}`);
-      success("Notiz gelöscht.");
+      success(t("noteDeleted"));
       loadDetail(expandedId);
       load();
     } catch {
-      error("Fehler beim Löschen der Notiz.");
+      error(t("noteDeleteError"));
     }
   };
 
@@ -221,18 +224,18 @@ export default function ScoutingPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Scouting</h1>
-          <p className="text-[var(--muted-foreground)]">Gegner analysieren und Notizen verwalten</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
+          <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Neuer Eintrag
+          <Plus className="h-4 w-4" /> {t("new")}
         </Button>
       </div>
 
       {entries.length === 0 ? (
         <Card className="py-12 text-center">
           <Eye className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Scouting-Einträge.</p>
+          <p className="text-[var(--muted-foreground)]">{t("empty")}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -250,11 +253,11 @@ export default function ScoutingPage() {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-[var(--foreground)]">{e.name}</h3>
                       {e.teamTag && <Badge variant="outline">{e.teamTag}</Badge>}
-                      <Badge variant={threat.color as "success" | "warning" | "destructive" | "outline"}>{threat.label}</Badge>
+                      <Badge variant={threat.color as "success" | "warning" | "destructive" | "outline"}>{t(`threatLevels.${threat.value}`)}</Badge>
                     </div>
                     <p className="text-xs text-[var(--muted-foreground)]">
-                      Aktualisiert: {formatDate(e.updatedAt)}
-                      {e._count && ` · ${e._count.scoutingNotes} Notizen`}
+                      {tc("updated")}: {formatDate(e.updatedAt)}
+                      {e._count && ` · ${e._count.scoutingNotes} ${t("notes")}`}
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -277,26 +280,26 @@ export default function ScoutingPage() {
                       <div className="space-y-3">
                         {e.playstyle && (
                           <div>
-                            <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">Spielstil</h4>
+                            <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">{t("playstyle")}</h4>
                             <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.playstyle}</p>
                           </div>
                         )}
                         {e.notes && (
                           <div>
-                            <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">Notizen</h4>
+                            <h4 className="mb-1 text-sm font-medium text-[var(--foreground)]">{t("notes")}</h4>
                             <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.notes}</p>
                           </div>
                         )}
                         <div className="grid gap-4 sm:grid-cols-2">
                           {e.strengths && (
                             <div>
-                              <h4 className="mb-1 text-sm font-medium text-green-400">Stärken</h4>
+                              <h4 className="mb-1 text-sm font-medium text-green-400">{t("strengths")}</h4>
                               <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.strengths}</p>
                             </div>
                           )}
                           {e.weaknesses && (
                             <div>
-                              <h4 className="mb-1 text-sm font-medium text-red-400">Schwächen</h4>
+                              <h4 className="mb-1 text-sm font-medium text-red-400">{t("weaknesses")}</h4>
                               <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.weaknesses}</p>
                             </div>
                           )}
@@ -308,7 +311,7 @@ export default function ScoutingPage() {
                     <div>
                       <div className="mb-3 flex items-center justify-between">
                         <h4 className="text-sm font-medium text-[var(--foreground)] flex items-center gap-1.5">
-                          <FileText className="h-4 w-4" /> Scout-Notizen
+                          <FileText className="h-4 w-4" /> {t("notesLabel")}
                         </h4>
                         <Button
                           variant="ghost"
@@ -318,7 +321,7 @@ export default function ScoutingPage() {
                             setNoteForm({ content: "", map: "", category: "" });
                           }}
                         >
-                          <Plus className="h-3.5 w-3.5" /> Notiz hinzufügen
+                          <Plus className="h-3.5 w-3.5" /> {t("addNote")}
                         </Button>
                       </div>
 
@@ -326,26 +329,26 @@ export default function ScoutingPage() {
                       {showNoteForm && (
                         <div className="mb-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] p-4 space-y-3">
                           <Textarea
-                            label="Inhalt *"
+                            label={t("form.noteContent")}
                             value={noteForm.content}
                             onChange={(ev) => setNoteForm({ ...noteForm, content: ev.target.value })}
                             rows={3}
                           />
                           <div className="grid gap-3 sm:grid-cols-2">
                             <Select
-                              label="Karte (optional)"
+                              label={t("form.noteMap")}
                               value={noteForm.map}
                               onChange={(ev) => setNoteForm({ ...noteForm, map: ev.target.value })}
                               options={[
-                                { value: "", label: "Keine Karte" },
+                                { value: "", label: t("form.noMap") },
                                 ...maps.map((m) => ({ value: m, label: m })),
                               ]}
                             />
                             <Input
-                              label="Kategorie (optional)"
+                              label={t("form.noteCategory")}
                               value={noteForm.category}
                               onChange={(ev) => setNoteForm({ ...noteForm, category: ev.target.value })}
-                              placeholder="z.B. Angriff, Verteidigung"
+                              placeholder={t("form.noteCategoryPlaceholder")}
                             />
                           </div>
                           <div className="flex justify-end gap-2">
@@ -354,7 +357,7 @@ export default function ScoutingPage() {
                               size="sm"
                               onClick={() => { setShowNoteForm(false); setNoteForm({ content: "", map: "", category: "" }); }}
                             >
-                              Abbrechen
+                              {tc("cancel")}
                             </Button>
                             <Button
                               size="sm"
@@ -362,7 +365,7 @@ export default function ScoutingPage() {
                               isLoading={noteSubmitting}
                               disabled={!noteForm.content.trim()}
                             >
-                              Speichern
+                              {tc("save")}
                             </Button>
                           </div>
                         </div>
@@ -374,7 +377,7 @@ export default function ScoutingPage() {
                           <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
                         </div>
                       ) : expandedDetail?.scoutingNotes?.length === 0 ? (
-                        <p className="text-sm text-[var(--muted-foreground)] py-2">Noch keine Scout-Notizen.</p>
+                        <p className="text-sm text-[var(--muted-foreground)] py-2">{t("noNotes")}</p>
                       ) : (
                         <div className="space-y-2">
                           {expandedDetail?.scoutingNotes?.map((note) => (
@@ -408,28 +411,28 @@ export default function ScoutingPage() {
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Scouting bearbeiten" : "Neuer Scouting-Eintrag"} size="lg">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")} size="lg">
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Gegner" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <Input label="Team-Tag" value={form.teamTag} onChange={(e) => setForm({ ...form, teamTag: e.target.value })} />
+            <Input label={t("form.opponent")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input label={t("form.teamTag")} value={form.teamTag} onChange={(e) => setForm({ ...form, teamTag: e.target.value })} />
           </div>
           <Select
-            label="Bedrohungsstufe"
+            label={t("form.threatLevel")}
             value={form.threatLevel}
             onChange={(e) => setForm({ ...form, threatLevel: e.target.value as ScoutingEntry["threatLevel"] })}
-            options={THREAT_LEVELS.map((t) => ({ value: t.value, label: t.label }))}
+            options={THREAT_LEVELS.map((tl) => ({ value: tl.value, label: t(`threatLevels.${tl.value}`) }))}
           />
-          <Textarea label="Spielstil" value={form.playstyle} onChange={(e) => setForm({ ...form, playstyle: e.target.value })} />
-          <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <Textarea label={t("form.playstyle")} value={form.playstyle} onChange={(e) => setForm({ ...form, playstyle: e.target.value })} />
+          <Textarea label={t("form.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Textarea label="Stärken" value={form.strengths} onChange={(e) => setForm({ ...form, strengths: e.target.value })} />
-            <Textarea label="Schwächen" value={form.weaknesses} onChange={(e) => setForm({ ...form, weaknesses: e.target.value })} />
+            <Textarea label={t("form.strengths")} value={form.strengths} onChange={(e) => setForm({ ...form, strengths: e.target.value })} />
+            <Textarea label={t("form.weaknesses")} value={form.weaknesses} onChange={(e) => setForm({ ...form, weaknesses: e.target.value })} />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button variant="ghost" onClick={() => setShowModal(false)}>{tc("cancel")}</Button>
+            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
           </div>
         </div>
       </Modal>
