@@ -87,8 +87,7 @@ if [ "$SKIP_BACKUP" = false ]; then
   fi
 
   # Keep only last 10 backups
-  ls -t "$BACKUP_DIR"/db_backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --
-  ok "Old backups cleaned (keeping last 10)"
+  ls -t "$BACKUP_DIR"/db_backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -- || true
 fi
 
 # ─── Pull latest code ───
