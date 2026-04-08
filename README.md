@@ -1,7 +1,7 @@
 # Next Phantoms HQ
 
-Team-Management-Plattform fuer Next Phantoms (Next Destiny eSports).
-Training, Scrims, Matches, Strategien, Lineups, Scouting, Replays, MOSS, Polls, Wiki, Notizen, Erinnerungen, Verfuegbarkeit — alles mit Discord-Login und AES-256-GCM Verschluesselung.
+Team-Management-Plattform für Next Phantoms (Next Destiny eSports).
+Training, Scrims, Matches, Strategien, Lineups, Scouting, Replays, MOSS, Polls, Wiki, Notizen, Erinnerungen, Verfügbarkeit — alles mit Discord-Login und AES-256-GCM Verschlüsselung.
 
 ---
 
@@ -36,11 +36,11 @@ echo \
 apt update
 apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Docker ohne sudo (optional, fuer deinen User)
+# Docker ohne sudo (optional, für deinen User)
 usermod -aG docker $USER
 # Danach neu einloggen oder: newgrp docker
 
-# Pruefen
+# Prüfen
 docker --version
 docker compose version
 ```
@@ -50,7 +50,7 @@ docker compose version
 ```bash
 # Zielverzeichnis (z.B. /opt oder /home/deinuser)
 cd /opt
-git clone https://github.com/Nexogenic-eSports/NextPhantomsHQ.git
+git clone https://github.com/NKr-NextDestiny/NextPhantomsHQ.git
 cd NextPhantomsHQ
 ```
 
@@ -61,16 +61,16 @@ cp .env.example .env
 nano .env
 ```
 
-Folgende Werte MUESSEN angepasst werden:
+Folgende Werte MÜSSEN angepasst werden:
 
 ```ini
-# Sichere Passwoerter setzen!
+# Sichere Passwörter setzen!
 DB_PASSWORD=ein-langes-sicheres-passwort-hier
 DATABASE_URL=postgresql://phantoms:ein-langes-sicheres-passwort-hier@postgres:5432/next_phantoms_hq
 
 # JWT Secret generieren (mindestens 64 Zeichen)
 # Generieren: openssl rand -base64 48
-JWT_SECRET=hier-langen-zufaelligen-string-eintragen
+JWT_SECRET=hier-langen-zufälligen-string-eintragen
 
 # Discord OAuth (https://discord.com/developers/applications)
 DISCORD_CLIENT_ID=deine-client-id
@@ -80,7 +80,7 @@ DISCORD_CALLBACK_URL=http://DEINE-SERVER-IP/api/auth/discord/callback
 # Discord Server ID (Rechtsklick auf Server -> "Server-ID kopieren")
 REQUIRED_GUILD_ID=deine-guild-id
 
-# Optional: Rollen-IDs fuer Login-Berechtigung
+# Optional: Rollen-IDs für Login-Berechtigung
 ALLOWED_ROLE_IDS=
 # Optional: Rollen-IDs die Admin-Zugang bekommen
 ADMIN_ROLE_IDS=
@@ -96,14 +96,14 @@ NEXT_PUBLIC_API_URL=http://DEINE-SERVER-IP
 # Generieren: openssl rand -hex 32
 FILE_ENCRYPTION_KEY=hier-64-zeichen-hex-string
 
-# SMTP (optional, fuer E-Mail-Benachrichtigungen)
+# SMTP (optional, für E-Mail-Benachrichtigungen)
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=noreply@deinedomain.de
 
-# Discord Webhook (optional, fuer Benachrichtigungen im Channel)
+# Discord Webhook (optional, für Benachrichtigungen im Channel)
 DISCORD_WEBHOOK_URL=
 ```
 
@@ -138,18 +138,18 @@ Das startet:
 - **client** — Next.js Frontend (Port 3000 intern)
 - **nginx** — Reverse Proxy (Port 80 extern)
 
-Der Server fuehrt beim Start automatisch `prisma migrate deploy` aus.
+Der Server führt beim Start automatisch `prisma migrate deploy` aus.
 
-Erster Build dauert einige Minuten. Fortschritt pruefen:
+Erster Build dauert einige Minuten. Fortschritt prüfen:
 
 ```bash
 docker compose logs -f
 ```
 
-### 8. Pruefen ob alles laeuft
+### 8. Prüfen ob alles läuft
 
 ```bash
-# Alle Container muessen "Up" sein
+# Alle Container müssen "Up" sein
 docker compose ps
 
 # Health Check
@@ -165,10 +165,10 @@ App ist jetzt erreichbar unter `http://DEINE-SERVER-IP`.
 
 ### 9. Erster Login
 
-1. Oeffne `http://DEINE-SERVER-IP` im Browser
+1. Öffne `http://DEINE-SERVER-IP` im Browser
 2. Klicke "Mit Discord anmelden"
-3. Der erste User wird automatisch Admin
-4. Weitere User koennen sich einloggen wenn sie im konfigurierten Discord-Server sind
+3. Admin-Zugriff wird über `ADMIN_USER_IDS` und `ADMIN_ROLE_IDS` in der `.env` gesteuert
+4. Weitere User können sich einloggen wenn sie im konfigurierten Discord-Server sind
 
 ---
 
@@ -187,7 +187,7 @@ Mehrere IDs mit Komma trennen: `ADMIN_USER_IDS=123456789,987654321`
 
 ---
 
-## Nuetzliche Befehle
+## Nützliche Befehle
 
 ```bash
 # Logs anzeigen
@@ -209,13 +209,13 @@ docker compose up -d --build
 # Datenbank-Shell
 docker compose exec postgres psql -U phantoms -d next_phantoms_hq
 
-# Prisma Studio (DB GUI, nur fuer Debugging)
+# Prisma Studio (DB GUI, nur für Debugging)
 docker compose exec server npx prisma studio
 
 # Container Status
 docker compose ps
 
-# Speicherplatz pruefen
+# Speicherplatz prüfen
 docker system df
 ```
 
@@ -228,7 +228,7 @@ docker compose down
 docker compose up -d --build
 ```
 
-Der Server fuehrt Datenbankmigrationen automatisch beim Start aus.
+Der Server führt Datenbankmigrationen automatisch beim Start aus.
 
 ## Backup
 
@@ -260,18 +260,18 @@ ufw enable
 ```bash
 docker compose logs server
 # Meistens: DATABASE_URL falsch oder Postgres noch nicht bereit
-# Loesung: docker compose restart server
+# Lösung: docker compose restart server
 ```
 
 **Discord Login leitet nicht weiter:**
-- Pruefen: DISCORD_CALLBACK_URL in .env UND in Discord Developer Portal muessen identisch sein
+- Prüfen: DISCORD_CALLBACK_URL in .env UND in Discord Developer Portal müssen identisch sein
 - Format: `http://DEINE-SERVER-IP/api/auth/discord/callback`
 
 **"Not in server" Fehler beim Login:**
-- REQUIRED_GUILD_ID pruefen — ist die richtige Server-ID?
+- REQUIRED_GUILD_ID prüfen — ist die richtige Server-ID?
 - Ist der User wirklich Mitglied des Discord-Servers?
 
-**Datei-Upload schlaegt fehl:**
+**Datei-Upload schlägt fehl:**
 - `uploads/` Verzeichnis existiert? Rechte korrekt?
 - `docker compose exec server ls -la /app/server/uploads/`
 
@@ -279,5 +279,5 @@ docker compose logs server
 ```bash
 # Wer nutzt Port 80?
 ss -tlnp | grep :80
-# Anderen Dienst stoppen oder in docker-compose.yml Port aendern
+# Anderen Dienst stoppen oder in docker-compose.yml Port ändern
 ```

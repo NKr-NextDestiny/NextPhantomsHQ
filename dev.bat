@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 cd /d "%~dp0"
 title Next Phantoms HQ - Dev Setup
 color 0A
@@ -110,9 +111,9 @@ if %DOCKER_AVAILABLE%==1 (
     :: Wait for PostgreSQL to be ready
     echo Warte auf PostgreSQL...
     timeout /t 5 /nobreak >nul
-    echo [OK] PostgreSQL laeuft
+    echo [OK] PostgreSQL läuft
 ) else (
-    echo [WARN] Docker nicht verfuegbar - stelle sicher dass PostgreSQL auf Port 5432 laeuft!
+    echo [WARN] Docker nicht verfügbar - stelle sicher dass PostgreSQL auf Port 5432 läuft!
     echo   DB_USER=phantoms  DB_PASSWORD=changeme  DB_NAME=next_phantoms_hq
     pause
 )
@@ -123,8 +124,8 @@ echo   5. Prisma Setup
 echo ============================================
 echo.
 
-:: Prisma CLI liest DATABASE_URL aus server/.env (mit @localhost fuer lokales Dev).
-:: In Docker wird sie durch die Umgebungsvariable aus docker-compose.yml ueberschrieben.
+:: Prisma CLI liest DATABASE_URL aus server/.env (mit @localhost für lokales Dev).
+:: In Docker wird sie durch die Umgebungsvariable aus docker-compose.yml überschrieben.
 :: Falls server/.env nicht existiert, aus Root-.env ableiten:
 if not exist server\.env (
     for /f "tokens=1,* delims==" %%a in ('findstr /b "DATABASE_URL=" .env') do set "DB_URL=%%b"
@@ -145,7 +146,7 @@ echo [OK] Prisma Client generiert
 
 call pnpm prisma migrate dev --name init
 if %ERRORLEVEL% neq 0 (
-    echo [WARN] Migration fehlgeschlagen - pruefe DATABASE_URL in server\.env
+    echo [WARN] Migration fehlgeschlagen - prüfe DATABASE_URL in server\.env
     cd ..
     pause
     exit /b 1
@@ -187,6 +188,6 @@ echo Starte Next Phantoms HQ...
 echo   Client: http://localhost:3000
 echo   Server: http://localhost:4000
 echo.
-:: Browser nach kurzer Verzoegerung oeffnen
+:: Browser nach kurzer Verzögerung öffnen
 start "" cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:3000"
 call pnpm dev
