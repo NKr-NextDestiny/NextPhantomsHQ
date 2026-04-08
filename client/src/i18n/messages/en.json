@@ -37,11 +37,13 @@
     "team": "Team",
     "notConfigured": "Not configured",
     "off": "Off",
-    "browserNotifications.title": "Enable browser notifications?",
-    "browserNotifications.description": "Get push notifications when new events, matches, or announcements are created — even when the tab is in the background.",
-    "browserNotifications.enable": "Enable",
-    "browserNotifications.dismiss": "No thanks",
-    "unsavedWarning": "You have unsaved changes. Discard?"
+    "unsavedWarning": "You have unsaved changes. Discard?",
+    "browserNotifications": {
+      "title": "Enable browser notifications?",
+      "description": "Get push notifications when new events, matches, or announcements are created — even when the tab is in the background.",
+      "enable": "Enable",
+      "dismiss": "No thanks"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -544,19 +546,19 @@
       "email": "Email (SMTP)",
       "emailDesc": "Notifications via email. Members need an email address.",
       "whatsapp": "WhatsApp (WAHA)",
-      "whatsappDesc": "Notifications via WhatsApp. Members need a phone number. Requires a running WAHA instance."
+      "whatsappDesc": "Notifications via WhatsApp. Members need a phone number. Requires a running WAHA instance.",
+      "browser": "Browser Notifications",
+      "browserDesc": "Show desktop notifications when new events are created or updated. Only works while the browser is open.",
+      "browserDenied": "Browser notifications have been blocked. Change the permission in your browser settings.",
+      "browserEnabled": "Browser notifications active",
+      "browserDisabled": "Browser notifications off",
+      "browserAllow": "Allow notifications"
     },
     "members": {
       "title": "Members",
       "empty": "No members yet. Once someone logs in via Discord, they'll appear here.",
       "confirmRemove": "Really remove this member?"
-    },
-    "notifications.browser": "Browser Notifications",
-    "notifications.browserDesc": "Show desktop notifications when new events are created or updated. Only works while the browser is open.",
-    "notifications.browserDenied": "Browser notifications have been blocked. Change the permission in your browser settings.",
-    "notifications.browserEnabled": "Browser notifications active",
-    "notifications.browserDisabled": "Browser notifications off",
-    "notifications.browserAllow": "Allow notifications"
+    }
   },
   "auth": {
     "loginWith": "Sign in with Discord",

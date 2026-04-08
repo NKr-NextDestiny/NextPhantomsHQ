@@ -37,11 +37,13 @@
     "team": "Mannschaft",
     "notConfigured": "Nich angetüddelt",
     "off": "Flaute",
-    "browserNotifications.title": "Flaschenpost aktivieren, Matrose? 🍾",
-    "browserNotifications.description": "Kriegst ne Meldung wenn neue Schlachten, Kaperfahrten oder Befehle eintrudeln — auch wenn du grad das Deck schruppst!",
-    "browserNotifications.enable": "Her damit!",
-    "browserNotifications.dismiss": "Nee, lass stecken",
-    "unsavedWarning": "Du hast unverbuddelte Änderungen! Einfach über Bord werfen? 🌊"
+    "unsavedWarning": "Du hast unverbuddelte Änderungen! Einfach über Bord werfen? 🌊",
+    "browserNotifications": {
+      "title": "Flaschenpost aktivieren, Matrose? 🍾",
+      "description": "Kriegst ne Meldung wenn neue Schlachten, Kaperfahrten oder Befehle eintrudeln — auch wenn du grad das Deck schruppst!",
+      "enable": "Her damit!",
+      "dismiss": "Nee, lass stecken"
+    }
   },
   "nav": {
     "dashboard": "Kommandobrücke",

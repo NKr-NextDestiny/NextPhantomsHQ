@@ -37,11 +37,13 @@
     "team": "Team",
     "notConfigured": "Nicht konfiguriert",
     "off": "Aus",
-    "browserNotifications.title": "Browser-Benachrichtigungen aktivieren?",
-    "browserNotifications.description": "Erhalte Push-Benachrichtigungen wenn neue Events, Matches oder Ankündigungen erstellt werden — auch wenn der Tab im Hintergrund ist.",
-    "browserNotifications.enable": "Aktivieren",
-    "browserNotifications.dismiss": "Nein danke",
-    "unsavedWarning": "Du hast ungespeicherte Änderungen. Verwerfen?"
+    "unsavedWarning": "Du hast ungespeicherte Änderungen. Verwerfen?",
+    "browserNotifications": {
+      "title": "Browser-Benachrichtigungen aktivieren?",
+      "description": "Erhalte Push-Benachrichtigungen wenn neue Events, Matches oder Ankündigungen erstellt werden — auch wenn der Tab im Hintergrund ist.",
+      "enable": "Aktivieren",
+      "dismiss": "Nein danke"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -544,19 +546,19 @@
       "email": "E-Mail (SMTP)",
       "emailDesc": "Benachrichtigungen per E-Mail. Mitglieder brauchen eine E-Mail-Adresse.",
       "whatsapp": "WhatsApp (WAHA)",
-      "whatsappDesc": "Benachrichtigungen per WhatsApp. Mitglieder brauchen eine Telefonnummer. Erfordert eine laufende WAHA-Instanz."
+      "whatsappDesc": "Benachrichtigungen per WhatsApp. Mitglieder brauchen eine Telefonnummer. Erfordert eine laufende WAHA-Instanz.",
+      "browser": "Browser-Benachrichtigungen",
+      "browserDesc": "Zeige Desktop-Benachrichtigungen wenn neue Events erstellt oder aktualisiert werden. Funktioniert nur wenn der Browser geöffnet ist.",
+      "browserDenied": "Browser-Benachrichtigungen wurden blockiert. Ändere die Berechtigung in deinen Browser-Einstellungen.",
+      "browserEnabled": "Browser-Benachrichtigungen aktiv",
+      "browserDisabled": "Browser-Benachrichtigungen aus",
+      "browserAllow": "Benachrichtigungen erlauben"
     },
     "members": {
       "title": "Mitglieder",
       "empty": "Noch keine Mitglieder. Sobald sich jemand über Discord anmeldet, erscheint er hier.",
       "confirmRemove": "Mitglied wirklich entfernen?"
-    },
-    "notifications.browser": "Browser-Benachrichtigungen",
-    "notifications.browserDesc": "Zeige Desktop-Benachrichtigungen wenn neue Events erstellt oder aktualisiert werden. Funktioniert nur wenn der Browser geöffnet ist.",
-    "notifications.browserDenied": "Browser-Benachrichtigungen wurden blockiert. Ändere die Berechtigung in deinen Browser-Einstellungen.",
-    "notifications.browserEnabled": "Browser-Benachrichtigungen aktiv",
-    "notifications.browserDisabled": "Browser-Benachrichtigungen aus",
-    "notifications.browserAllow": "Benachrichtigungen erlauben"
+    }
   },
   "auth": {
     "loginWith": "Mit Discord anmelden",
