@@ -97,10 +97,10 @@ export default function AvailabilityPage() {
           <p className="text-[var(--muted-foreground)]">Wann bist du verfügbar?</p>
         </div>
         <div className="flex gap-2">
-          <Button variant={tab === "my" ? "default" : "outline"} onClick={() => setTab("my")}>
+          <Button variant={tab === "my" ? "primary" : "outline"} onClick={() => setTab("my")}>
             <Calendar className="h-4 w-4" /> Meine
           </Button>
-          <Button variant={tab === "team" ? "default" : "outline"} onClick={() => setTab("team")}>
+          <Button variant={tab === "team" ? "primary" : "outline"} onClick={() => setTab("team")}>
             <Users className="h-4 w-4" /> Team
           </Button>
         </div>
