@@ -59,11 +59,7 @@ LOCAL_SHORT="${LOCAL_SHA:0:7}"
 REMOTE_SHORT="${REMOTE_SHA:0:7}"
 
 if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
-  ok "Already up to date ($LOCAL_SHORT)"
-  if [ "$FORCE" = false ]; then
-    exit 0
-  fi
-  warn "--force flag set, rebuilding anyway"
+  ok "Already up to date ($LOCAL_SHORT) — rebuilding anyway"
 fi
 
 COMMITS_BEHIND=$(git rev-list HEAD.."origin/$BRANCH" --count)
