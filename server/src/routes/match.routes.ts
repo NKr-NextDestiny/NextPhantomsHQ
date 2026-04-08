@@ -76,7 +76,7 @@ matchRouter.get("/", authenticate, teamContext, requireFeature("matches"), async
 matchRouter.get("/:id", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
   try {
     const match = await prisma.match.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         playerStats: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
@@ -149,13 +149,13 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
 // Update match
 matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.match.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.match.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
     const { playerStats, ...data } = req.body;
 
     const match = await prisma.match.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data,
     });
 
@@ -206,13 +206,13 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
 // Delete match
 matchRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.match.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.match.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
-    await prisma.match.delete({ where: { id: req.params.id } });
+    await prisma.match.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "match", req.params.id, { opponent: existing.opponent }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("match:deleted", { id: req.params.id }); } catch {}
+    await logAudit(req.user!.id, "DELETE", "match", String(req.params.id), { opponent: existing.opponent }, req.teamId);
+    try { getIO().to(`team:${req.teamId}`).emit("match:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Match deleted" });
   } catch (error) { next(error); }

@@ -53,7 +53,7 @@ lineupRouter.get("/", authenticate, teamContext, requireFeature("lineup"), async
 lineupRouter.get("/:id", authenticate, teamContext, requireFeature("lineup"), async (req, res, next) => {
   try {
     const lineup = await prisma.lineup.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         players: {
           include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
@@ -99,17 +99,17 @@ lineupRouter.post("/", authenticate, teamContext, requireFeature("lineup"), requ
 // Update lineup
 lineupRouter.put("/:id", authenticate, teamContext, requireFeature("lineup"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.lineup.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.lineup.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Lineup not found");
 
     const { players, ...data } = req.body;
 
     if (players !== undefined) {
-      await prisma.lineupPlayer.deleteMany({ where: { lineupId: req.params.id } });
+      await prisma.lineupPlayer.deleteMany({ where: { lineupId: String(req.params.id) } });
       if (players.length > 0) {
         await prisma.lineupPlayer.createMany({
           data: players.map((p: any) => ({
-            lineupId: req.params.id,
+            lineupId: String(req.params.id),
             userId: p.userId,
             role: p.role,
             operators: p.operators || [],
@@ -119,7 +119,7 @@ lineupRouter.put("/:id", authenticate, teamContext, requireFeature("lineup"), re
     }
 
     const lineup = await prisma.lineup.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.map !== undefined && { map: data.map }),
@@ -143,13 +143,13 @@ lineupRouter.put("/:id", authenticate, teamContext, requireFeature("lineup"), re
 // Delete lineup
 lineupRouter.delete("/:id", authenticate, teamContext, requireFeature("lineup"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.lineup.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.lineup.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Lineup not found");
 
-    await prisma.lineup.delete({ where: { id: req.params.id } });
+    await prisma.lineup.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "lineup", req.params.id, { name: existing.name }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("lineup:deleted", { id: req.params.id }); } catch {}
+    await logAudit(req.user!.id, "DELETE", "lineup", String(req.params.id), { name: existing.name }, req.teamId);
+    try { getIO().to(`team:${req.teamId}`).emit("lineup:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Lineup deleted" });
   } catch (error) { next(error); }

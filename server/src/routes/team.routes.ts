@@ -114,7 +114,7 @@ teamRouter.get("/members", authenticate, teamContext, async (req, res, next) => 
 teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validate(updateMemberSchema), async (req, res, next) => {
   try {
     const membership = await prisma.teamMember.findUnique({
-      where: { userId_teamId: { userId: req.params.uid, teamId: req.teamId! } },
+      where: { userId_teamId: { userId: String(req.params.uid), teamId: req.teamId! } },
     });
     if (!membership) throw new AppError(404, "Member not found");
 
@@ -128,7 +128,7 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
       },
     });
 
-    await logAudit(req.user!.id, "UPDATE", "team_member", membership.id, { userId: req.params.uid, role: req.body.role }, req.teamId);
+    await logAudit(req.user!.id, "UPDATE", "team_member", membership.id, { userId: String(req.params.uid), role: req.body.role }, req.teamId);
 
     res.json({ success: true, data: updated });
   } catch (error) { next(error); }
@@ -138,13 +138,13 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
 teamRouter.delete("/members/:uid", authenticate, teamContext, requireAdmin, async (req, res, next) => {
   try {
     const membership = await prisma.teamMember.findUnique({
-      where: { userId_teamId: { userId: req.params.uid, teamId: req.teamId! } },
+      where: { userId_teamId: { userId: String(req.params.uid), teamId: req.teamId! } },
     });
     if (!membership) throw new AppError(404, "Member not found");
 
     await prisma.teamMember.delete({ where: { id: membership.id } });
 
-    await logAudit(req.user!.id, "DELETE", "team_member", membership.id, { userId: req.params.uid }, req.teamId);
+    await logAudit(req.user!.id, "DELETE", "team_member", membership.id, { userId: String(req.params.uid) }, req.teamId);
     res.json({ success: true, message: "Member removed" });
   } catch (error) { next(error); }
 });

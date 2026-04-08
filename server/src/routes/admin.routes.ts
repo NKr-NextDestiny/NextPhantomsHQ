@@ -37,7 +37,7 @@ adminRouter.get("/users", authenticate, requireAdmin, async (req, res, next) => 
 // Toggle admin status
 adminRouter.put("/users/:numericId/admin", authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const numericId = parseInt(req.params.numericId, 10);
+    const numericId = parseInt(String(req.params.numericId), 10);
     if (isNaN(numericId)) throw new AppError(400, "Invalid numeric ID");
 
     const user = await prisma.user.findUnique({ where: { numericId } });
@@ -80,7 +80,7 @@ adminRouter.put("/users/:numericId/admin", authenticate, requireAdmin, async (re
 // Deactivate/reactivate user
 adminRouter.put("/users/:numericId/active", authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const numericId = parseInt(req.params.numericId, 10);
+    const numericId = parseInt(String(req.params.numericId), 10);
     if (isNaN(numericId)) throw new AppError(400, "Invalid numeric ID");
 
     const user = await prisma.user.findUnique({ where: { numericId } });

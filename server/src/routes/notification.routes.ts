@@ -32,11 +32,11 @@ notificationRouter.get("/", authenticate, async (req, res, next) => {
 // Mark single notification as read
 notificationRouter.put("/:id/read", authenticate, async (req, res, next) => {
   try {
-    const notification = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    const notification = await prisma.notification.findUnique({ where: { id: String(req.params.id) } });
     if (!notification || notification.userId !== req.user!.id) throw new AppError(404, "Notification not found");
 
     await prisma.notification.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { read: true },
     });
 
@@ -59,10 +59,10 @@ notificationRouter.put("/read-all", authenticate, async (req, res, next) => {
 // Delete notification
 notificationRouter.delete("/:id", authenticate, async (req, res, next) => {
   try {
-    const notification = await prisma.notification.findUnique({ where: { id: req.params.id } });
+    const notification = await prisma.notification.findUnique({ where: { id: String(req.params.id) } });
     if (!notification || notification.userId !== req.user!.id) throw new AppError(404, "Notification not found");
 
-    await prisma.notification.delete({ where: { id: req.params.id } });
+    await prisma.notification.delete({ where: { id: String(req.params.id) } });
 
     res.json({ success: true, message: "Notification deleted" });
   } catch (error) { next(error); }

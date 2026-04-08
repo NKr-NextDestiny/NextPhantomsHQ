@@ -16,11 +16,11 @@ export const mossRouter = Router();
 // List MOSS files for a match
 mossRouter.get("/match/:matchId", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
   try {
-    const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.matchId) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
     const files = await prisma.mossFile.findMany({
-      where: { matchId: req.params.matchId },
+      where: { matchId: String(req.params.matchId) },
       include: { uploadedBy: { select: { id: true, displayName: true, avatarUrl: true } } },
       orderBy: { createdAt: "desc" },
     });
@@ -34,7 +34,7 @@ mossRouter.post("/match/:matchId", authenticate, teamContext, requireFeature("ma
   try {
     if (!req.file) throw new AppError(400, "No file uploaded");
 
-    const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.matchId) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
     // Encrypt the file
@@ -51,14 +51,14 @@ mossRouter.post("/match/:matchId", authenticate, teamContext, requireFeature("ma
         fileUrl,
         fileSize: req.file.size,
         playerName: req.body.playerName || null,
-        matchId: req.params.matchId,
+        matchId: String(req.params.matchId),
         uploadedById: req.user!.id,
         teamId: req.teamId!,
       },
       include: { uploadedBy: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    await logAudit(req.user!.id, "CREATE", "moss_file", mossFile.id, { fileName: mossFile.fileName, matchId: req.params.matchId }, req.teamId);
+    await logAudit(req.user!.id, "CREATE", "moss_file", mossFile.id, { fileName: mossFile.fileName, matchId: String(req.params.matchId) }, req.teamId);
 
     res.status(201).json({ success: true, data: mossFile });
   } catch (error) { next(error); }
@@ -67,7 +67,7 @@ mossRouter.post("/match/:matchId", authenticate, teamContext, requireFeature("ma
 // Download MOSS file (with decryption)
 mossRouter.get("/:id/download", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
   try {
-    const mossFile = await prisma.mossFile.findUnique({ where: { id: req.params.id } });
+    const mossFile = await prisma.mossFile.findUnique({ where: { id: String(req.params.id) } });
     if (!mossFile || mossFile.teamId !== req.teamId) throw new AppError(404, "MOSS file not found");
 
     const filePath = path.resolve(config.uploadDir, "general", path.basename(mossFile.fileUrl));
@@ -87,7 +87,7 @@ mossRouter.get("/:id/download", authenticate, teamContext, requireFeature("match
 // Delete MOSS file
 mossRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const mossFile = await prisma.mossFile.findUnique({ where: { id: req.params.id } });
+    const mossFile = await prisma.mossFile.findUnique({ where: { id: String(req.params.id) } });
     if (!mossFile || mossFile.teamId !== req.teamId) throw new AppError(404, "MOSS file not found");
 
     try {
@@ -95,9 +95,9 @@ mossRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"), 
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     } catch {}
 
-    await prisma.mossFile.delete({ where: { id: req.params.id } });
+    await prisma.mossFile.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "moss_file", req.params.id, { fileName: mossFile.fileName }, req.teamId);
+    await logAudit(req.user!.id, "DELETE", "moss_file", String(req.params.id), { fileName: mossFile.fileName }, req.teamId);
 
     res.json({ success: true, message: "MOSS file deleted" });
   } catch (error) { next(error); }

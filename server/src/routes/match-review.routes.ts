@@ -21,10 +21,10 @@ const reviewSchema = z.object({
 // Get review for a match
 matchReviewRouter.get("/:matchId/review", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
   try {
-    const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.matchId) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
-    const review = await prisma.matchReview.findUnique({ where: { matchId: req.params.matchId } });
+    const review = await prisma.matchReview.findUnique({ where: { matchId: String(req.params.matchId) } });
     res.json({ success: true, data: review });
   } catch (error) { next(error); }
 });
@@ -32,14 +32,14 @@ matchReviewRouter.get("/:matchId/review", authenticate, teamContext, requireFeat
 // Create or update review (upsert)
 matchReviewRouter.put("/:matchId/review", authenticate, teamContext, requireFeature("matches"), validate(reviewSchema), async (req, res, next) => {
   try {
-    const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.matchId) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
     const { positives, negatives, improvements, notes } = req.body;
     const review = await prisma.matchReview.upsert({
-      where: { matchId: req.params.matchId },
+      where: { matchId: String(req.params.matchId) },
       create: {
-        matchId: req.params.matchId,
+        matchId: String(req.params.matchId),
         teamId: req.teamId!,
         createdById: req.user!.id,
         positives: positives || null,
@@ -61,10 +61,10 @@ matchReviewRouter.put("/:matchId/review", authenticate, teamContext, requireFeat
 // Delete review
 matchReviewRouter.delete("/:matchId/review", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
   try {
-    const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.matchId) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
 
-    const review = await prisma.matchReview.findUnique({ where: { matchId: req.params.matchId } });
+    const review = await prisma.matchReview.findUnique({ where: { matchId: String(req.params.matchId) } });
     if (!review) throw new AppError(404, "Review not found");
 
     await prisma.matchReview.delete({ where: { id: review.id } });

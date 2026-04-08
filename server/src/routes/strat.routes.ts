@@ -57,7 +57,7 @@ stratRouter.get("/", authenticate, teamContext, requireFeature("strats"), async 
 stratRouter.get("/:id", authenticate, teamContext, requireFeature("strats"), async (req, res, next) => {
   try {
     const strat = await prisma.strat.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         versions: { orderBy: { version: "desc" } },
@@ -123,7 +123,7 @@ stratRouter.post("/", authenticate, teamContext, requireFeature("strats"), requi
 // Update strat (with optional file, creates new version)
 stratRouter.put("/:id", authenticate, teamContext, requireFeature("strats"), requireTeamRole("ANALYST"), upload.single("file"), async (req, res, next) => {
   try {
-    const existing = await prisma.strat.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.strat.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Strat not found");
 
     const data = updateSchema.parse(req.body);
@@ -137,7 +137,7 @@ stratRouter.put("/:id", authenticate, teamContext, requireFeature("strats"), req
     }
 
     const strat = await prisma.strat.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.map !== undefined && { map: data.map }),
@@ -177,13 +177,13 @@ stratRouter.put("/:id", authenticate, teamContext, requireFeature("strats"), req
 // Delete strat
 stratRouter.delete("/:id", authenticate, teamContext, requireFeature("strats"), requireTeamRole("ANALYST"), async (req, res, next) => {
   try {
-    const existing = await prisma.strat.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.strat.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Strat not found");
 
-    await prisma.strat.delete({ where: { id: req.params.id } });
+    await prisma.strat.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "strat", req.params.id, { title: existing.title }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("strat:deleted", { id: req.params.id }); } catch {}
+    await logAudit(req.user!.id, "DELETE", "strat", String(req.params.id), { title: existing.title }, req.teamId);
+    try { getIO().to(`team:${req.teamId}`).emit("strat:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Strat deleted" });
   } catch (error) { next(error); }
@@ -192,11 +192,11 @@ stratRouter.delete("/:id", authenticate, teamContext, requireFeature("strats"), 
 // Toggle favorite
 stratRouter.post("/:id/favorite", authenticate, teamContext, requireFeature("strats"), async (req, res, next) => {
   try {
-    const strat = await prisma.strat.findUnique({ where: { id: req.params.id } });
+    const strat = await prisma.strat.findUnique({ where: { id: String(req.params.id) } });
     if (!strat || strat.teamId !== req.teamId) throw new AppError(404, "Strat not found");
 
     const updated = await prisma.strat.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { isFavorite: !strat.isFavorite },
     });
 
@@ -251,7 +251,7 @@ stratRouter.put("/playbooks/:id", authenticate, teamContext, requireFeature("str
     const data = schema.parse(req.body);
 
     const playbook = await prisma.playbook.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data,
     });
     res.json({ success: true, data: playbook });
@@ -261,7 +261,7 @@ stratRouter.put("/playbooks/:id", authenticate, teamContext, requireFeature("str
 // Delete playbook
 stratRouter.delete("/playbooks/:id", authenticate, teamContext, requireFeature("strats"), requireTeamRole("ANALYST"), async (req, res, next) => {
   try {
-    await prisma.playbook.delete({ where: { id: req.params.id } });
+    await prisma.playbook.delete({ where: { id: String(req.params.id) } });
     res.json({ success: true, message: "Playbook deleted" });
   } catch (error) { next(error); }
 });
@@ -273,7 +273,7 @@ stratRouter.post("/playbooks/:id/strats", authenticate, teamContext, requireFeat
     const data = schema.parse(req.body);
 
     const entry = await prisma.playbookStrat.create({
-      data: { playbookId: req.params.id, stratId: data.stratId, order: data.order },
+      data: { playbookId: String(req.params.id), stratId: data.stratId, order: data.order },
     });
     res.status(201).json({ success: true, data: entry });
   } catch (error) { next(error); }
@@ -283,7 +283,7 @@ stratRouter.post("/playbooks/:id/strats", authenticate, teamContext, requireFeat
 stratRouter.delete("/playbooks/:playbookId/strats/:stratId", authenticate, teamContext, requireFeature("strats"), requireTeamRole("ANALYST"), async (req, res, next) => {
   try {
     await prisma.playbookStrat.delete({
-      where: { playbookId_stratId: { playbookId: req.params.playbookId, stratId: req.params.stratId } },
+      where: { playbookId_stratId: { playbookId: String(req.params.playbookId), stratId: String(req.params.stratId) } },
     });
     res.json({ success: true, message: "Strat removed from playbook" });
   } catch (error) { next(error); }

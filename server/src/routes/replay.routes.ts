@@ -68,7 +68,7 @@ replayRouter.get("/tags", authenticate, teamContext, requireFeature("replays"), 
 replayRouter.get("/:id", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
     const replay = await prisma.replay.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         uploadedBy: { select: { id: true, displayName: true, avatarUrl: true } },
         match:      { select: { id: true, opponent: true, map: true, date: true, result: true, scoreUs: true, scoreThem: true } },
@@ -91,11 +91,11 @@ replayRouter.get("/:id", authenticate, teamContext, requireFeature("replays"), a
 // Get rounds of a replay
 replayRouter.get("/:id/rounds", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
 
     const rounds = await prisma.replayRound.findMany({
-      where: { replayId: req.params.id },
+      where: { replayId: String(req.params.id) },
       include: {
         playerStats: {
           include: { user: { select: { id: true, displayName: true, username: true, avatarUrl: true } } },
@@ -207,12 +207,12 @@ replayRouter.post("/", authenticate, teamContext, requireFeature("replays"), upl
 // Update round tags
 replayRouter.put("/:id/rounds/:roundId/tags", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
 
     const tags: string[] = Array.isArray(req.body.tags) ? req.body.tags : [];
     const round = await prisma.replayRound.update({
-      where: { id: req.params.roundId },
+      where: { id: String(req.params.roundId) },
       data: { tags },
     });
 
@@ -231,14 +231,14 @@ replayRouter.put("/:id/rounds/:roundId/tags", authenticate, teamContext, require
 // Map single player stat to user
 replayRouter.put("/:id/stats/:statId/map-user", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
 
     const { userId } = req.body;
     if (!userId) throw new AppError(400, "userId required");
 
     const stat = await prisma.replayPlayerStat.update({
-      where: { id: req.params.statId },
+      where: { id: String(req.params.statId) },
       data: { userId },
       include: { user: { select: { id: true, displayName: true, username: true } } },
     });
@@ -250,7 +250,7 @@ replayRouter.put("/:id/stats/:statId/map-user", authenticate, teamContext, requi
 // Bulk map username across all rounds
 replayRouter.put("/:id/map-username", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
 
     const { r6Username, userId } = req.body;
@@ -258,7 +258,7 @@ replayRouter.put("/:id/map-username", authenticate, teamContext, requireFeature(
 
     const result = await prisma.replayPlayerStat.updateMany({
       where: {
-        round: { replayId: req.params.id },
+        round: { replayId: String(req.params.id) },
         r6Username: { equals: r6Username, mode: "insensitive" },
       },
       data: { userId },
@@ -271,7 +271,7 @@ replayRouter.put("/:id/map-username", authenticate, teamContext, requireFeature(
 // Download full file (decrypted)
 replayRouter.get("/:id/download", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
     const filePath = path.join(config.uploadDir, path.basename(replay.fileUrl));
     if (!fs.existsSync(filePath)) throw new AppError(404, "File not found on disk");
@@ -285,7 +285,7 @@ replayRouter.get("/:id/download", authenticate, teamContext, requireFeature("rep
 // Download single round .rec file (decrypted)
 replayRouter.get("/:id/rounds/:roundId/download", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const round = await prisma.replayRound.findUnique({ where: { id: req.params.roundId }, include: { replay: true } });
+    const round = await prisma.replayRound.findUnique({ where: { id: String(req.params.roundId) }, include: { replay: true } });
     if (!round || round.replay.teamId !== req.teamId) throw new AppError(404, "Round not found");
     const filePath = path.join(config.uploadDir, path.basename(round.fileUrl));
     if (!fs.existsSync(filePath)) throw new AppError(404, "File not found on disk");
@@ -299,23 +299,23 @@ replayRouter.get("/:id/rounds/:roundId/download", authenticate, teamContext, req
 // Delete replay
 replayRouter.delete("/:id", authenticate, teamContext, requireFeature("replays"), async (req, res, next) => {
   try {
-    const replay = await prisma.replay.findUnique({ where: { id: req.params.id } });
+    const replay = await prisma.replay.findUnique({ where: { id: String(req.params.id) } });
     if (!replay || replay.teamId !== req.teamId) throw new AppError(404, "Replay not found");
     if (replay.uploadedById !== req.user!.id && !req.user!.isAdmin) {
       throw new AppError(403, "Not authorized");
     }
 
     // Delete round files from disk
-    const rounds = await prisma.replayRound.findMany({ where: { replayId: req.params.id } });
+    const rounds = await prisma.replayRound.findMany({ where: { replayId: String(req.params.id) } });
     for (const round of rounds) {
       try { fs.unlinkSync(path.join(config.uploadDir, path.basename(round.fileUrl))); } catch {}
     }
     // Delete main file
     try { fs.unlinkSync(path.join(config.uploadDir, path.basename(replay.fileUrl))); } catch {}
 
-    await prisma.replay.delete({ where: { id: req.params.id } });
-    await logAudit(req.user!.id, "DELETE", "Replay", req.params.id);
-    try { getIO().to(`team:${req.teamId}`).emit("replay:deleted", { id: req.params.id }); } catch {}
+    await prisma.replay.delete({ where: { id: String(req.params.id) } });
+    await logAudit(req.user!.id, "DELETE", "Replay", String(req.params.id));
+    try { getIO().to(`team:${req.teamId}`).emit("replay:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Replay deleted" });
   } catch (error) { next(error); }

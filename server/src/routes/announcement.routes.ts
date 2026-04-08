@@ -67,7 +67,7 @@ announcementRouter.get("/unread", authenticate, teamContext, requireFeature("ann
 announcementRouter.get("/:id", authenticate, teamContext, requireFeature("announcements"), async (req, res, next) => {
   try {
     const announcement = await prisma.announcement.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
       },
@@ -100,11 +100,11 @@ announcementRouter.post("/", authenticate, teamContext, requireFeature("announce
 // Update announcement
 announcementRouter.put("/:id", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.announcement.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.announcement.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Announcement not found");
 
     const announcement = await prisma.announcement.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: req.body,
       include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
@@ -118,12 +118,12 @@ announcementRouter.put("/:id", authenticate, teamContext, requireFeature("announ
 // Delete announcement
 announcementRouter.delete("/:id", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.announcement.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.announcement.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Announcement not found");
 
-    await prisma.announcement.delete({ where: { id: req.params.id } });
+    await prisma.announcement.delete({ where: { id: String(req.params.id) } });
 
-    try { getIO().to(`team:${req.teamId}`).emit("announcement:deleted", { id: req.params.id }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("announcement:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Announcement deleted" });
   } catch (error) { next(error); }
@@ -133,9 +133,9 @@ announcementRouter.delete("/:id", authenticate, teamContext, requireFeature("ann
 announcementRouter.post("/:id/dismiss", authenticate, teamContext, requireFeature("announcements"), async (req, res, next) => {
   try {
     await prisma.announcementDismiss.upsert({
-      where: { announcementId_userId: { announcementId: req.params.id, userId: req.user!.id } },
+      where: { announcementId_userId: { announcementId: String(req.params.id), userId: req.user!.id } },
       update: {},
-      create: { announcementId: req.params.id, userId: req.user!.id },
+      create: { announcementId: String(req.params.id), userId: req.user!.id },
     });
     res.json({ success: true, message: "Dismissed" });
   } catch (error) { next(error); }
@@ -144,11 +144,11 @@ announcementRouter.post("/:id/dismiss", authenticate, teamContext, requireFeatur
 // Pin/unpin announcement
 announcementRouter.post("/:id/pin", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.announcement.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.announcement.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Announcement not found");
 
     const announcement = await prisma.announcement.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { pinned: !existing.pinned },
     });
 

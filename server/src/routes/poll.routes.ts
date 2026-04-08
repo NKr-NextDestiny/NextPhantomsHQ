@@ -47,7 +47,7 @@ pollRouter.get("/", authenticate, teamContext, requireFeature("polls"), async (r
 pollRouter.get("/:id", authenticate, teamContext, requireFeature("polls"), async (req, res, next) => {
   try {
     const poll = await prisma.poll.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         options: {
@@ -99,7 +99,7 @@ pollRouter.post("/", authenticate, teamContext, requireFeature("polls"), require
 pollRouter.post("/:id/vote", authenticate, teamContext, requireFeature("polls"), validate(voteSchema), async (req, res, next) => {
   try {
     const poll = await prisma.poll.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: { options: true },
     });
     if (!poll || poll.teamId !== req.teamId) throw new AppError(404, "Poll not found");
@@ -133,7 +133,7 @@ pollRouter.post("/:id/vote", authenticate, teamContext, requireFeature("polls"),
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:vote", { pollId: req.params.id, vote }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("poll:vote", { pollId: String(req.params.id), vote }); } catch {}
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -151,7 +151,7 @@ pollRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("polls"
     } else {
       // Remove all votes for this poll
       const poll = await prisma.poll.findUnique({
-        where: { id: req.params.id },
+        where: { id: String(req.params.id) },
         include: { options: { select: { id: true } } },
       });
       if (poll) {
@@ -164,7 +164,7 @@ pollRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("polls"
       }
     }
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:vote:retracted", { pollId: req.params.id, userId: req.user!.id }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("poll:vote:retracted", { pollId: String(req.params.id), userId: req.user!.id }); } catch {}
 
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
@@ -173,7 +173,7 @@ pollRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("polls"
 // Delete poll
 pollRouter.delete("/:id", authenticate, teamContext, requireFeature("polls"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const poll = await prisma.poll.findUnique({ where: { id: req.params.id } });
+    const poll = await prisma.poll.findUnique({ where: { id: String(req.params.id) } });
     if (!poll || poll.teamId !== req.teamId) throw new AppError(404, "Poll not found");
 
     // Only creator or coach+ can delete
@@ -181,9 +181,9 @@ pollRouter.delete("/:id", authenticate, teamContext, requireFeature("polls"), re
       // Check role - already handled by requireTeamRole("COACH")
     }
 
-    await prisma.poll.delete({ where: { id: req.params.id } });
+    await prisma.poll.delete({ where: { id: String(req.params.id) } });
 
-    try { getIO().to(`team:${req.teamId}`).emit("poll:deleted", { id: req.params.id }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("poll:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Poll deleted" });
   } catch (error) { next(error); }

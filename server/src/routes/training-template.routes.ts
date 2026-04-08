@@ -44,11 +44,11 @@ trainingTemplateRouter.post("/", authenticate, teamContext, requireFeature("trai
 // Update template (COACH+)
 trainingTemplateRouter.put("/:id", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), validate(templateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.trainingTemplate.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.trainingTemplate.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Template not found");
     const { title, type, notes } = req.body;
     const template = await prisma.trainingTemplate.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { title, type, notes: notes || null },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
@@ -59,9 +59,9 @@ trainingTemplateRouter.put("/:id", authenticate, teamContext, requireFeature("tr
 // Delete template (COACH+)
 trainingTemplateRouter.delete("/:id", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.trainingTemplate.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.trainingTemplate.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Template not found");
-    await prisma.trainingTemplate.delete({ where: { id: req.params.id } });
+    await prisma.trainingTemplate.delete({ where: { id: String(req.params.id) } });
     res.json({ success: true, message: "Template deleted" });
   } catch (error) { next(error); }
 });

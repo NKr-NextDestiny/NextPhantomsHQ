@@ -9,7 +9,7 @@ export const attendanceRouter = Router();
 attendanceRouter.get("/:token", async (req, res, next) => {
   try {
     const at = await prisma.attendanceToken.findUnique({
-      where: { token: req.params.token },
+      where: { token: String(req.params.token) },
       include: { user: { select: { displayName: true } } },
     });
 
@@ -50,7 +50,7 @@ attendanceRouter.post("/:token", async (req, res, next) => {
     });
     const { vote, reason } = schema.parse(req.body);
 
-    const at = await prisma.attendanceToken.findUnique({ where: { token: req.params.token } });
+    const at = await prisma.attendanceToken.findUnique({ where: { token: String(req.params.token) } });
     if (!at) throw new AppError(404, "Token not found");
     if (at.expiresAt < new Date()) throw new AppError(410, "Token has expired");
 

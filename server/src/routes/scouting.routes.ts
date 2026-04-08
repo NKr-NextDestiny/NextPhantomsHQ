@@ -50,7 +50,7 @@ scoutingRouter.get("/opponents", authenticate, teamContext, requireFeature("scou
 scoutingRouter.get("/opponents/:id", authenticate, teamContext, requireFeature("scouting"), async (req, res, next) => {
   try {
     const opponent = await prisma.opponent.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         scoutingNotes: {
           include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
@@ -81,11 +81,11 @@ scoutingRouter.post("/opponents", authenticate, teamContext, requireFeature("sco
 // Update opponent
 scoutingRouter.put("/opponents/:id", authenticate, teamContext, requireFeature("scouting"), requireTeamRole("ANALYST"), validate(updateOpponentSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.opponent.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.opponent.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Opponent not found");
 
     const opponent = await prisma.opponent.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: req.body,
     });
 
@@ -97,12 +97,12 @@ scoutingRouter.put("/opponents/:id", authenticate, teamContext, requireFeature("
 // Delete opponent
 scoutingRouter.delete("/opponents/:id", authenticate, teamContext, requireFeature("scouting"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.opponent.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.opponent.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Opponent not found");
 
-    await prisma.opponent.delete({ where: { id: req.params.id } });
+    await prisma.opponent.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "opponent", req.params.id, { name: existing.name }, req.teamId);
+    await logAudit(req.user!.id, "DELETE", "opponent", String(req.params.id), { name: existing.name }, req.teamId);
     res.json({ success: true, message: "Opponent deleted" });
   } catch (error) { next(error); }
 });
@@ -110,13 +110,13 @@ scoutingRouter.delete("/opponents/:id", authenticate, teamContext, requireFeatur
 // Add scouting note
 scoutingRouter.post("/opponents/:id/notes", authenticate, teamContext, requireFeature("scouting"), validate(createNoteSchema), async (req, res, next) => {
   try {
-    const opponent = await prisma.opponent.findUnique({ where: { id: req.params.id } });
+    const opponent = await prisma.opponent.findUnique({ where: { id: String(req.params.id) } });
     if (!opponent || opponent.teamId !== req.teamId) throw new AppError(404, "Opponent not found");
 
     const note = await prisma.scoutingNote.create({
       data: {
         ...req.body,
-        opponentId: req.params.id,
+        opponentId: String(req.params.id),
         createdById: req.user!.id,
       },
       include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
@@ -129,7 +129,7 @@ scoutingRouter.post("/opponents/:id/notes", authenticate, teamContext, requireFe
 // Update scouting note
 scoutingRouter.put("/notes/:id", authenticate, teamContext, requireFeature("scouting"), async (req, res, next) => {
   try {
-    const note = await prisma.scoutingNote.findUnique({ where: { id: req.params.id } });
+    const note = await prisma.scoutingNote.findUnique({ where: { id: String(req.params.id) } });
     if (!note) throw new AppError(404, "Note not found");
 
     // Only author or admin can update
@@ -141,7 +141,7 @@ scoutingRouter.put("/notes/:id", authenticate, teamContext, requireFeature("scou
     const data = schema.parse(req.body);
 
     const updated = await prisma.scoutingNote.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data,
       include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
@@ -153,14 +153,14 @@ scoutingRouter.put("/notes/:id", authenticate, teamContext, requireFeature("scou
 // Delete scouting note
 scoutingRouter.delete("/notes/:id", authenticate, teamContext, requireFeature("scouting"), async (req, res, next) => {
   try {
-    const note = await prisma.scoutingNote.findUnique({ where: { id: req.params.id } });
+    const note = await prisma.scoutingNote.findUnique({ where: { id: String(req.params.id) } });
     if (!note) throw new AppError(404, "Note not found");
 
     if (note.createdById !== req.user!.id && !req.user!.isAdmin) {
       throw new AppError(403, "Not authorized");
     }
 
-    await prisma.scoutingNote.delete({ where: { id: req.params.id } });
+    await prisma.scoutingNote.delete({ where: { id: String(req.params.id) } });
     res.json({ success: true, message: "Note deleted" });
   } catch (error) { next(error); }
 });

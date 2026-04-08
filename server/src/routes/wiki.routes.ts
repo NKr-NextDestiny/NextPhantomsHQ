@@ -33,7 +33,7 @@ wikiRouter.get("/", authenticate, teamContext, requireFeature("wiki"), async (re
 wikiRouter.get("/:slug", authenticate, teamContext, requireFeature("wiki"), async (req, res, next) => {
   try {
     const page = await prisma.wikiPage.findUnique({
-      where: { teamId_slug: { teamId: req.teamId!, slug: req.params.slug } },
+      where: { teamId_slug: { teamId: req.teamId!, slug: String(req.params.slug) } },
       include: {
         createdBy: { select: { id: true, displayName: true } },
         updatedBy: { select: { id: true, displayName: true } },
@@ -62,7 +62,7 @@ wikiRouter.post("/", authenticate, teamContext, requireFeature("wiki"), requireT
 // Update page (ANALYST+)
 wikiRouter.put("/:slug", authenticate, teamContext, requireFeature("wiki"), requireTeamRole("ANALYST"), validate(pageSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.wikiPage.findUnique({ where: { teamId_slug: { teamId: req.teamId!, slug: req.params.slug } } });
+    const existing = await prisma.wikiPage.findUnique({ where: { teamId_slug: { teamId: req.teamId!, slug: String(req.params.slug) } } });
     if (!existing) throw new AppError(404, "Page not found");
 
     const { title, slug, content } = req.body;
@@ -81,7 +81,7 @@ wikiRouter.put("/:slug", authenticate, teamContext, requireFeature("wiki"), requ
 // Delete page (ADMIN only)
 wikiRouter.delete("/:slug", authenticate, teamContext, requireFeature("wiki"), requireTeamRole("ADMIN"), async (req, res, next) => {
   try {
-    const existing = await prisma.wikiPage.findUnique({ where: { teamId_slug: { teamId: req.teamId!, slug: req.params.slug } } });
+    const existing = await prisma.wikiPage.findUnique({ where: { teamId_slug: { teamId: req.teamId!, slug: String(req.params.slug) } } });
     if (!existing) throw new AppError(404, "Page not found");
     await prisma.wikiPage.delete({ where: { id: existing.id } });
     res.json({ success: true, message: "Page deleted" });

@@ -39,7 +39,7 @@ notesRouter.get("/", authenticate, teamContext, requireFeature("notes"), async (
 notesRouter.get("/:id", authenticate, teamContext, requireFeature("notes"), async (req, res, next) => {
   try {
     const note = await prisma.note.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
     if (!note || note.teamId !== req.teamId) throw new AppError(404, "Note not found");
@@ -65,13 +65,13 @@ notesRouter.post("/", authenticate, teamContext, requireFeature("notes"), valida
 // Update note (own only, admin bypass)
 notesRouter.put("/:id", authenticate, teamContext, requireFeature("notes"), validate(noteSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.note.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.note.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Note not found");
     if (existing.createdById !== req.user!.id && !req.user!.isAdmin) throw new AppError(403, "Not authorized");
 
     const { title, content, isPrivate } = req.body;
     const note = await prisma.note.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { title, content, isPrivate: isPrivate ?? existing.isPrivate },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
@@ -82,10 +82,10 @@ notesRouter.put("/:id", authenticate, teamContext, requireFeature("notes"), vali
 // Delete note (own only, admin bypass)
 notesRouter.delete("/:id", authenticate, teamContext, requireFeature("notes"), async (req, res, next) => {
   try {
-    const existing = await prisma.note.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.note.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Note not found");
     if (existing.createdById !== req.user!.id && !req.user!.isAdmin) throw new AppError(403, "Not authorized");
-    await prisma.note.delete({ where: { id: req.params.id } });
+    await prisma.note.delete({ where: { id: String(req.params.id) } });
     res.json({ success: true, message: "Note deleted" });
   } catch (error) { next(error); }
 });

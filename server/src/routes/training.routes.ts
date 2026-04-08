@@ -63,7 +63,7 @@ trainingRouter.get("/", authenticate, teamContext, requireFeature("training"), a
 trainingRouter.get("/:id", authenticate, teamContext, requireFeature("training"), async (req, res, next) => {
   try {
     const training = await prisma.training.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         votes: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
@@ -137,12 +137,12 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
 // Update training
 trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.training.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Training not found");
 
     const data = req.body;
     const training = await prisma.training.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.type !== undefined && { type: data.type }),
@@ -174,14 +174,14 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
 // Delete training
 trainingRouter.delete("/:id", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.training.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Training not found");
 
-    await prisma.eventReminder.deleteMany({ where: { eventType: "TRAINING", eventId: req.params.id } });
-    await prisma.training.delete({ where: { id: req.params.id } });
+    await prisma.eventReminder.deleteMany({ where: { eventType: "TRAINING", eventId: String(req.params.id) } });
+    await prisma.training.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "training", req.params.id, { title: existing.title }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("training:deleted", { id: req.params.id }); } catch {}
+    await logAudit(req.user!.id, "DELETE", "training", String(req.params.id), { title: existing.title }, req.teamId);
+    try { getIO().to(`team:${req.teamId}`).emit("training:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Training deleted" });
   } catch (error) { next(error); }
@@ -190,17 +190,17 @@ trainingRouter.delete("/:id", authenticate, teamContext, requireFeature("trainin
 // Vote
 trainingRouter.post("/:id/vote", authenticate, teamContext, requireFeature("training"), validate(voteSchema), async (req, res, next) => {
   try {
-    const training = await prisma.training.findUnique({ where: { id: req.params.id } });
+    const training = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
     if (!training || training.teamId !== req.teamId) throw new AppError(404, "Training not found");
 
     const vote = await prisma.trainingVote.upsert({
-      where: { userId_trainingId: { userId: req.user!.id, trainingId: req.params.id } },
+      where: { userId_trainingId: { userId: req.user!.id, trainingId: String(req.params.id) } },
       update: { status: req.body.status, comment: req.body.comment || null },
-      create: { userId: req.user!.id, trainingId: req.params.id, status: req.body.status, comment: req.body.comment || null },
+      create: { userId: req.user!.id, trainingId: String(req.params.id), status: req.body.status, comment: req.body.comment || null },
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("training:vote", { trainingId: req.params.id, vote }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("training:vote", { trainingId: String(req.params.id), vote }); } catch {}
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -209,8 +209,8 @@ trainingRouter.post("/:id/vote", authenticate, teamContext, requireFeature("trai
 // Retract vote
 trainingRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("training"), async (req, res, next) => {
   try {
-    await prisma.trainingVote.deleteMany({ where: { userId: req.user!.id, trainingId: req.params.id } });
-    try { getIO().to(`team:${req.teamId}`).emit("training:vote:retracted", { trainingId: req.params.id, userId: req.user!.id }); } catch {}
+    await prisma.trainingVote.deleteMany({ where: { userId: req.user!.id, trainingId: String(req.params.id) } });
+    try { getIO().to(`team:${req.teamId}`).emit("training:vote:retracted", { trainingId: String(req.params.id), userId: req.user!.id }); } catch {}
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
 });
@@ -218,11 +218,11 @@ trainingRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("tr
 // Attendance stats
 trainingRouter.get("/:id/attendance", authenticate, teamContext, requireFeature("training"), async (req, res, next) => {
   try {
-    const training = await prisma.training.findUnique({ where: { id: req.params.id } });
+    const training = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
     if (!training || training.teamId !== req.teamId) throw new AppError(404, "Training not found");
 
     const votes = await prisma.trainingVote.findMany({
-      where: { trainingId: req.params.id },
+      where: { trainingId: String(req.params.id) },
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
     const members = await prisma.teamMember.findMany({

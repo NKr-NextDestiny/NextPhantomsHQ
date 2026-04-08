@@ -50,11 +50,11 @@ reminderRouter.post("/", authenticate, teamContext, requireFeature("reminders"),
 // Update reminder (COACH+)
 reminderRouter.put("/:id", authenticate, teamContext, requireFeature("reminders"), requireTeamRole("COACH"), validate(reminderSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.reminder.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.reminder.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Reminder not found");
     const { title, content, deadline } = req.body;
     const reminder = await prisma.reminder.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { title, content: content || null, deadline: deadline ? new Date(deadline) : null },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
@@ -65,10 +65,10 @@ reminderRouter.put("/:id", authenticate, teamContext, requireFeature("reminders"
 // Toggle done
 reminderRouter.patch("/:id/toggle", authenticate, teamContext, requireFeature("reminders"), async (req, res, next) => {
   try {
-    const existing = await prisma.reminder.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.reminder.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Reminder not found");
     const reminder = await prisma.reminder.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: { done: !existing.done },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
@@ -79,9 +79,9 @@ reminderRouter.patch("/:id/toggle", authenticate, teamContext, requireFeature("r
 // Delete reminder (COACH+)
 reminderRouter.delete("/:id", authenticate, teamContext, requireFeature("reminders"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.reminder.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.reminder.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Reminder not found");
-    await prisma.reminder.delete({ where: { id: req.params.id } });
+    await prisma.reminder.delete({ where: { id: String(req.params.id) } });
     res.json({ success: true, message: "Reminder deleted" });
   } catch (error) { next(error); }
 });

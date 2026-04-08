@@ -65,7 +65,7 @@ commentRouter.post("/", authenticate, teamContext, validate(createSchema), async
 // Delete comment
 commentRouter.delete("/:id", authenticate, teamContext, async (req, res, next) => {
   try {
-    const comment = await prisma.comment.findUnique({ where: { id: req.params.id } });
+    const comment = await prisma.comment.findUnique({ where: { id: String(req.params.id) } });
     if (!comment || comment.teamId !== req.teamId) throw new AppError(404, "Comment not found");
 
     // Only author or admin can delete
@@ -73,10 +73,10 @@ commentRouter.delete("/:id", authenticate, teamContext, async (req, res, next) =
       throw new AppError(403, "Not authorized");
     }
 
-    await prisma.comment.delete({ where: { id: req.params.id } });
+    await prisma.comment.delete({ where: { id: String(req.params.id) } });
 
     try {
-      getIO().to(`entity:${comment.entityId}`).emit("comment:deleted", { id: req.params.id, entityId: comment.entityId });
+      getIO().to(`entity:${comment.entityId}`).emit("comment:deleted", { id: String(req.params.id), entityId: comment.entityId });
     } catch {}
 
     res.json({ success: true, message: "Comment deleted" });

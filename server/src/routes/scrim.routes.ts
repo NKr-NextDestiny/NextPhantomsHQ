@@ -75,7 +75,7 @@ scrimRouter.get("/", authenticate, teamContext, requireFeature("scrims"), async 
 scrimRouter.get("/:id", authenticate, teamContext, requireFeature("scrims"), async (req, res, next) => {
   try {
     const scrim = await prisma.scrim.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         votes: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
@@ -152,12 +152,12 @@ scrimRouter.post("/", authenticate, teamContext, requireFeature("scrims"), requi
 // Update scrim
 scrimRouter.put("/:id", authenticate, teamContext, requireFeature("scrims"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.scrim.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.scrim.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
     const data = req.body;
     const scrim = await prisma.scrim.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         ...(data.opponent !== undefined && { opponent: data.opponent }),
         ...(data.date !== undefined && { date: data.date }),
@@ -191,14 +191,14 @@ scrimRouter.put("/:id", authenticate, teamContext, requireFeature("scrims"), req
 // Delete scrim
 scrimRouter.delete("/:id", authenticate, teamContext, requireFeature("scrims"), requireTeamRole("COACH"), async (req, res, next) => {
   try {
-    const existing = await prisma.scrim.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.scrim.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
-    await prisma.eventReminder.deleteMany({ where: { eventType: "SCRIM", eventId: req.params.id } });
-    await prisma.scrim.delete({ where: { id: req.params.id } });
+    await prisma.eventReminder.deleteMany({ where: { eventType: "SCRIM", eventId: String(req.params.id) } });
+    await prisma.scrim.delete({ where: { id: String(req.params.id) } });
 
-    await logAudit(req.user!.id, "DELETE", "scrim", req.params.id, { opponent: existing.opponent }, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:deleted", { id: req.params.id }); } catch {}
+    await logAudit(req.user!.id, "DELETE", "scrim", String(req.params.id), { opponent: existing.opponent }, req.teamId);
+    try { getIO().to(`team:${req.teamId}`).emit("scrim:deleted", { id: String(req.params.id) }); } catch {}
 
     res.json({ success: true, message: "Scrim deleted" });
   } catch (error) { next(error); }
@@ -207,17 +207,17 @@ scrimRouter.delete("/:id", authenticate, teamContext, requireFeature("scrims"), 
 // Vote
 scrimRouter.post("/:id/vote", authenticate, teamContext, requireFeature("scrims"), validate(voteSchema), async (req, res, next) => {
   try {
-    const scrim = await prisma.scrim.findUnique({ where: { id: req.params.id } });
+    const scrim = await prisma.scrim.findUnique({ where: { id: String(req.params.id) } });
     if (!scrim || scrim.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
     const vote = await prisma.scrimVote.upsert({
-      where: { userId_scrimId: { userId: req.user!.id, scrimId: req.params.id } },
+      where: { userId_scrimId: { userId: req.user!.id, scrimId: String(req.params.id) } },
       update: { status: req.body.status, comment: req.body.comment || null },
-      create: { userId: req.user!.id, scrimId: req.params.id, status: req.body.status, comment: req.body.comment || null },
+      create: { userId: req.user!.id, scrimId: String(req.params.id), status: req.body.status, comment: req.body.comment || null },
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote", { scrimId: req.params.id, vote }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote", { scrimId: String(req.params.id), vote }); } catch {}
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -226,8 +226,8 @@ scrimRouter.post("/:id/vote", authenticate, teamContext, requireFeature("scrims"
 // Retract vote
 scrimRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("scrims"), async (req, res, next) => {
   try {
-    await prisma.scrimVote.deleteMany({ where: { userId: req.user!.id, scrimId: req.params.id } });
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote:retracted", { scrimId: req.params.id, userId: req.user!.id }); } catch {}
+    await prisma.scrimVote.deleteMany({ where: { userId: req.user!.id, scrimId: String(req.params.id) } });
+    try { getIO().to(`team:${req.teamId}`).emit("scrim:vote:retracted", { scrimId: String(req.params.id), userId: req.user!.id }); } catch {}
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
 });
@@ -235,17 +235,17 @@ scrimRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("scrim
 // Log result
 scrimRouter.post("/:id/result", authenticate, teamContext, requireFeature("scrims"), requireTeamRole("COACH"), validate(resultSchema), async (req, res, next) => {
   try {
-    const scrim = await prisma.scrim.findUnique({ where: { id: req.params.id } });
+    const scrim = await prisma.scrim.findUnique({ where: { id: String(req.params.id) } });
     if (!scrim || scrim.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
     const result = await prisma.scrimResult.upsert({
-      where: { scrimId: req.params.id },
+      where: { scrimId: String(req.params.id) },
       update: req.body,
-      create: { ...req.body, scrimId: req.params.id },
+      create: { ...req.body, scrimId: String(req.params.id) },
     });
 
     await logAudit(req.user!.id, "UPDATE", "scrim_result", result.id, undefined, req.teamId);
-    try { getIO().to(`team:${req.teamId}`).emit("scrim:result", { scrimId: req.params.id, result }); } catch {}
+    try { getIO().to(`team:${req.teamId}`).emit("scrim:result", { scrimId: String(req.params.id), result }); } catch {}
 
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
@@ -254,11 +254,11 @@ scrimRouter.post("/:id/result", authenticate, teamContext, requireFeature("scrim
 // Attendance stats
 scrimRouter.get("/:id/attendance", authenticate, teamContext, requireFeature("scrims"), async (req, res, next) => {
   try {
-    const scrim = await prisma.scrim.findUnique({ where: { id: req.params.id } });
+    const scrim = await prisma.scrim.findUnique({ where: { id: String(req.params.id) } });
     if (!scrim || scrim.teamId !== req.teamId) throw new AppError(404, "Scrim not found");
 
     const votes = await prisma.scrimVote.findMany({
-      where: { scrimId: req.params.id },
+      where: { scrimId: String(req.params.id) },
       include: { user: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
     const members = await prisma.teamMember.findMany({
