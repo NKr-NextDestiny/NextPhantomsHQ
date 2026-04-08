@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Calendar, Dumbbell, Swords, Trophy, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
@@ -29,8 +30,38 @@ interface Activity {
   user?: { displayName: string };
 }
 
+function formatActivity(action: string, entity: string): string {
+  const entities: Record<string, string> = {
+    training: "Training",
+    scrim: "Scrim",
+    match: "Match",
+    strat: "Strategie",
+    lineup: "Lineup",
+    opponent: "Gegner",
+    moss_file: "MOSS-Datei",
+    replay: "Replay",
+    announcement: "Ankündigung",
+    poll: "Umfrage",
+    wiki_page: "Wiki-Seite",
+    note: "Notiz",
+    reminder: "Erinnerung",
+    team: "Team-Einstellungen",
+    team_member: "Mitglied",
+    game_config: "Spielkonfiguration",
+  };
+  const actions: Record<string, string> = {
+    CREATE: "erstellt",
+    UPDATE: "bearbeitet",
+    DELETE: "gelöscht",
+  };
+  const e = entities[entity.toLowerCase()] || entity;
+  const a = actions[action] || action;
+  return `${e} ${a}`;
+}
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const { error: showError } = useToast();
   const [stats, setStats] = useState<Stats>({ upcomingTrainings: 0, upcomingScrims: 0, recentMatches: 0, teamMembers: 0 });
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -48,7 +79,7 @@ export default function DashboardPage() {
         if (eventsRes.status === "fulfilled" && eventsRes.value.data) setEvents(eventsRes.value.data);
         if (activityRes.status === "fulfilled" && activityRes.value.data) setActivity(activityRes.value.data);
       } catch {
-        // ignore
+        showError("Fehler beim Laden des Dashboards");
       } finally {
         setLoading(false);
       }
@@ -141,15 +172,21 @@ export default function DashboardPage() {
             <p className="text-sm text-[var(--muted-foreground)]">Keine aktuelle Aktivität.</p>
           ) : (
             <div className="space-y-3">
-              {activity.map((a) => (
-                <div key={a.id} className="rounded-lg bg-[var(--secondary)] p-3">
-                  <p className="text-sm text-[var(--foreground)]">{a.description}</p>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                    {a.user?.displayName && `${a.user.displayName} - `}
-                    {formatDate(a.createdAt)}
-                  </p>
-                </div>
-              ))}
+              {activity.map((a) => {
+                const parts = a.description.split(" ");
+                const entity = parts[1] || "";
+                const readable = formatActivity(a.type, entity);
+                return (
+                  <div key={a.id} className="rounded-lg bg-[var(--secondary)] p-3">
+                    <p className="text-sm text-[var(--foreground)]">
+                      {a.user?.displayName ? `${a.user.displayName} hat ` : ""}{readable}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                      {formatDate(a.createdAt)}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           )}
         </Card>

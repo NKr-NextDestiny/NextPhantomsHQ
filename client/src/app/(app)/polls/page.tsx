@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface PollOption {
   id: string;
@@ -32,6 +33,7 @@ interface Poll {
 
 export default function PollsPage() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -43,11 +45,11 @@ export default function PollsPage() {
       const res = await api.get<Poll[]>("/api/polls");
       if (res.data) setPolls(res.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -79,10 +81,11 @@ export default function PollsPage() {
         expiresAt: form.expiresAt || undefined,
         options: form.options.filter((o) => o.trim()),
       });
+      success("Umfrage erstellt");
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -91,9 +94,10 @@ export default function PollsPage() {
   const handleVote = async (pollId: string, optionId: string) => {
     try {
       await api.post(`/api/polls/${pollId}/vote`, { optionId });
+      success("Abstimmung gespeichert");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     }
   };
 
@@ -101,9 +105,10 @@ export default function PollsPage() {
     if (!confirm("Umfrage wirklich löschen?")) return;
     try {
       await api.delete(`/api/polls/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 

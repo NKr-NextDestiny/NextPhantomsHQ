@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Scrim {
   id: string;
@@ -21,10 +22,10 @@ interface Scrim {
   votes?: { available: number; unavailable: number; maybe: number; userVote?: string };
 }
 
-const CS_MAPS = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2", "Vertigo"];
-
 export default function ScrimsPage() {
+  const { success, error } = useToast();
   const [scrims, setScrims] = useState<Scrim[]>([]);
+  const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,17 +34,25 @@ export default function ScrimsPage() {
   const [resultForm, setResultForm] = useState({ us: "0", them: "0" });
   const [submitting, setSubmitting] = useState(false);
 
+  const loadMaps = useCallback(async () => {
+    try {
+      const res = await api.get<{ maps: string[] }>("/api/team/config");
+      if (res.data?.maps) setMaps(res.data.maps);
+    } catch { /* ignore */ }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const res = await api.get<Scrim[]>("/api/scrims");
       if (res.data) setScrims(res.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
 
+  useEffect(() => { loadMaps(); }, [loadMaps]);
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
@@ -76,13 +85,15 @@ export default function ScrimsPage() {
     try {
       if (editingId) {
         await api.put(`/api/scrims/${editingId}`, form);
+        success("Gespeichert");
       } else {
         await api.post("/api/scrims", form);
+        success("Scrim erstellt");
       }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -92,18 +103,20 @@ export default function ScrimsPage() {
     if (!confirm("Scrim wirklich löschen?")) return;
     try {
       await api.delete(`/api/scrims/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
   const handleVote = async (scrimId: string, vote: string) => {
     try {
       await api.post(`/api/scrims/${scrimId}/vote`, { vote });
+      success("Abstimmung gespeichert");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     }
   };
 
@@ -115,10 +128,11 @@ export default function ScrimsPage() {
         us: parseInt(resultForm.us),
         them: parseInt(resultForm.them),
       });
+      success("Gespeichert");
       setResultModal(null);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +262,7 @@ export default function ScrimsPage() {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-[var(--foreground)]">Map Pool</label>
             <div className="flex flex-wrap gap-2">
-              {CS_MAPS.map((map) => (
+              {maps.map((map) => (
                 <button
                   key={map}
                   onClick={() => toggleMap(map)}

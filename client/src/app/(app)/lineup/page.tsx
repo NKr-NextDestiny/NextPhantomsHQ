@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Player {
   id: string;
@@ -28,6 +29,7 @@ interface Lineup {
 const ROLES = ["IGL", "Entry", "AWP", "Support", "Lurker", "Rifler", "Coach", "Substitute"];
 
 export default function LineupPage() {
+  const { success, error } = useToast();
   const [lineups, setLineups] = useState<Lineup[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,13 +46,14 @@ export default function LineupPage() {
         api.get<Player[]>("/api/users"),
       ]);
       if (linRes.status === "fulfilled" && linRes.value.data) setLineups(linRes.value.data);
+      else if (linRes.status === "rejected") error("Fehler beim Laden");
       if (plRes.status === "fulfilled" && plRes.value.data) setPlayers(plRes.value.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -89,13 +92,15 @@ export default function LineupPage() {
       };
       if (editingId) {
         await api.put(`/api/lineups/${editingId}`, body);
+        success("Gespeichert");
       } else {
         await api.post("/api/lineups", body);
+        success("Lineup erstellt");
       }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -105,9 +110,10 @@ export default function LineupPage() {
     if (!confirm("Lineup wirklich löschen?")) return;
     try {
       await api.delete(`/api/lineups/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
