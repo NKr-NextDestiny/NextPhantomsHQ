@@ -102,13 +102,13 @@
 <body>
   <div class="container">
     <h1>Next Phantoms HQ</h1>
-    <p class="subtitle">Team-Management-Plattform for Next Phantoms (Next Destiny eSports)</p>
+    <p class="subtitle">Team-Management-Plattform für Next Phantoms (Next Destiny eSports) — R6 Siege</p>
 
     <div class="section">Allgemein</div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128202;</div>
+        <div class="feature-icon">📊</div>
         <span class="feature-name">Dashboard</span>
       </div>
       <p class="feature-desc">
@@ -121,11 +121,27 @@
       </p>
     </div>
 
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🌍</div>
+        <span class="feature-name">Mehrsprachigkeit (i18n)</span>
+      </div>
+      <p class="feature-desc">
+        Die komplette App ist in mehreren Sprachen verfügbar.
+        <ul>
+          <li><strong>3 Sprachen</strong> — Deutsch (Standard), Englisch und Piratensprache (Meme-Sprache, komplett auf Deutsch mit Piraten-Slang)</li>
+          <li><strong>Sprachauswahl</strong> — Im Profil-Dropdown oben rechts umstellbar. Wird im Profil und localStorage gespeichert</li>
+          <li><strong>Browser-Erkennung</strong> — Neue Nutzer bekommen automatisch die passende Sprache basierend auf der Browser-Einstellung</li>
+          <li><strong>Komplett übersetzt</strong> — Alle Seiten, Navigation, Benachrichtigungen, Fehlermeldungen und Login-Seite</li>
+        </ul>
+      </p>
+    </div>
+
     <div class="section">Spielbetrieb</div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#127947;</div>
+        <div class="feature-icon">🏋️</div>
         <span class="feature-name">Training</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -135,30 +151,32 @@
           <li><strong>Erstellen</strong> — Typ (Ranked, Custom, Aim Training, VOD Review, Strat Practice), Datum, Treffzeit, optionales Ende und Notizen</li>
           <li><strong>Vorlagen</strong> — Wiederkehrende Trainings als Vorlage speichern und mit einem Klick neu erstellen</li>
           <li><strong>Abstimmung</strong> — Jeder Spieler gibt an ob er dabei ist (Verfügbar / Nicht verfügbar / Vielleicht). Übersicht zeigt Status aller Spieler</li>
-          <li><strong>E-Mail-Erinnerungen</strong> — Automatische Mails vor dem Training mit direktem Abstimmungs-Link (konfigurierbare Intervalle)</li>
+          <li><strong>Erinnerungen</strong> — Automatische Benachrichtigungen vor dem Training (per E-Mail, WhatsApp oder Browser) mit direktem Abstimmungs-Link (konfigurierbare Intervalle)</li>
           <li><strong>Wiederkehrend</strong> — Trainings können als wöchentlich, täglich etc. markiert werden</li>
+          <li><strong>Socket.io</strong> — Echtzeit-Updates wenn Trainings erstellt, bearbeitet oder gelöscht werden</li>
         </ul>
       </p>
     </div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#127942;</div>
+        <div class="feature-icon">🏆</div>
         <span class="feature-name">Matches</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
       <p class="feature-desc">
-        Zentraler Bereich für alle Spiele — Scrims, Turniere, Liga, Freundschaftsspiele und mehr. Jedes Match hat einen Typ, der bestimmt welche Felder sichtbar sind.
+        Zentraler Bereich für alle Spiele — Scrims, Turniere, Liga, Freundschaftsspiele und mehr. Jedes Match hat einen Typ, der bestimmt welche Felder sichtbar sind. Scrims wurden vollständig in Matches integriert.
         <ul>
-          <li><strong>Typ-Filter</strong> — Filtere die Liste nach Scrim, Turnier, Liga, Freundschaftlich oder Sonstige. Statistiken passen sich dem Filter an</li>
+          <li><strong>Match-Typen</strong> — Scrim, Turnier, Liga, Freundschaftlich oder Sonstige. Typ bestimmt welche Felder angezeigt werden</li>
+          <li><strong>Typ-Filter</strong> — Filtere die Liste nach Match-Typ. Statistiken passen sich dem Filter an</li>
           <li><strong>Scrim-Typ</strong> — Map-Pool (Mehrfachauswahl), Format (z.B. BO3), Kontaktinfos, Server-Region, Treffzeit und Ende. Teilnahme-Abstimmung wie beim Training</li>
           <li><strong>Turnier/Liga-Typ</strong> — Map, Score, Wettbewerb. Ergebnis wird automatisch berechnet (WIN/LOSS/DRAW)</li>
           <li><strong>Spieler-Statistiken</strong> — Pro Match Kills, Deaths, Assists und Headshots für jeden Spieler. K/D und HS-Rate werden automatisch berechnet. Auch externe/Aushilfsspieler möglich</li>
-          <li><strong>Ergebnis nachträglich</strong> — Scrims ohne Scores können das Ergebnis nachträglich eintragen inkl. Skill-, Kommunikations- und Pünktlichkeits-Bewertung (1-5)</li>
-          <li><strong>MOSS-Dateien</strong> — MOSS-Dateien pro Match und pro Spieler hochladen (verschlüsselt gespeichert)</li>
-          <li><strong>Replays</strong> — .rec oder .zip Dateien verknüpfen. R6 Siege Replays werden automatisch geparst (Runden, Kills, Deaths)</li>
+          <li><strong>Ergebnis nachträglich</strong> — Scrims ohne Scores können das Ergebnis nachträglich eintragen inkl. Skill-, Kommunikations- und Pünktlichkeits-Bewertung (1-5 Sterne)</li>
+          <li><strong>MOSS-Dateien</strong> — MOSS-Dateien pro Match und pro Spieler hochladen (verschlüsselt gespeichert mit AES-256-GCM)</li>
+          <li><strong>Replays</strong> — .rec oder .zip Dateien verknüpfen. R6 Siege Replays werden automatisch geparst (Runden, Kills, Deaths, Spieler-Zuordnung)</li>
           <li><strong>Match Review</strong> — Nachbesprechung mit Positives, Negatives, Verbesserungen und freien Notizen</li>
-          <li><strong>Discord-Webhook</strong> — Neue Matches und Scrims werden automatisch in Discord gepostet</li>
+          <li><strong>Discord-Webhook</strong> — Neue Matches werden automatisch in Discord gepostet (farbcodierte Embeds)</li>
           <li><strong>Statistik-Leiste</strong> — Siege, Niederlagen, Winrate auf einen Blick</li>
         </ul>
       </p>
@@ -168,7 +186,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128506;</div>
+        <div class="feature-icon">🗺️</div>
         <span class="feature-name">Strategien</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -177,22 +195,22 @@
         <ul>
           <li><strong>Erstellen</strong> — Map, Seite (Attack/Defense), Typ (Default, Anti-Strat, Retake, Post-Plant, Rush, Slow Execute) und Beschreibung</li>
           <li><strong>Dateien</strong> — Bilder oder Dateien hochladen um Strats visuell zu erklären. Alle Dateien AES-256-GCM verschlüsselt</li>
-          <li><strong>Versionierung</strong> — Jede Änderung erstellt automatisch eine neue Version. Ältere Versionen bleiben erhalten</li>
-          <li><strong>Playbooks</strong> — Mehrere Strats zu einem geordneten Playbook zusammenfassen, z.B. "Ranked-Rotation" oder "Turnier-Strats"</li>
+          <li><strong>Versionierung</strong> — Jede Änderung erstellt automatisch eine neue Version. Ältere Versionen bleiben erhalten und können eingesehen werden</li>
+          <li><strong>Playbooks</strong> — Mehrere Strats zu einem geordneten Playbook zusammenfassen, z.B. "Ranked-Rotation" oder "Turnier-Strats". Drag & Drop Sortierung</li>
         </ul>
       </p>
     </div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128101;</div>
+        <div class="feature-icon">👥</div>
         <span class="feature-name">Lineups</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
       <p class="feature-desc">
         Aufstellungen für Map/Seite-Kombinationen zusammenstellen.
         <ul>
-          <li><strong>Erstellen</strong> — Map und Seite wählen, dann Spielern Rollen und Operators zuweisen</li>
+          <li><strong>Erstellen</strong> — Map und Seite wählen, dann Spielern Rollen und Operators zuweisen (aus der R6 Siege Game-Config geladen)</li>
           <li><strong>Übersicht</strong> — Auf einen Blick sehen, wer auf welcher Map welche Rolle und welchen Operator spielt</li>
           <li><strong>Mehrere Varianten</strong> — Verschiedene Lineup-Varianten für die gleiche Map vorbereiten</li>
         </ul>
@@ -201,7 +219,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128065;</div>
+        <div class="feature-icon">🔭</div>
         <span class="feature-name">Scouting</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -209,8 +227,9 @@
         Gegner-Datenbank für die Spielvorbereitung.
         <ul>
           <li><strong>Gegner anlegen</strong> — Name, Team-Tag, Bedrohungslevel (Low / Medium / High / Critical) und allgemeine Infos</li>
-          <li><strong>Scouting-Notizen</strong> — Pro Gegner detaillierte Notizen zu Maps, Stärken, Schwächen und Gewohnheiten. Kategorisiert für bessere Übersicht</li>
+          <li><strong>Scouting-Notizen</strong> — Pro Gegner detaillierte Notizen zu Maps, Stärken, Schwächen und Gewohnheiten. Kategorisiert nach Map und Thema</li>
           <li><strong>Bedrohungslevel</strong> — Farbcodierte Schnell-Einschätzung wie stark ein Gegner ist</li>
+          <li><strong>Kampfstil & Analyse</strong> — Playstyle, Stärken und Schwächen pro Gegner dokumentieren</li>
         </ul>
       </p>
     </div>
@@ -219,7 +238,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128202;</div>
+        <div class="feature-icon">🗳️</div>
         <span class="feature-name">Umfragen</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -228,24 +247,24 @@
         <ul>
           <li><strong>Erstellen</strong> — Frage mit beliebig vielen Antwortoptionen. Optional: Mehrfachauswahl und Ablaufdatum</li>
           <li><strong>Abstimmen</strong> — Ein Klick genügt. Ergebnisse werden in Echtzeit mit Prozent-Balken angezeigt</li>
-          <li><strong>Abgelaufen</strong> — Nach Ablauf werden Ergebnisse eingefroren und per E-Mail benachrichtigt</li>
+          <li><strong>Abgelaufen</strong> — Nach Ablauf werden Ergebnisse eingefroren und per Benachrichtigung (E-Mail/WhatsApp) gemeldet</li>
         </ul>
       </p>
     </div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128227;</div>
+        <div class="feature-icon">📢</div>
         <span class="feature-name">Ankündigungen</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
       <p class="feature-desc">
         Wichtige Team-News zentral posten.
         <ul>
-          <li><strong>Erstellen</strong> — Titel und Inhalt verfassen, optional mit Ablaufdatum</li>
+          <li><strong>Erstellen</strong> — Titel und Inhalt verfassen, mit Prioritätsstufe (Ruhig, Normal, Dringend, ALLE MANN AN DECK)</li>
           <li><strong>Anpinnen</strong> — Wichtige Ankündigungen oben fixieren damit sie nicht untergehen</li>
           <li><strong>Lesebestätigung</strong> — Teammitglieder markieren Ankündigungen als gelesen. Admins sehen wer gelesen hat</li>
-          <li><strong>E-Mail</strong> — Neue Ankündigungen werden per Mail an das Team verschickt</li>
+          <li><strong>Benachrichtigung</strong> — Neue Ankündigungen werden per E-Mail, WhatsApp und/oder Discord-Webhook verschickt</li>
         </ul>
       </p>
     </div>
@@ -254,7 +273,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128214;</div>
+        <div class="feature-icon">📖</div>
         <span class="feature-name">Wiki</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -270,7 +289,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128221;</div>
+        <div class="feature-icon">📝</div>
         <span class="feature-name">Notizen</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -286,7 +305,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128276;</div>
+        <div class="feature-icon">🔔</div>
         <span class="feature-name">Erinnerungen</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -302,7 +321,7 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128197;</div>
+        <div class="feature-icon">📅</div>
         <span class="feature-name">Verfügbarkeit</span>
         <span class="badge badge-toggle">Togglebar</span>
       </div>
@@ -315,11 +334,77 @@
       </p>
     </div>
 
+    <div class="section">Benachrichtigungen</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🔔</div>
+        <span class="feature-name">In-App-Benachrichtigungen</span>
+      </div>
+      <p class="feature-desc">
+        Echtzeit-Benachrichtigungssystem direkt in der App.
+        <ul>
+          <li><strong>Glocken-Icon</strong> — Im Header mit Ungelesen-Zähler (Badge). Dropdown zeigt die letzten 10 Benachrichtigungen</li>
+          <li><strong>Echtzeit</strong> — Socket.io liefert Updates in Echtzeit, zusätzlich Polling alle 60 Sekunden</li>
+          <li><strong>Klick-Navigation</strong> — Klick auf eine Benachrichtigung markiert sie als gelesen und navigiert zum verlinkten Bereich</li>
+          <li><strong>Alle gelesen</strong> — Ein Klick markiert alle Benachrichtigungen als gelesen</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">💻</div>
+        <span class="feature-name">Browser-Benachrichtigungen</span>
+      </div>
+      <p class="feature-desc">
+        Desktop-Notifications über die Browser Notification API.
+        <ul>
+          <li><strong>Automatische Nachfrage</strong> — Beim ersten Besuch wird gefragt ob Browser-Benachrichtigungen aktiviert werden sollen</li>
+          <li><strong>Push bei Events</strong> — Benachrichtigungen bei neuen Trainings, Matches und Ankündigungen — auch wenn der Tab im Hintergrund ist</li>
+          <li><strong>Nur im Hintergrund</strong> — Benachrichtigungen werden nur angezeigt wenn der Tab nicht fokussiert ist</li>
+          <li><strong>Einstellbar</strong> — Im Profil-Dropdown oben rechts ein/ausschaltbar</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">📧</div>
+        <span class="feature-name">E-Mail & WhatsApp</span>
+      </div>
+      <p class="feature-desc">
+        Externe Benachrichtigungen über konfigurierbare Kanäle.
+        <ul>
+          <li><strong>Kanal-Auswahl</strong> — In den Einstellungen wählbar: E-Mail (SMTP), WhatsApp (WAHA) oder Aus</li>
+          <li><strong>E-Mail</strong> — SMTP-basiert. HTML-Templates für Event-Erstellung, Änderungen, Löschungen, Ankündigungen, Erinnerungen und Poll-Ergebnisse</li>
+          <li><strong>WhatsApp</strong> — Über WAHA (WhatsApp HTTP API). Alle Benachrichtigungstypen werden auch per WhatsApp unterstützt</li>
+          <li><strong>Erinnerungen</strong> — Automatische Erinnerungen vor Events mit konfigurierbaren Intervallen (z.B. 60 Min und 24h vorher)</li>
+          <li><strong>Ausgegraut</strong> — Wenn SMTP- oder WAHA-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option in den Einstellungen ausgegraut</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🎮</div>
+        <span class="feature-name">Discord-Webhooks</span>
+      </div>
+      <p class="feature-desc">
+        Automatische Benachrichtigungen in Discord.
+        <ul>
+          <li><strong>Rich Embeds</strong> — Farbcodierte Discord-Embeds für neue Matches und Trainings (Grün=Sieg, Rot=Niederlage, Blau=Scrim, Orange=Ausstehend)</li>
+          <li><strong>Unabhängig</strong> — Funktioniert immer, egal welcher Benachrichtigungskanal in den Einstellungen gewählt ist</li>
+          <li><strong>Team- oder Global-URL</strong> — Webhook-URL kann pro Team oder global in der .env konfiguriert werden</li>
+        </ul>
+      </p>
+    </div>
+
     <div class="section">Hilfe &amp; Info</div>
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#10067;</div>
+        <div class="feature-icon">❓</div>
         <span class="feature-name">Dokumentation</span>
       </div>
       <p class="feature-desc">
@@ -329,11 +414,30 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128336;</div>
+        <div class="feature-icon">🕐</div>
         <span class="feature-name">Changelog</span>
       </div>
       <p class="feature-desc">
-        Versionsverlauf mit allen bisherigen Änderungen, neuen Features und Bugfixes. Einklappbar, neueste Version standardmäßig geöffnet.
+        Versionsverlauf mit allen bisherigen Änderungen, neuen Features und Bugfixes. Einklappbar, neueste Version standardmäßig geöffnet. Tags: Feature, Fix, Improvement, Breaking.
+      </p>
+    </div>
+
+    <div class="section">Profil &amp; Persönliche Einstellungen</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">👤</div>
+        <span class="feature-name">Profil-Dropdown</span>
+      </div>
+      <p class="feature-desc">
+        Persönliche Einstellungen über das Profil-Icon oben rechts — für alle Benutzer zugänglich, ohne Admin-Rechte.
+        <ul>
+          <li><strong>Anzeigename</strong> — Eigenen Anzeigenamen ändern</li>
+          <li><strong>E-Mail & Telefon</strong> — E-Mail-Adresse und WhatsApp-Nummer hinterlegen für Benachrichtigungen</li>
+          <li><strong>Sprache</strong> — Zwischen Deutsch, Englisch und Piratensprache wechseln</li>
+          <li><strong>Browser-Benachrichtigungen</strong> — Desktop-Notifications ein/ausschalten</li>
+          <li><strong>Abmelden</strong> — Session beenden</li>
+        </ul>
       </p>
     </div>
 
@@ -341,20 +445,77 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#9881;</div>
+        <div class="feature-icon">⚙️</div>
         <span class="feature-name">Einstellungen</span>
         <span class="badge badge-admin">Nur Admins</span>
       </div>
       <p class="feature-desc">
-        Zentrale Konfiguration der Plattform.
+        Zentrale Konfiguration der Plattform. Nur für Benutzer mit Admin-Rechten sichtbar und zugänglich.
         <ul>
-          <li><strong>Feature-Toggles</strong> — Jedes Feature einzeln aktivieren oder deaktivieren. Deaktivierte Features verschwinden aus der Navigation</li>
-          <li><strong>Game-Config</strong> — Maps, Operators, Spieler-Rollen und andere spielspezifische Daten anpassen</li>
-          <li><strong>Team-Profil</strong> — Team-Name, Logo und Discord-Webhook-URL verwalten</li>
-          <li><strong>Admin-Dashboard</strong> — User-Aktivität (7 Tage), Entity-Counts, API-Requests (30 Tage) und Speicherverbrauch auf einen Blick</li>
-          <li><strong>Mitglieder</strong> — Rollen zuweisen, Mitglieder entfernen</li>
+          <li><strong>Team-Profil</strong> — Team-Name, Tag, Logo und Beschreibung verwalten. Discord-Webhook-URL konfigurieren</li>
+          <li><strong>Benachrichtigungs-Kanal</strong> — Team-weiten Benachrichtigungskanal wählen: E-Mail (SMTP), WhatsApp (WAHA) oder Aus. Nicht konfigurierte Kanäle werden ausgegraut angezeigt</li>
+          <li><strong>Browser-Benachrichtigungen</strong> — Einstellung für Desktop-Notifications (gilt pro Benutzer, hier als Admin-Übersicht)</li>
+          <li><strong>Mitglieder-Verwaltung</strong> — Alle Team-Mitglieder mit Rollen und Status. Mitglieder entfernen möglich</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🛡️</div>
+        <span class="feature-name">Admin-Rechte</span>
+        <span class="badge badge-admin">Nur Admins</span>
+      </div>
+      <p class="feature-desc">
+        Was können Admins, was normale Benutzer nicht können?
+        <ul>
+          <li><strong>Einstellungen-Seite</strong> — Nur Admins sehen den Einstellungen-Link in der Navigation und können die Seite aufrufen</li>
+          <li><strong>Team-Einstellungen</strong> — Team-Name, Logo, Discord-Webhook-URL und Benachrichtigungskanal ändern</li>
+          <li><strong>Mitglieder verwalten</strong> — Team-Mitglieder einsehen und entfernen</li>
+          <li><strong>Feature-Toggles</strong> — Einzelne Features (Training, Matches, Strats, etc.) für das gesamte Team aktivieren/deaktivieren</li>
+          <li><strong>Game-Config</strong> — Maps, Operators, Spieler-Rollen und spielspezifische Daten anpassen</li>
           <li><strong>Daten-Export</strong> — Match-Statistiken, Training-Teilnahme und Verfügbarkeit als CSV oder JSON exportieren</li>
-          <li><strong>E-Mail-Einstellungen</strong> — Automatische Event-Benachrichtigungen und Erinnerungs-Intervalle konfigurieren</li>
+          <li><strong>Wiki-Seiten löschen</strong> — Nur Admins können Wiki-Seiten entfernen (erstellen/bearbeiten ab Analyst)</li>
+          <li><strong>Alle Notizen einsehen</strong> — Admins sehen und verwalten alle Team-Notizen, auch private anderer Benutzer</li>
+          <li><strong>Admin-Vergabe</strong> — Über <code>ADMIN_ROLE_IDS</code> (Discord-Rollen) oder <code>ADMIN_USER_IDS</code> (Discord-User-IDs) in der .env. Admin-User können sich auch ohne Guild-Mitgliedschaft einloggen</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Zugang &amp; Rollen</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🔐</div>
+        <span class="feature-name">Discord-Authentifizierung</span>
+      </div>
+      <p class="feature-desc">
+        Login ausschließlich über Discord OAuth 2.0. Keine eigenen Passwörter.
+        <ul>
+          <li><strong>Guild-Prüfung</strong> — Benutzer muss Mitglied des in <code>REQUIRED_GUILD_ID</code> konfigurierten Discord-Servers sein</li>
+          <li><strong>Rollen-Prüfung</strong> — Wenn <code>ALLOWED_ROLE_IDS</code> gesetzt ist, braucht der Benutzer mindestens eine dieser Discord-Rollen</li>
+          <li><strong>Admin-Bypass</strong> — Benutzer in <code>ADMIN_USER_IDS</code> können die Guild- und Rollen-Prüfung komplett umgehen</li>
+          <li><strong>Admin-Rollen</strong> — Discord-Rollen in <code>ADMIN_ROLE_IDS</code> vergeben automatisch Admin-Rechte in der App</li>
+          <li><strong>Automatische Aktualisierung</strong> — Avatar, Name und Admin-Status werden bei jedem Login von Discord synchronisiert</li>
+          <li><strong>JWT-Sessions</strong> — httpOnly Cookies, 7 Tage Access-Token, 30 Tage Refresh-Token</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">👑</div>
+        <span class="feature-name">Team-Rollen (In-App)</span>
+      </div>
+      <p class="feature-desc">
+        Aufsteigende Berechtigungsstufen innerhalb der App:
+        <ul>
+          <li><strong>Tryout (-1)</strong> — Eingeschränkter Zugriff, kann an Abstimmungen teilnehmen</li>
+          <li><strong>Player (0)</strong> — Standard-Rolle, voller Lese- und Abstimmungszugriff</li>
+          <li><strong>Analyst (1)</strong> — Kann Strats und Wiki-Seiten erstellen/bearbeiten</li>
+          <li><strong>Coach (2)</strong> — Kann Erinnerungen erstellen und erweiterte Verwaltung</li>
+          <li><strong>Captain (3)</strong> — Team-Anführer mit erweiterten Rechten</li>
+          <li><strong>Admin (4)</strong> — Voller Zugriff auf alle Funktionen und Einstellungen</li>
         </ul>
       </p>
     </div>
@@ -363,22 +524,59 @@
 
     <div class="feature">
       <div class="feature-header">
-        <div class="feature-icon">&#128274;</div>
+        <div class="feature-icon">🔒</div>
         <span class="feature-name">Sicherheit</span>
       </div>
       <p class="feature-desc">
         <ul>
-          <li><strong>Discord OAuth</strong> — Login ausschließlich über Discord. Keine Passwörter gespeichert. Zugang über Guild-Mitgliedschaft und Rollen einschränkbar</li>
           <li><strong>Dateiverschlüsselung</strong> — Alle hochgeladenen Dateien (Strats, Replays, MOSS) mit AES-256-GCM verschlüsselt auf dem Server. Downloads automatisch entschlüsselt</li>
           <li><strong>CSRF-Schutz</strong> — Double-Submit-Cookie-Pattern auf allen Mutation-Endpoints</li>
           <li><strong>Rate-Limiting</strong> — 60 Requests/Minute auf POST/PUT/DELETE, strengere Limits auf Auth-Routen</li>
-          <li><strong>Sessions</strong> — JWT httpOnly Cookies, 7 Tage Access-Token, 30 Tage Refresh-Token</li>
           <li><strong>File-Validierung</strong> — Magic-Bytes-Check verhindert manipulierte Datei-Uploads</li>
+          <li><strong>Strukturiertes Logging</strong> — Pino JSON-Logger mit Log-Levels für Debugging und Monitoring</li>
+          <li><strong>Graceful Shutdown</strong> — Server schließt DB-Verbindungen und Requests sauber bei SIGTERM</li>
         </ul>
       </p>
     </div>
 
-    <footer>Next Phantoms HQ v1.6.0 — Next Destiny eSports</footer>
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">⚡</div>
+        <span class="feature-name">Performance &amp; Infrastruktur</span>
+      </div>
+      <p class="feature-desc">
+        <ul>
+          <li><strong>Echtzeit</strong> — Socket.io für Live-Updates auf allen Seiten (Trainings, Matches, Ankündigungen, Kommentare etc.)</li>
+          <li><strong>Datenbank-Indexes</strong> — 18+ Indexes auf Foreign-Keys und Zeit-Queries für schnelle Abfragen</li>
+          <li><strong>In-Memory-Cache</strong> — Team-Config und Game-Config werden 60 Sekunden gecacht</li>
+          <li><strong>Batch-Queries</strong> — Scheduler lädt Events in einem Query statt einzeln</li>
+          <li><strong>Parallele Benachrichtigungen</strong> — E-Mails und WhatsApp-Nachrichten werden mit Promise.all parallel versendet</li>
+          <li><strong>Docker-Deployment</strong> — Docker Compose mit Health-Checks, automatischem Restart und Nginx-Reverse-Proxy</li>
+          <li><strong>Update-Script</strong> — <code>update.sh</code> für den Server: Git Pull, DB-Backup, Docker-Rebuild, Health-Check und Smoke-Test</li>
+          <li><strong>PWA-Support</strong> — Manifest für "Zum Startbildschirm hinzufügen" auf Mobilgeräten</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">🛠️</div>
+        <span class="feature-name">Tech Stack</span>
+      </div>
+      <p class="feature-desc">
+        <ul>
+          <li><strong>Frontend</strong> — Next.js 16 (App Router), React 19, Tailwind CSS 4, Zustand (State Management), Recharts (Statistiken)</li>
+          <li><strong>Backend</strong> — Express.js 5, TypeScript (strict mode), Prisma 7 ORM, Socket.io</li>
+          <li><strong>Datenbank</strong> — PostgreSQL 16+</li>
+          <li><strong>Auth</strong> — Discord OAuth 2.0 + JWT (httpOnly Cookies)</li>
+          <li><strong>Benachrichtigungen</strong> — Nodemailer (SMTP), WAHA (WhatsApp), Discord Webhooks, Browser Notification API</li>
+          <li><strong>Deployment</strong> — Docker Compose, Nginx, pnpm Workspaces (Monorepo)</li>
+          <li><strong>Shared Types</strong> — TypeScript-Typen und Konstanten im <code>shared/</code> Paket, von Client und Server genutzt</li>
+        </ul>
+      </p>
+    </div>
+
+    <footer>Next Phantoms HQ v1.9.0 — Next Destiny eSports</footer>
   </div>
 </body>
 </html>

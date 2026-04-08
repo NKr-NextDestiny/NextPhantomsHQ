@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Settings, Shield, User, Save, Upload, Trash2, Bell, Globe, Monitor } from "lucide-react";
+import { Settings, Shield, Save, Trash2, Bell, Monitor } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
-import { useT, useI18n } from "@/i18n/provider";
-import { locales, localeNames, type Locale } from "@/i18n";
+import { useT } from "@/i18n/provider";
 
 interface TeamSettings {
   id: string;
@@ -94,9 +93,7 @@ export default function SettingsPage() {
   const { success, error } = useToast();
   const t = useT("settings");
   const tc = useT("common");
-  const tl = useT("language");
-  const { locale, setLocale } = useI18n();
-  const [tab, setTab] = useState<"personal" | "team" | "notifications" | "members">("personal");
+  const [tab, setTab] = useState<"team" | "notifications" | "members">("team");
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
   const [notifyConfig, setNotifyConfig] = useState<NotificationConfig>({ email: false, whatsapp: false });
@@ -104,7 +101,6 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const [notificationChannel, setNotificationChannel] = useState("NONE");
-  const [personalForm, setPersonalForm] = useState({ displayName: "", email: "", phone: "" });
 
   // Nur Admins dürfen hier rein
   useEffect(() => {
@@ -132,9 +128,6 @@ export default function SettingsPage() {
       if (notifyRes.status === "fulfilled" && notifyRes.value.data) {
         setNotifyConfig(notifyRes.value.data);
       }
-      if (user) {
-        setPersonalForm({ displayName: user.displayName, email: user.email || "", phone: (user as any).phone || "" });
-      }
     } catch {
       error(tc("loadError"));
     } finally {
@@ -150,18 +143,6 @@ export default function SettingsPage() {
       await api.put("/api/team", teamForm);
       success(tc("saved"));
       load();
-    } catch {
-      error(tc("saveError"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const savePersonal = async () => {
-    setSaving(true);
-    try {
-      await api.put("/api/users/me", { ...personalForm, phone: personalForm.phone || null });
-      success(tc("saved"));
     } catch {
       error(tc("saveError"));
     } finally {
@@ -200,7 +181,6 @@ export default function SettingsPage() {
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1">
         {[
-          { id: "personal" as const, label: t("tabs.personal"), icon: User },
           { id: "team" as const, label: t("tabs.team"), icon: Settings },
           { id: "notifications" as const, label: t("tabs.notifications"), icon: Bell },
           { id: "members" as const, label: t("tabs.members"), icon: Shield },
@@ -214,58 +194,6 @@ export default function SettingsPage() {
           </button>
         ))}
       </div>
-
-      {/* Personal Settings */}
-      {tab === "personal" && (
-        <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("personal.title")}</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="h-16 w-16 rounded-full ring-2 ring-[var(--border)]" />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--primary)] text-xl font-bold text-white">
-                  {user?.displayName?.charAt(0)}
-                </div>
-              )}
-              <div>
-                <p className="font-semibold text-[var(--foreground)]">{user?.displayName}</p>
-                <p className="text-sm text-[var(--muted-foreground)]">@{user?.username}</p>
-              </div>
-            </div>
-            <Input label={t("personal.displayName")} value={personalForm.displayName} onChange={(e) => setPersonalForm({ ...personalForm, displayName: e.target.value })} />
-            <Input label={t("personal.email")} type="email" value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
-            <Input label={t("personal.phone")} value={personalForm.phone} onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })} placeholder="+491234567890" />
-
-            {/* Language Switcher */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
-                <Globe className="mr-1.5 inline h-4 w-4" />
-                {t("personal.language")}
-              </label>
-              <div className="flex gap-2">
-                {locales.map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLocale(l)}
-                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
-                      locale === l
-                        ? "border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]"
-                        : "border-[var(--border)] bg-[var(--secondary)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/50 hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    {localeNames[l]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <Button onClick={savePersonal} isLoading={saving}>
-              <Save className="h-4 w-4" /> {tc("save")}
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Team Settings */}
       {tab === "team" && (

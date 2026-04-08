@@ -8,6 +8,7 @@ export interface AuthUser {
   avatarUrl: string | null;
   isAdmin: boolean;
   email: string | null;
+  phone: string | null;
   language: string | null;
 }
 

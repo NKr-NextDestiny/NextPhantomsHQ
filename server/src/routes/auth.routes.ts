@@ -2,6 +2,7 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma.js";
 import { config } from "../config/index.js";
+import { logger } from "../config/logger.js";
 import { authenticate } from "../middleware/auth.js";
 import { generateUniqueNumericId } from "../services/numericId.service.js";
 import { ensureTeamExists } from "../services/team.service.js";
@@ -27,7 +28,7 @@ authRouter.get("/discord", (_req, res) => {
     redirect_uri: config.discordCallbackUrl,
     response_type: "code",
     scope: scopes.join(" "),
-    prompt: "none",
+    prompt: "consent",
   });
   res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
 });
@@ -62,30 +63,49 @@ authRouter.get("/discord/callback", async (req, res) => {
 
     // Guild & Role check
     let memberRoles: string[] = [];
+    const isAdminUser = config.adminUserIds.includes(discordUser.id);
+
     if (config.requiredGuildId) {
       try {
         const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${config.requiredGuildId}/member`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (!memberRes.ok) { res.redirect(config.appUrl + "/access-denied?reason=not_in_server"); return; }
-        const memberData = await memberRes.json();
-        memberRoles = memberData.roles || [];
-
-        if (config.allowedRoleIds.length > 0) {
-          const hasAllowedRole = config.allowedRoleIds.some(roleId => memberRoles.includes(roleId));
-          const isAdminUser = config.adminUserIds.includes(discordUser.id);
-          if (!hasAllowedRole && !isAdminUser) { res.redirect(config.appUrl + "/access-denied?reason=missing_role"); return; }
+        if (!memberRes.ok) {
+          // Admin users (via ADMIN_USER_IDS) can bypass guild membership
+          if (isAdminUser) {
+            logger.info({ discordId: discordUser.id }, "[Auth] Admin user bypassed guild check");
+          } else {
+            logger.warn({ discordId: discordUser.id, status: memberRes.status, statusText: memberRes.statusText }, "[Auth] Guild member check failed");
+            res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
+            return;
+          }
+        } else {
+          const memberData = await memberRes.json();
+          memberRoles = memberData.roles || [];
         }
-      } catch {
-        res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
-        return;
+
+        if (config.allowedRoleIds.length > 0 && !isAdminUser) {
+          const hasAllowedRole = config.allowedRoleIds.some(roleId => memberRoles.includes(roleId));
+          if (!hasAllowedRole) {
+            logger.warn({ discordId: discordUser.id, roles: memberRoles }, "[Auth] Missing required role");
+            res.redirect(config.appUrl + "/access-denied?reason=missing_role");
+            return;
+          }
+        }
+      } catch (err) {
+        if (isAdminUser) {
+          logger.info({ discordId: discordUser.id }, "[Auth] Admin user bypassed guild check (fetch error)");
+        } else {
+          logger.error(err, "[Auth] Guild member check error");
+          res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
+          return;
+        }
       }
     }
 
     // Admin check: via role IDs OR via user IDs
     const hasAdminRole = config.adminRoleIds.length > 0 && config.adminRoleIds.some(roleId => memberRoles.includes(roleId));
-    const hasAdminUserId = config.adminUserIds.includes(discordUser.id);
-    const isDiscordAdmin = hasAdminRole || hasAdminUserId;
+    const isDiscordAdmin = hasAdminRole || isAdminUser;
 
     const teamId = await ensureTeamExists();
 

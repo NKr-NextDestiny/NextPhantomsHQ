@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.9.0",
+    date: "2026-04-09",
+    tags: ["feature", "improvement", "fix"],
+    title: "Profil-Dropdown, Login-Fix & Piratensprache 2.0",
+    changes: [
+      "Persönliche Einstellungen (Name, E-Mail, Telefon, Sprache, Browser-Notifications) jetzt im Profil-Dropdown oben rechts — für alle Benutzer zugänglich",
+      "Einstellungen-Seite ist jetzt rein Admin-only (kein persönlicher Tab mehr)",
+      "Login-Fix: Admin-User (ADMIN_USER_IDS) können sich jetzt auch ohne Discord-Server-Mitgliedschaft einloggen",
+      "Login-Fix: Discord OAuth fragt jetzt immer nach Berechtigung (prompt=consent statt prompt=none) — behebt Scope-Probleme bei bestehenden Autorisierungen",
+      "Logging: Guild- und Rollen-Prüfung loggt jetzt Fehler mit Status-Codes für einfacheres Debugging",
+      "Piratensprache komplett auf Deutsch umgeschrieben mit viel mehr Memes und Emojis 🏴‍☠️",
+      "features.html komplett überarbeitet und auf Stand gebracht (Browser-Notifications, i18n, WhatsApp, Admin-Rechte, Profil-Dropdown, Tech Stack)",
+    ],
+  },
+  {
     version: "1.8.0",
     date: "2026-04-09",
     tags: ["feature"],

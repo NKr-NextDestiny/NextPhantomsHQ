@@ -65,7 +65,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   // Keep <html lang="..."> in sync
   useEffect(() => {
-    document.documentElement.lang = locale === "pirate" ? "en" : locale;
+    document.documentElement.lang = locale === "pirate" ? "de" : locale;
   }, [locale]);
 
   const value = useMemo(() => ({ locale, setLocale, t, scopedT }), [locale, setLocale, t, scopedT]);
