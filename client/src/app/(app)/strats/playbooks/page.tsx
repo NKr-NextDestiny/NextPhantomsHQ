@@ -170,7 +170,7 @@ export default function PlaybooksPage() {
                   <Button variant="secondary" size="sm" onClick={() => openEdit(pb)}>
                     <Edit2 className="h-4 w-4" />
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => handleDelete(pb.id)}>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(pb.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
