@@ -2,11 +2,10 @@
 set -euo pipefail
 
 # ─── Next Phantoms HQ — Production Update Script ───
-# Usage: ./update.sh [--force] [--no-backup] [--branch main]
+# Usage: ./update.sh [--no-backup] [--branch main]
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 BRANCH="main"
-FORCE=false
 SKIP_BACKUP=false
 BACKUP_DIR="$REPO_DIR/backups"
 
@@ -25,13 +24,11 @@ err()  { echo -e "${RED}[ERROR ]${NC} $1"; exit 1; }
 # ─── Parse arguments ───
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --force)     FORCE=true; shift ;;
     --no-backup) SKIP_BACKUP=true; shift ;;
     --branch)    BRANCH="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: ./update.sh [--force] [--no-backup] [--branch <branch>]"
+      echo "Usage: ./update.sh [--no-backup] [--branch <branch>]"
       echo ""
-      echo "  --force       Skip confirmation prompt"
       echo "  --no-backup   Skip database backup before update"
       echo "  --branch      Branch to pull (default: main)"
       exit 0
@@ -58,20 +55,15 @@ REMOTE_SHA=$(git rev-parse "origin/$BRANCH")
 LOCAL_SHORT="${LOCAL_SHA:0:7}"
 REMOTE_SHORT="${REMOTE_SHA:0:7}"
 
-if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
-  ok "Already up to date ($LOCAL_SHORT) — rebuilding anyway"
-fi
-
 COMMITS_BEHIND=$(git rev-list HEAD.."origin/$BRANCH" --count)
-log "Current: $LOCAL_SHORT | Remote: $REMOTE_SHORT | $COMMITS_BEHIND commit(s) behind"
-echo ""
-git log --oneline HEAD.."origin/$BRANCH" | head -15
-echo ""
 
-# ─── Confirm ───
-if [ "$FORCE" = false ]; then
-  read -rp "Apply update? [y/N] " confirm
-  [[ "$confirm" =~ ^[yYjJ]$ ]] || { log "Aborted."; exit 0; }
+if [ "$COMMITS_BEHIND" -gt 0 ]; then
+  log "Current: $LOCAL_SHORT | Remote: $REMOTE_SHORT | $COMMITS_BEHIND commit(s) behind"
+  echo ""
+  git log --oneline HEAD.."origin/$BRANCH" | head -15
+  echo ""
+else
+  ok "Already up to date ($LOCAL_SHORT) — rebuilding anyway"
 fi
 
 # ─── Backup database ───
