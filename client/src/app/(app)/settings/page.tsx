@@ -352,11 +352,39 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-[var(--foreground)]">{m.user.displayName}</span>
                       {m.user.isAdmin && m.role !== "ADMIN" && <Badge variant="default">Admin</Badge>}
-                      <Badge variant={m.role === "ADMIN" ? "default" : "outline"}>{m.role}</Badge>
-                      {m.status !== "ACTIVE" && <Badge variant="outline">{m.status}</Badge>}
                     </div>
                     <span className="text-xs text-[var(--muted-foreground)]">@{m.user.username}</span>
                   </div>
+                  <select
+                    value={m.role}
+                    onChange={async (e) => {
+                      try {
+                        await api.put(`/api/team/members/${m.user.id}`, { role: e.target.value, status: m.status });
+                        success(tc("saved"));
+                        load();
+                      } catch { error(tc("saveError")); }
+                    }}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+                  >
+                    {["TRYOUT", "PLAYER", "ANALYST", "COACH", "CAPTAIN", "ADMIN"].map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={m.status}
+                    onChange={async (e) => {
+                      try {
+                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: e.target.value });
+                        success(tc("saved"));
+                        load();
+                      } catch { error(tc("saveError")); }
+                    }}
+                    className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+                  >
+                    {["ACTIVE", "SUBSTITUTE", "BENCH", "INACTIVE"].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                   {m.user.id !== user?.id && (
                     <button onClick={() => removeMember(m.user.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
                       <Trash2 className="h-4 w-4" />
