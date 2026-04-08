@@ -8,6 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { upload } from "../middleware/upload.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
+import { getAvailableChannels } from "../services/channel-notification.service.js";
 
 export const teamRouter = Router();
 
@@ -20,6 +21,7 @@ const updateTeamSchema = z.object({
   discordWebhookUrl: z.string().optional().nullable(),
   defaultReminderIntervals: z.array(z.number()).optional(),
   autoEmailEvents: z.boolean().optional(),
+  notificationChannel: z.enum(["NONE", "EMAIL", "WHATSAPP"]).optional(),
   enabledFeatures: z.array(z.string()).optional(),
 });
 
@@ -147,6 +149,11 @@ teamRouter.delete("/members/:uid", authenticate, teamContext, requireAdmin, asyn
     await logAudit(req.user!.id, "DELETE", "team_member", membership.id, { userId: String(req.params.uid) }, req.teamId);
     res.json({ success: true, message: "Member removed" });
   } catch (error) { next(error); }
+});
+
+// Get available notification channels (based on env configuration)
+teamRouter.get("/notification-config", authenticate, teamContext, async (_req, res) => {
+  res.json({ success: true, data: getAvailableChannels() });
 });
 
 // Upload team logo (admin only)

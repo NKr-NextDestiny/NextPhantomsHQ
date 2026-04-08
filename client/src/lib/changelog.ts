@@ -8,6 +8,35 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.6.0",
+    date: "2026-04-08",
+    tags: ["feature"],
+    title: "WhatsApp-Benachrichtigungen (WAHA) & Kanal-Auswahl",
+    changes: [
+      "Benachrichtigungs-Kanal in Einstellungen wählbar: E-Mail (SMTP), WhatsApp (WAHA) oder Aus",
+      "WAHA-Integration: Trainings, Matches, Ankündigungen und Erinnerungen werden per WhatsApp verschickt",
+      "Wenn SMTP- oder WAHA-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option ausgegraut",
+      "Discord-Webhooks funktionieren immer unabhängig vom gewählten Kanal",
+      "Neues Telefon-Feld in persönlichen Einstellungen für WhatsApp-Nummer",
+      "Alle bestehenden E-Mail-Benachrichtigungen (Trainings, Matches, Ankündigungen, Erinnerungen) laufen jetzt über den konfigurierten Kanal",
+    ],
+  },
+  {
+    version: "1.5.0",
+    date: "2026-04-08",
+    tags: ["feature", "breaking"],
+    title: "Scrims in Matches zusammengeführt",
+    changes: [
+      "Scrims sind jetzt Teil von Matches — neuer Typ-Filter: Scrim, Turnier, Liga, Freundschaftlich, Sonstige",
+      "Match-Erstellung mit Typ-Auswahl: je nach Typ werden passende Felder angezeigt (Map-Pool, Format, Kontakt etc.)",
+      "Teilnahme-Abstimmung (Verfügbar/Nicht verfügbar/Vielleicht) direkt im Match für Scrim-Typ",
+      "Ergebnis nachträglich eintragen für Scrims ohne initiale Scores inkl. Bewertungen",
+      "Statistik-Leiste passt sich dem aktiven Typ-Filter an",
+      "Bestehende Scrim-Daten wurden automatisch in Matches migriert (alle Links/Referenzen bleiben intakt)",
+      "Scrims-Seite und Navigation entfernt — alles unter Matches",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-04-08",
     tags: ["feature", "improvement"],
@@ -22,7 +51,7 @@ export const changelog: ChangelogEntry[] = [
       "Datenbank-Indexes: 18 neue Indexes auf Foreign-Keys und Zeit-Queries für schnellere Abfragen",
       "In-Memory-Cache: Team-Config und Game-Config werden 60 Sekunden gecacht",
       "Pagination-Helper: Einheitliche Pagination für Listen-Endpoints",
-      "Batch-Queries: Scheduler lädt Trainings/Scrims in einem Query statt einzeln",
+      "Batch-Queries: Scheduler lädt Trainings/Matches in einem Query statt einzeln",
       "Parallele E-Mails: Benachrichtigungen werden mit Promise.all statt sequentiell versendet",
       "E-Mail-Benachrichtigungen: Neue Mails für Event-Änderungen, Löschungen, Announcements und Poll-Ergebnisse",
       "Socket.io Client-Hook: useSocket mit Singleton-Pattern und Ref-Counting",

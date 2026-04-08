@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "../config/prisma.js";
-import { sendAttendanceReminder } from "./email.service.js";
+import * as channelNotify from "./channel-notification.service.js";
 import { config } from "../config/index.js";
 import { logger } from "../config/logger.js";
 
@@ -14,21 +14,21 @@ export function startScheduler() {
 
       if (reminders.length === 0) return;
 
-      // Batch-load all referenced trainings and scrims
+      // Batch-load all referenced trainings and matches
       const trainingIds = reminders.filter(r => r.eventType === "TRAINING").map(r => r.eventId);
-      const scrimIds = reminders.filter(r => r.eventType === "SCRIM").map(r => r.eventId);
+      const matchIds = reminders.filter(r => r.eventType === "MATCH").map(r => r.eventId);
 
-      const [trainings, scrims] = await Promise.all([
+      const [trainings, matches] = await Promise.all([
         trainingIds.length > 0
           ? prisma.training.findMany({ where: { id: { in: trainingIds } }, include: { team: true } })
           : [],
-        scrimIds.length > 0
-          ? prisma.scrim.findMany({ where: { id: { in: scrimIds } }, include: { team: true } })
+        matchIds.length > 0
+          ? prisma.match.findMany({ where: { id: { in: matchIds } }, include: { team: true } })
           : [],
       ]);
 
       const trainingMap = new Map(trainings.map(t => [t.id, t]));
-      const scrimMap = new Map(scrims.map(s => [s.id, s]));
+      const matchMap = new Map(matches.map(m => [m.id, m]));
 
       for (const reminder of reminders) {
         try {
@@ -39,41 +39,48 @@ export function startScheduler() {
           if (reminder.eventType === "TRAINING") {
             const t = trainingMap.get(reminder.eventId);
             if (t) { title = t.title; date = t.date; teamId = t.teamId; }
-          } else if (reminder.eventType === "SCRIM") {
-            const s = scrimMap.get(reminder.eventId);
-            if (s) { title = `Scrim vs ${s.opponent}`; date = s.date; teamId = s.teamId; }
+          } else if (reminder.eventType === "MATCH") {
+            const m = matchMap.get(reminder.eventId);
+            if (m) {
+              title = m.type === "SCRIM" ? `Scrim vs ${m.opponent}` : `Match vs ${m.opponent}`;
+              date = m.date; teamId = m.teamId;
+            }
           }
 
           if (teamId) {
-            const members = await prisma.teamMember.findMany({
-              where: { teamId },
-              include: { user: { select: { id: true, email: true, emailNotifications: true } } },
-            });
+            const channel = await channelNotify.getChannel(teamId);
+            if (channel !== "NONE") {
+              const members = await prisma.teamMember.findMany({
+                where: { teamId },
+                include: { user: { select: { id: true, email: true, phone: true, emailNotifications: true } } },
+              });
 
-            const team = trainings.find(t => t.teamId === teamId)?.team
-              || scrims.find(s => s.teamId === teamId)?.team;
+              const team = trainings.find(t => t.teamId === teamId)?.team
+                || matches.find(m => m.teamId === teamId)?.team;
 
-            const emailPromises: Promise<void>[] = [];
+              const promises: Promise<void>[] = [];
 
-            for (const member of members) {
-              if (!member.user?.email || !member.user.emailNotifications) continue;
+              for (const member of members) {
+                if (!member.user.emailNotifications) continue;
 
-              let token: string | undefined;
-              if (team?.autoEmailEvents) {
-                const at = await prisma.attendanceToken.upsert({
-                  where: { userId_eventType_eventId: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId } },
-                  update: {},
-                  create: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId, expiresAt: date },
-                });
-                token = at.token;
+                let token: string | undefined;
+                if (channel === "EMAIL" && team?.autoEmailEvents) {
+                  const at = await prisma.attendanceToken.upsert({
+                    where: { userId_eventType_eventId: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId } },
+                    update: {},
+                    create: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId, expiresAt: date },
+                  });
+                  token = at.token;
+                }
+
+                promises.push(
+                  channelNotify.sendAttendanceReminder(channel, member.user, reminder.eventType, title, date.toLocaleString("de-DE"), token, config.appUrl)
+                    .catch(e => logger.error(e, "Failed to send reminder"))
+                );
               }
 
-              emailPromises.push(
-                sendAttendanceReminder(member.user.email, reminder.eventType, title, date.toLocaleString("de-DE"), token, config.appUrl).catch(e => logger.error(e, "Failed to send reminder email"))
-              );
+              await Promise.all(promises);
             }
-
-            await Promise.all(emailPromises);
           }
 
           await prisma.eventReminder.update({ where: { id: reminder.id }, data: { sentAt: now } });

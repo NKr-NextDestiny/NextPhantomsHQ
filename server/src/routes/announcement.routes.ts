@@ -8,7 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { parsePagination } from "../middleware/pagination.js";
 import { safeEmit } from "../config/socket.js";
-import { sendAnnouncementNotification } from "../services/email.service.js";
+import * as channelNotify from "../services/channel-notification.service.js";
 
 export const announcementRouter = Router();
 
@@ -95,16 +95,7 @@ announcementRouter.post("/", authenticate, teamContext, requireFeature("announce
 
     safeEmit(`team:${req.teamId}`, "announcement:created", announcement);
 
-    // Send email notifications
-    const members = await prisma.teamMember.findMany({
-      where: { teamId: req.teamId! },
-      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
-    });
-    await Promise.all(
-      members
-        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendAnnouncementNotification(m.user.email!, announcement.title, req.user!.displayName).catch(console.error))
-    );
+    channelNotify.notifyAnnouncement(req.teamId!, announcement.title, req.user!.displayName).catch(console.error);
 
     res.status(201).json({ success: true, data: announcement });
   } catch (error) { next(error); }

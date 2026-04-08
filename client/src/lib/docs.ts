@@ -12,7 +12,7 @@ export const docs: DocSection[] = [
 Klicke auf "Mit Discord anmelden" auf der Login-Seite. Du musst Mitglied des konfigurierten Discord-Servers sein um Zugang zu erhalten.
 
 ## Dashboard
-Nach dem Login landest du auf dem Dashboard. Hier siehst du eine Übersicht über anstehende Trainings, Scrims und aktuelle Ankündigungen.
+Nach dem Login landest du auf dem Dashboard. Hier siehst du eine Übersicht über anstehende Trainings, Matches und aktuelle Ankündigungen.
 
 ## Navigation
 Die Sidebar links führt dich zu allen Bereichen. Auf Mobilgeräten öffnest du sie über das Menu-Icon oben links.`,
@@ -33,28 +33,30 @@ Jedes Teammitglied kann seine Verfügbarkeit für ein Training angeben: Verfügb
 Automatische E-Mail-Erinnerungen werden vor dem Training verschickt (konfigurierbar).`,
   },
   {
-    id: "scrims",
-    title: "Scrims",
-    content: `## Scrim erstellen
-Coaches erstellen Scrims mit Gegner, Datum, Map-Pool, Format und optionalen Kontaktinfos.
-
-## Abstimmung
-Wie beim Training kann jeder seine Verfügbarkeit angeben.
-
-## Ergebnis eintragen
-Nach dem Scrim kann das Ergebnis (Score, Maps, Bewertungen) eingetragen werden. Skill-, Kommunikations- und Pünktlichkeits-Bewertungen helfen bei der Nachbereitung.`,
-  },
-  {
     id: "matches",
     title: "Matches",
-    content: `## Match erstellen
-Trage Matches mit Gegner, Map, Score und Ergebnis ein. Optional: Competition, Operator-Bans, Overtime.
+    content: `## Übersicht
+Alle Matches (Turniere, Scrims, Liga, Freundschaftlich, Sonstige) werden zentral verwaltet. Der Typ bestimmt welche Felder verfügbar sind.
+
+## Match erstellen
+Wähle den Typ (Scrim, Turnier, Liga, Freundschaftlich, Sonstige) und trage Gegner, Datum und weitere Infos ein. Je nach Typ sind unterschiedliche Felder verfügbar:
+- **Scrim**: Map-Pool, Format, Kontaktinfos, Server-Region, Treffzeit
+- **Turnier/Liga**: Map, Score, Wettbewerb (Pflichtfelder)
+
+## Abstimmung (Scrim-Typ)
+Bei Scrims kann jedes Teammitglied seine Verfügbarkeit angeben: Verfügbar, Nicht verfügbar oder Vielleicht.
+
+## Ergebnis eintragen
+Für Scrims ohne initiale Scores kann das Ergebnis nachträglich eingetragen werden (Score, Maps, Bewertungen). Skill-, Kommunikations- und Pünktlichkeits-Bewertungen helfen bei der Nachbereitung.
 
 ## Spieler-Statistiken
 Pro Match können Kills, Deaths, Assists und Headshots für jeden Spieler eingetragen werden. K/D und Headshot-Rate werden automatisch berechnet.
 
 ## Match Review
-Nach dem Match kann ein Review erstellt werden mit Positives, Negatives, Verbesserungen und Notizen für die Nachbesprechung.`,
+Nach dem Match kann ein Review erstellt werden mit Positives, Negatives, Verbesserungen und Notizen für die Nachbesprechung.
+
+## Typ-Filter
+Die Match-Liste kann nach Typ gefiltert werden. Statistiken (Winrate, Siege, Niederlagen) passen sich dem aktiven Filter an.`,
   },
   {
     id: "strats",
@@ -186,7 +188,7 @@ Wechsle zum "Team"-Tab um zu sehen wann die meisten Teammitglieder verfügbar si
 - **Tryout** — Eingeschränkter Zugang, kann abstimmen
 - **Player** — Standard-Zugang, kann Notizen erstellen, abstimmen
 - **Analyst** — Kann Strats und Wiki-Seiten erstellen/bearbeiten
-- **Coach** — Kann Trainings, Scrims, Erinnerungen und Vorlagen verwalten
+- **Coach** — Kann Trainings, Matches, Erinnerungen und Vorlagen verwalten
 - **Captain** — Erweiterte Rechte
 - **Admin** — Voller Zugriff auf alles
 
@@ -200,7 +202,7 @@ Admin-Zugang wird über Discord konfiguriert:
     id: "search",
     title: "Suche",
     content: `## Globale Suche
-Die Suchfunktion durchsucht Trainings, Scrims, Strategien, Matches, Spieler und Wiki-Seiten gleichzeitig. Mindestens 2 Zeichen eingeben.`,
+Die Suchfunktion durchsucht Trainings, Strategien, Matches, Spieler und Wiki-Seiten gleichzeitig. Mindestens 2 Zeichen eingeben.`,
   },
   {
     id: "security",

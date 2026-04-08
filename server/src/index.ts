@@ -20,7 +20,7 @@ import { prisma } from "./config/prisma.js";
 // Routes
 import { authRouter } from "./routes/auth.routes.js";
 import { trainingRouter } from "./routes/training.routes.js";
-import { scrimRouter } from "./routes/scrim.routes.js";
+
 import { matchRouter } from "./routes/match.routes.js";
 import { stratRouter } from "./routes/strat.routes.js";
 import { lineupRouter } from "./routes/lineup.routes.js";
@@ -132,7 +132,7 @@ app.get("/api/health", (_req, res) => {
 // Routes
 app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/trainings", mutationLimiter, trainingRouter);
-app.use("/api/scrims", mutationLimiter, scrimRouter);
+
 app.use("/api/matches", mutationLimiter, matchRouter);
 app.use("/api/strats", mutationLimiter, stratRouter);
 app.use("/api/lineups", mutationLimiter, lineupRouter);

@@ -68,11 +68,25 @@ enum MatchResult {
   DRAW
 }
 
+enum MatchType {
+  SCRIM
+  TOURNAMENT
+  LEAGUE
+  FRIENDLY
+  OTHER
+}
+
 enum ThreatLevel {
   LOW
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum NotificationChannel {
+  NONE
+  EMAIL
+  WHATSAPP
 }
 
 enum CommentEntityType {
@@ -98,6 +112,7 @@ model User {
   isActive      Boolean  @default(true)
   discordAccessToken String?
   emailNotifications Boolean @default(true)
+  phone         String?
   r6Username    String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -105,9 +120,8 @@ model User {
   // Relations
   teamMemberships  TeamMember[]
   trainingVotes    TrainingVote[]
-  scrimVotes       ScrimVote[]
+  matchVotes       MatchVote[]
   createdTrainings Training[]     @relation("CreatedTrainings")
-  createdScrims    Scrim[]        @relation("CreatedScrims")
   createdStrats    Strat[]        @relation("CreatedStrats")
   createdMatches   Match[]        @relation("CreatedMatches")
   createdPlaybooks Playbook[]     @relation("CreatedPlaybooks")
@@ -149,7 +163,8 @@ model Team {
 
   defaultReminderIntervals Int[]    @default([60, 1440])
   autoEmailEvents          Boolean  @default(false)
-  enabledFeatures          String[] @default(["training", "scrims", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls", "wiki", "notes", "reminders", "availability"])
+  notificationChannel      NotificationChannel @default(NONE)
+  enabledFeatures          String[] @default(["training", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls", "wiki", "notes", "reminders", "availability"])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,7 +172,6 @@ model Team {
   members       TeamMember[]
   gameConfig    GameConfig?
   trainings     Training[]
-  scrims        Scrim[]
   strats        Strat[]
   matches       Match[]
   lineups       Lineup[]
@@ -258,70 +272,6 @@ model TrainingVote {
   @@map("training_votes")
 }
 
-// SCRIMS
-model Scrim {
-  id           String   @id @default(cuid())
-  opponent     String
-  meetTime     DateTime?
-  date         DateTime
-  endDate      DateTime?
-  mapPool      String[]
-  format       String?
-  contactInfo  String?
-  serverRegion String?
-  notes        String?
-  recurrence    RecurrenceType @default(NONE)
-  reminderIntervals Int[]      @default([])
-
-  createdById String
-  createdBy   User   @relation("CreatedScrims", fields: [createdById], references: [id])
-  teamId      String
-  team        Team   @relation(fields: [teamId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  votes   ScrimVote[]
-  result  ScrimResult?
-  matches Match[] @relation("ScrimMatches")
-  @@index([createdById])
-  @@index([teamId, date])
-  @@map("scrims")
-}
-
-model ScrimVote {
-  id      String           @id @default(cuid())
-  status  AttendanceStatus
-  comment String?
-
-  userId  String
-  user    User   @relation(fields: [userId], references: [id])
-  scrimId String
-  scrim   Scrim  @relation(fields: [scrimId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([userId, scrimId])
-  @@map("scrim_votes")
-}
-
-model ScrimResult {
-  id        String  @id @default(cuid())
-  scoreUs   Int
-  scoreThem Int
-  maps      Json?
-  notes     String?
-  skillRating          Int?
-  communicationRating  Int?
-  punctualityRating    Int?
-
-  scrimId String @unique
-  scrim   Scrim  @relation(fields: [scrimId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  @@map("scrim_results")
-}
-
 // STRATS
 model Strat {
   id          String    @id @default(cuid())
@@ -398,22 +348,36 @@ model PlaybookStrat {
 
 // MATCHES
 model Match {
-  id           String      @id @default(cuid())
+  id           String       @id @default(cuid())
+  type         MatchType    @default(OTHER)
   opponent     String
   date         DateTime
   competition  String?
-  map          String
+  map          String?
   side         MapSide?
-  scoreUs      Int
-  scoreThem    Int
-  result       MatchResult
+  scoreUs      Int?
+  scoreThem    Int?
+  result       MatchResult?
   notes        String?
-  operatorBans String[]    @default([])
+  operatorBans String[]     @default([])
   overtimeUs   Int?
   overtimeThem Int?
 
-  scrimId String?
-  scrim   Scrim? @relation("ScrimMatches", fields: [scrimId], references: [id], onDelete: SetNull)
+  // Scrim/event fields (optional, used for SCRIM type)
+  meetTime          DateTime?
+  endDate           DateTime?
+  mapPool           String[]       @default([])
+  format            String?
+  contactInfo       String?
+  serverRegion      String?
+  recurrence        RecurrenceType @default(NONE)
+  reminderIntervals Int[]          @default([])
+
+  // Ratings (optional, used for SCRIM type)
+  skillRating         Int?
+  communicationRating Int?
+  punctualityRating   Int?
+  mapResults          Json?
 
   createdById String
   createdBy   User   @relation("CreatedMatches", fields: [createdById], references: [id])
@@ -424,13 +388,31 @@ model Match {
   updatedAt DateTime @updatedAt
 
   playerStats MatchPlayerStat[]
+  votes       MatchVote[]
   replay      Replay?      @relation("ReplayMatch")
   mossFiles   MossFile[]
   review      MatchReview?
-  @@index([scrimId])
   @@index([createdById])
   @@index([teamId, date])
+  @@index([teamId, type, date])
   @@map("matches")
+}
+
+model MatchVote {
+  id      String           @id @default(cuid())
+  status  AttendanceStatus
+  comment String?
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, matchId])
+  @@map("match_votes")
 }
 
 model MatchPlayerStat {

@@ -35,17 +35,15 @@ export async function sendWebhookNotification(embed: DiscordEmbed): Promise<void
   }
 }
 
-export function buildMatchEmbed(data: { opponent: string; map: string; result: string; scoreUs: number; scoreThem: number; competition?: string }): DiscordEmbed {
-  const color = data.result === "WIN" ? 0x22c55e : data.result === "LOSS" ? 0xef4444 : 0xf59e0b;
-  return {
-    title: `Match: ${data.result} vs ${data.opponent}`,
-    color,
-    fields: [
-      { name: "Map", value: data.map, inline: true },
-      { name: "Score", value: `${data.scoreUs} - ${data.scoreThem}`, inline: true },
-      ...(data.competition ? [{ name: "Competition", value: data.competition, inline: true }] : []),
-    ],
-  };
+export function buildMatchEmbed(data: { opponent: string; map?: string | null; result?: string | null; scoreUs?: number | null; scoreThem?: number | null; competition?: string | null; type?: string }): DiscordEmbed {
+  const isScrim = data.type === "SCRIM";
+  const color = isScrim ? 0x3b82f6 : data.result === "WIN" ? 0x22c55e : data.result === "LOSS" ? 0xef4444 : 0xf59e0b;
+  const title = isScrim ? `Scrim: vs ${data.opponent}` : `Match: ${data.result ?? "Geplant"} vs ${data.opponent}`;
+  const fields: EmbedField[] = [];
+  if (data.map) fields.push({ name: "Map", value: data.map, inline: true });
+  if (data.scoreUs != null && data.scoreThem != null) fields.push({ name: "Score", value: `${data.scoreUs} - ${data.scoreThem}`, inline: true });
+  if (data.competition) fields.push({ name: "Competition", value: data.competition, inline: true });
+  return { title, color, fields };
 }
 
 export function buildTrainingEmbed(data: { title: string; type: string; date: string }): DiscordEmbed {
@@ -59,13 +57,3 @@ export function buildTrainingEmbed(data: { title: string; type: string; date: st
   };
 }
 
-export function buildScrimEmbed(data: { opponent: string; date: string; format?: string }): DiscordEmbed {
-  return {
-    title: `Scrim: vs ${data.opponent}`,
-    color: 0x3b82f6,
-    fields: [
-      { name: "Datum", value: new Date(data.date).toLocaleString("de-DE"), inline: true },
-      ...(data.format ? [{ name: "Format", value: data.format, inline: true }] : []),
-    ],
-  };
-}

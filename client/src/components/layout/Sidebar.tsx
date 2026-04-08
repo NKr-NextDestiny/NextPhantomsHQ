@@ -28,7 +28,7 @@ import { useAuthStore } from "@/lib/auth-store";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/training", label: "Training", icon: Dumbbell },
-  { href: "/scrims", label: "Scrims", icon: Swords },
+
   { href: "/matches", label: "Matches", icon: Trophy },
   { href: "/strats", label: "Strategien", icon: Map },
   { href: "/lineup", label: "Lineups", icon: Users },

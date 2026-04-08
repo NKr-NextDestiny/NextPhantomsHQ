@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Next Phantoms HQ — Features</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      line-height: 1.6;
+      padding: 2rem;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #f97316;
+    }
+    .subtitle {
+      color: #94a3b8;
+      margin-bottom: 2.5rem;
+      font-size: 1rem;
+    }
+    .feature {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    .feature:hover { border-color: #f97316; }
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .feature-icon {
+      width: 36px;
+      height: 36px;
+      background: #f9731620;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+    .feature-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .feature-desc {
+      color: #94a3b8;
+      font-size: 0.925rem;
+      padding-left: 3rem;
+    }
+    .feature-desc ul {
+      margin-top: 0.4rem;
+      padding-left: 1.2rem;
+    }
+    .feature-desc li {
+      margin-bottom: 0.2rem;
+    }
+    .feature-desc strong {
+      color: #cbd5e1;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .badge-admin { background: #dc262620; color: #f87171; border: 1px solid #f8717130; }
+    .badge-toggle { background: #f9731620; color: #f97316; border: 1px solid #f9731630; }
+    .section {
+      color: #64748b;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 2rem 0 0.75rem;
+    }
+    footer {
+      text-align: center;
+      color: #475569;
+      font-size: 0.8rem;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #1e293b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Next Phantoms HQ</h1>
+    <p class="subtitle">Team-Management-Plattform for Next Phantoms (Next Destiny eSports)</p>
+
+    <div class="section">Allgemein</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128202;</div>
+        <span class="feature-name">Dashboard</span>
+      </div>
+      <p class="feature-desc">
+        Zentrale Startseite nach dem Login. Zeigt auf einen Blick:
+        <ul>
+          <li><strong>Statistik-Karten</strong> — Anzahl anstehender Trainings, Matches, Gesamtmatches und Teammitglieder</li>
+          <li><strong>Kommende Events</strong> — Die nächsten 10 Trainings und Matches chronologisch sortiert mit Typ-Badge (Training, Scrim, Turnier etc.)</li>
+          <li><strong>Letzte Aktivität</strong> — Wer hat wann was erstellt, bearbeitet oder gelöscht (aus dem Audit-Log)</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Spielbetrieb</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#127947;</div>
+        <span class="feature-name">Training</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Trainingseinheiten planen und nachverfolgen.
+        <ul>
+          <li><strong>Erstellen</strong> — Typ (Ranked, Custom, Aim Training, VOD Review, Strat Practice), Datum, Treffzeit, optionales Ende und Notizen</li>
+          <li><strong>Vorlagen</strong> — Wiederkehrende Trainings als Vorlage speichern und mit einem Klick neu erstellen</li>
+          <li><strong>Abstimmung</strong> — Jeder Spieler gibt an ob er dabei ist (Verfügbar / Nicht verfügbar / Vielleicht). Übersicht zeigt Status aller Spieler</li>
+          <li><strong>E-Mail-Erinnerungen</strong> — Automatische Mails vor dem Training mit direktem Abstimmungs-Link (konfigurierbare Intervalle)</li>
+          <li><strong>Wiederkehrend</strong> — Trainings können als wöchentlich, täglich etc. markiert werden</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#127942;</div>
+        <span class="feature-name">Matches</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Zentraler Bereich für alle Spiele — Scrims, Turniere, Liga, Freundschaftsspiele und mehr. Jedes Match hat einen Typ, der bestimmt welche Felder sichtbar sind.
+        <ul>
+          <li><strong>Typ-Filter</strong> — Filtere die Liste nach Scrim, Turnier, Liga, Freundschaftlich oder Sonstige. Statistiken passen sich dem Filter an</li>
+          <li><strong>Scrim-Typ</strong> — Map-Pool (Mehrfachauswahl), Format (z.B. BO3), Kontaktinfos, Server-Region, Treffzeit und Ende. Teilnahme-Abstimmung wie beim Training</li>
+          <li><strong>Turnier/Liga-Typ</strong> — Map, Score, Wettbewerb. Ergebnis wird automatisch berechnet (WIN/LOSS/DRAW)</li>
+          <li><strong>Spieler-Statistiken</strong> — Pro Match Kills, Deaths, Assists und Headshots für jeden Spieler. K/D und HS-Rate werden automatisch berechnet. Auch externe/Aushilfsspieler möglich</li>
+          <li><strong>Ergebnis nachträglich</strong> — Scrims ohne Scores können das Ergebnis nachträglich eintragen inkl. Skill-, Kommunikations- und Pünktlichkeits-Bewertung (1-5)</li>
+          <li><strong>MOSS-Dateien</strong> — MOSS-Dateien pro Match und pro Spieler hochladen (verschlüsselt gespeichert)</li>
+          <li><strong>Replays</strong> — .rec oder .zip Dateien verknüpfen. R6 Siege Replays werden automatisch geparst (Runden, Kills, Deaths)</li>
+          <li><strong>Match Review</strong> — Nachbesprechung mit Positives, Negatives, Verbesserungen und freien Notizen</li>
+          <li><strong>Discord-Webhook</strong> — Neue Matches und Scrims werden automatisch in Discord gepostet</li>
+          <li><strong>Statistik-Leiste</strong> — Siege, Niederlagen, Winrate auf einen Blick</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Taktik &amp; Planung</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128506;</div>
+        <span class="feature-name">Strategien</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Taktiken dokumentieren, versionieren und in Playbooks bündeln.
+        <ul>
+          <li><strong>Erstellen</strong> — Map, Seite (Attack/Defense), Typ (Default, Anti-Strat, Retake, Post-Plant, Rush, Slow Execute) und Beschreibung</li>
+          <li><strong>Dateien</strong> — Bilder oder Dateien hochladen um Strats visuell zu erklären. Alle Dateien AES-256-GCM verschlüsselt</li>
+          <li><strong>Versionierung</strong> — Jede Änderung erstellt automatisch eine neue Version. Ältere Versionen bleiben erhalten</li>
+          <li><strong>Playbooks</strong> — Mehrere Strats zu einem geordneten Playbook zusammenfassen, z.B. "Ranked-Rotation" oder "Turnier-Strats"</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128101;</div>
+        <span class="feature-name">Lineups</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Aufstellungen für Map/Seite-Kombinationen zusammenstellen.
+        <ul>
+          <li><strong>Erstellen</strong> — Map und Seite wählen, dann Spielern Rollen und Operators zuweisen</li>
+          <li><strong>Übersicht</strong> — Auf einen Blick sehen, wer auf welcher Map welche Rolle und welchen Operator spielt</li>
+          <li><strong>Mehrere Varianten</strong> — Verschiedene Lineup-Varianten für die gleiche Map vorbereiten</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128065;</div>
+        <span class="feature-name">Scouting</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Gegner-Datenbank für die Spielvorbereitung.
+        <ul>
+          <li><strong>Gegner anlegen</strong> — Name, Team-Tag, Bedrohungslevel (Low / Medium / High / Critical) und allgemeine Infos</li>
+          <li><strong>Scouting-Notizen</strong> — Pro Gegner detaillierte Notizen zu Maps, Stärken, Schwächen und Gewohnheiten. Kategorisiert für bessere Übersicht</li>
+          <li><strong>Bedrohungslevel</strong> — Farbcodierte Schnell-Einschätzung wie stark ein Gegner ist</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Kommunikation</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128202;</div>
+        <span class="feature-name">Umfragen</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Team-Abstimmungen für Entscheidungen aller Art.
+        <ul>
+          <li><strong>Erstellen</strong> — Frage mit beliebig vielen Antwortoptionen. Optional: Mehrfachauswahl und Ablaufdatum</li>
+          <li><strong>Abstimmen</strong> — Ein Klick genügt. Ergebnisse werden in Echtzeit mit Prozent-Balken angezeigt</li>
+          <li><strong>Abgelaufen</strong> — Nach Ablauf werden Ergebnisse eingefroren und per E-Mail benachrichtigt</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128227;</div>
+        <span class="feature-name">Ankündigungen</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Wichtige Team-News zentral posten.
+        <ul>
+          <li><strong>Erstellen</strong> — Titel und Inhalt verfassen, optional mit Ablaufdatum</li>
+          <li><strong>Anpinnen</strong> — Wichtige Ankündigungen oben fixieren damit sie nicht untergehen</li>
+          <li><strong>Lesebestätigung</strong> — Teammitglieder markieren Ankündigungen als gelesen. Admins sehen wer gelesen hat</li>
+          <li><strong>E-Mail</strong> — Neue Ankündigungen werden per Mail an das Team verschickt</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Wissen &amp; Organisation</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128214;</div>
+        <span class="feature-name">Wiki</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Team-Wissensdatenbank für alles, was das Team wissen muss.
+        <ul>
+          <li><strong>Seiten erstellen</strong> — Titel, URL-freundlicher Slug und Inhalt. Für Guides, Callouts, Teamregeln, Onboarding etc.</li>
+          <li><strong>Bearbeiten</strong> — Analysten und höher können Seiten erstellen und bearbeiten. Letzter Bearbeiter wird angezeigt</li>
+          <li><strong>Löschen</strong> — Nur Admins können Wiki-Seiten entfernen</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128221;</div>
+        <span class="feature-name">Notizen</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Persönliche und Team-Notizen.
+        <ul>
+          <li><strong>Privat-Modus</strong> — Eigene Notizen, die nur man selbst sehen kann (z.B. Selbstreflexion, persönliche Ziele)</li>
+          <li><strong>Team-Notizen</strong> — Für alle sichtbar, z.B. Besprechungsprotokolle oder Ideen</li>
+          <li><strong>Bearbeiten/Löschen</strong> — Nur eigene Notizen bearbeitbar. Admins sehen und verwalten alle</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128276;</div>
+        <span class="feature-name">Erinnerungen</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Deadlines und To-Dos verwalten.
+        <ul>
+          <li><strong>Erstellen</strong> — Titel, optionale Details und Fälligkeitsdatum. Coaches und höher können Erinnerungen anlegen</li>
+          <li><strong>Abhaken</strong> — Jeder kann Erinnerungen als erledigt markieren</li>
+          <li><strong>Überfällig</strong> — Abgelaufene Deadlines werden rot hervorgehoben — ideal für Turnierfristen, Roster-Deadlines etc.</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128197;</div>
+        <span class="feature-name">Verfügbarkeit</span>
+        <span class="badge badge-toggle">Togglebar</span>
+      </div>
+      <p class="feature-desc">
+        Wann ist wer verfügbar?
+        <ul>
+          <li><strong>Eigene Zeiten</strong> — Auf ein Wochenraster klicken um Zeitslots als verfügbar zu markieren. Montag bis Sonntag, stundenweise</li>
+          <li><strong>Team-Heatmap</strong> — Übersicht wann wie viele Spieler gleichzeitig verfügbar sind. Dunklere Felder = mehr Spieler. Ideal für Trainingsplanung</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Hilfe &amp; Info</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#10067;</div>
+        <span class="feature-name">Dokumentation</span>
+      </div>
+      <p class="feature-desc">
+        Integriertes Benutzer-Handbuch das alle Features, deren Bedienung und die Rollen-Berechtigungen erklärt. Direkt in der App aufrufbar.
+      </p>
+    </div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128336;</div>
+        <span class="feature-name">Changelog</span>
+      </div>
+      <p class="feature-desc">
+        Versionsverlauf mit allen bisherigen Änderungen, neuen Features und Bugfixes. Einklappbar, neueste Version standardmäßig geöffnet.
+      </p>
+    </div>
+
+    <div class="section">Administration</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#9881;</div>
+        <span class="feature-name">Einstellungen</span>
+        <span class="badge badge-admin">Nur Admins</span>
+      </div>
+      <p class="feature-desc">
+        Zentrale Konfiguration der Plattform.
+        <ul>
+          <li><strong>Feature-Toggles</strong> — Jedes Feature einzeln aktivieren oder deaktivieren. Deaktivierte Features verschwinden aus der Navigation</li>
+          <li><strong>Game-Config</strong> — Maps, Operators, Spieler-Rollen und andere spielspezifische Daten anpassen</li>
+          <li><strong>Team-Profil</strong> — Team-Name, Logo und Discord-Webhook-URL verwalten</li>
+          <li><strong>Admin-Dashboard</strong> — User-Aktivität (7 Tage), Entity-Counts, API-Requests (30 Tage) und Speicherverbrauch auf einen Blick</li>
+          <li><strong>Mitglieder</strong> — Rollen zuweisen, Mitglieder entfernen</li>
+          <li><strong>Daten-Export</strong> — Match-Statistiken, Training-Teilnahme und Verfügbarkeit als CSV oder JSON exportieren</li>
+          <li><strong>E-Mail-Einstellungen</strong> — Automatische Event-Benachrichtigungen und Erinnerungs-Intervalle konfigurieren</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="section">Sicherheit &amp; Technik</div>
+
+    <div class="feature">
+      <div class="feature-header">
+        <div class="feature-icon">&#128274;</div>
+        <span class="feature-name">Sicherheit</span>
+      </div>
+      <p class="feature-desc">
+        <ul>
+          <li><strong>Discord OAuth</strong> — Login ausschließlich über Discord. Keine Passwörter gespeichert. Zugang über Guild-Mitgliedschaft und Rollen einschränkbar</li>
+          <li><strong>Dateiverschlüsselung</strong> — Alle hochgeladenen Dateien (Strats, Replays, MOSS) mit AES-256-GCM verschlüsselt auf dem Server. Downloads automatisch entschlüsselt</li>
+          <li><strong>CSRF-Schutz</strong> — Double-Submit-Cookie-Pattern auf allen Mutation-Endpoints</li>
+          <li><strong>Rate-Limiting</strong> — 60 Requests/Minute auf POST/PUT/DELETE, strengere Limits auf Auth-Routen</li>
+          <li><strong>Sessions</strong> — JWT httpOnly Cookies, 7 Tage Access-Token, 30 Tage Refresh-Token</li>
+          <li><strong>File-Validierung</strong> — Magic-Bytes-Check verhindert manipulierte Datei-Uploads</li>
+        </ul>
+      </p>
+    </div>
+
+    <footer>Next Phantoms HQ v1.6.0 — Next Destiny eSports</footer>
+  </div>
+</body>
+</html>

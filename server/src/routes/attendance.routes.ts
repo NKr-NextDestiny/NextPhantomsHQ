@@ -22,9 +22,9 @@ attendanceRouter.get("/:token", async (req, res, next) => {
     if (at.eventType === "TRAINING") {
       const t = await prisma.training.findUnique({ where: { id: at.eventId } });
       if (t) { eventTitle = t.title; eventDate = t.date; }
-    } else if (at.eventType === "SCRIM") {
-      const s = await prisma.scrim.findUnique({ where: { id: at.eventId } });
-      if (s) { eventTitle = `Scrim vs ${s.opponent}`; eventDate = s.date; }
+    } else if (at.eventType === "MATCH") {
+      const m = await prisma.match.findUnique({ where: { id: at.eventId } });
+      if (m) { eventTitle = m.type === "SCRIM" ? `Scrim vs ${m.opponent}` : `Match vs ${m.opponent}`; eventDate = m.date; }
     }
 
     res.json({
@@ -67,11 +67,11 @@ attendanceRouter.post("/:token", async (req, res, next) => {
         update: { status: vote, comment: reason || null },
         create: { userId: at.userId, trainingId: at.eventId, status: vote, comment: reason || null },
       });
-    } else if (at.eventType === "SCRIM") {
-      await prisma.scrimVote.upsert({
-        where: { userId_scrimId: { userId: at.userId, scrimId: at.eventId } },
+    } else if (at.eventType === "MATCH") {
+      await prisma.matchVote.upsert({
+        where: { userId_matchId: { userId: at.userId, matchId: at.eventId } },
         update: { status: vote, comment: reason || null },
-        create: { userId: at.userId, scrimId: at.eventId, status: vote, comment: reason || null },
+        create: { userId: at.userId, matchId: at.eventId, status: vote, comment: reason || null },
       });
     }
 

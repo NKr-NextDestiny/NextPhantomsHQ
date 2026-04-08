@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Calendar, Dumbbell, Swords, Trophy, Users } from "lucide-react";
+import { Calendar, Dumbbell, Trophy, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useToast } from "@/components/ui/Toast";
@@ -10,14 +10,15 @@ import { formatDate } from "@/lib/utils";
 
 interface Stats {
   upcomingTrainings: number;
-  upcomingScrims: number;
-  recentMatches: number;
+  upcomingMatches: number;
+  totalMatches: number;
   teamMembers: number;
 }
 
 interface UpcomingEvent {
   id: string;
-  type: "training" | "scrim" | "match";
+  type: "training" | "match";
+  matchType?: string;
   title: string;
   date: string;
 }
@@ -33,7 +34,6 @@ interface Activity {
 function formatActivity(action: string, entity: string): string {
   const entities: Record<string, string> = {
     training: "Training",
-    scrim: "Scrim",
     match: "Match",
     strat: "Strategie",
     lineup: "Lineup",
@@ -62,7 +62,7 @@ function formatActivity(action: string, entity: string): string {
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { error: showError } = useToast();
-  const [stats, setStats] = useState<Stats>({ upcomingTrainings: 0, upcomingScrims: 0, recentMatches: 0, teamMembers: 0 });
+  const [stats, setStats] = useState<Stats>({ upcomingTrainings: 0, upcomingMatches: 0, totalMatches: 0, teamMembers: 0 });
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,14 +89,13 @@ export default function DashboardPage() {
 
   const statCards = [
     { label: "Trainings", value: stats.upcomingTrainings, icon: Dumbbell, color: "text-green-400" },
-    { label: "Scrims", value: stats.upcomingScrims, icon: Swords, color: "text-blue-400" },
-    { label: "Matches", value: stats.recentMatches, icon: Trophy, color: "text-yellow-400" },
+    { label: "Anstehend", value: stats.upcomingMatches, icon: Trophy, color: "text-blue-400" },
+    { label: "Matches Gesamt", value: stats.totalMatches, icon: Trophy, color: "text-yellow-400" },
     { label: "Mitglieder", value: stats.teamMembers, icon: Users, color: "text-purple-400" },
   ];
 
   const eventTypeIcons: Record<string, typeof Dumbbell> = {
     training: Dumbbell,
-    scrim: Swords,
     match: Trophy,
   };
 
@@ -152,8 +151,8 @@ export default function DashboardPage() {
                       <p className="truncate text-sm font-medium text-[var(--foreground)]">{e.title}</p>
                       <p className="text-xs text-[var(--muted-foreground)]">{formatDate(e.date)}</p>
                     </div>
-                    <Badge variant={e.type === "match" ? "warning" : e.type === "scrim" ? "info" : "success"}>
-                      {e.type === "training" ? "Training" : e.type === "scrim" ? "Scrim" : "Match"}
+                    <Badge variant={e.type === "match" ? "info" : "success"}>
+                      {e.type === "training" ? "Training" : e.matchType === "SCRIM" ? "Scrim" : "Match"}
                     </Badge>
                   </div>
                 );

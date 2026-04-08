@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Next Phantoms HQ is a single-team esports management platform for the Next Phantoms team (part of Next Destiny eSports). It provides training scheduling, scrim management, match tracking, strategy sharing, lineup building, opponent scouting, replay management, MOSS file storage, polls, announcements, wiki, notes, reminders, and availability tracking — all with Discord-based authentication and AES-256-GCM file encryption.
+Next Phantoms HQ is a single-team esports management platform for the Next Phantoms team (part of Next Destiny eSports). It provides training scheduling, match tracking (with types: Scrim, Tournament, League, Friendly, Other), strategy sharing, lineup building, opponent scouting, replay management, MOSS file storage, polls, announcements, wiki, notes, reminders, and availability tracking — all with Discord-based authentication and AES-256-GCM file encryption.
 
 ## Architecture
 
@@ -67,8 +67,8 @@ TRYOUT(-1) < PLAYER(0) < ANALYST(1) < COACH(2) < CAPTAIN(3) < ADMIN(4)
 ### First User
 - First user to log in automatically becomes admin
 
-## Features (13 toggleable)
-training, scrims, strats, matches, lineup, scouting, replays, announcements, polls, wiki, notes, reminders, availability
+## Features (12 toggleable)
+training, strats, matches, lineup, scouting, replays, announcements, polls, wiki, notes, reminders, availability
 
 ## Workflow
 - Commit and push to `dev` after changes

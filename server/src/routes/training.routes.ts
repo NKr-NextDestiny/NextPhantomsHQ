@@ -9,7 +9,7 @@ import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 import { notifyTeam } from "../services/notification.service.js";
 import { sendWebhookNotification, buildTrainingEmbed } from "../services/discord-webhook.service.js";
-import { sendNewEventNotification, sendEventUpdatedNotification, sendEventDeletedNotification } from "../services/email.service.js";
+import * as channelNotify from "../services/channel-notification.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
 import { safeEmit } from "../config/socket.js";
 
@@ -114,16 +114,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
       actorId: req.user!.id,
     });
 
-    // Send email notifications (parallel)
-    const members = await prisma.teamMember.findMany({
-      where: { teamId: req.teamId! },
-      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
-    });
-    await Promise.all(
-      members
-        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendNewEventNotification(m.user.email!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
-    );
+    channelNotify.notifyNewEvent(req.teamId!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
 
     await logAudit(req.user!.id, "CREATE", "training", training.id, { title: training.title }, req.teamId);
 
@@ -167,16 +158,7 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
     await logAudit(req.user!.id, "UPDATE", "training", training.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "training:updated", training);
 
-    // Notify team about update
-    const updateMembers = await prisma.teamMember.findMany({
-      where: { teamId: req.teamId! },
-      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
-    });
-    await Promise.all(
-      updateMembers
-        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventUpdatedNotification(m.user.email!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
-    );
+    channelNotify.notifyEventUpdated(req.teamId!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
 
     res.json({ success: true, data: training });
   } catch (error) { next(error); }
@@ -190,16 +172,7 @@ trainingRouter.delete("/:id", authenticate, teamContext, requireFeature("trainin
 
     await prisma.eventReminder.deleteMany({ where: { eventType: "TRAINING", eventId: String(req.params.id) } });
 
-    // Notify team about deletion before deleting
-    const deleteMembers = await prisma.teamMember.findMany({
-      where: { teamId: req.teamId! },
-      include: { user: { select: { email: true, emailNotifications: true, id: true } } },
-    });
-    await Promise.all(
-      deleteMembers
-        .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventDeletedNotification(m.user.email!, "Training", existing.title, req.user!.displayName).catch(console.error))
-    );
+    channelNotify.notifyEventDeleted(req.teamId!, "Training", existing.title, req.user!.displayName).catch(console.error);
 
     await prisma.training.delete({ where: { id: String(req.params.id) } });
 

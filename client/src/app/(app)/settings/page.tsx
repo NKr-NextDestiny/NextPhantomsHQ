@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Settings, Shield, User, Save, Upload, Trash2 } from "lucide-react";
+import { Settings, Shield, User, Save, Upload, Trash2, Bell } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -18,6 +18,12 @@ interface TeamSettings {
   logoUrl?: string;
   discordWebhookUrl?: string;
   defaultTimezone?: string;
+  notificationChannel?: string;
+}
+
+interface NotificationConfig {
+  email: boolean;
+  whatsapp: boolean;
 }
 
 interface MemberData {
@@ -41,13 +47,15 @@ export default function SettingsPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const { success, error } = useToast();
-  const [tab, setTab] = useState<"personal" | "team" | "members">("personal");
+  const [tab, setTab] = useState<"personal" | "team" | "notifications" | "members">("personal");
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
+  const [notifyConfig, setNotifyConfig] = useState<NotificationConfig>({ email: false, whatsapp: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
-  const [personalForm, setPersonalForm] = useState({ displayName: "", email: "" });
+  const [notificationChannel, setNotificationChannel] = useState("NONE");
+  const [personalForm, setPersonalForm] = useState({ displayName: "", email: "", phone: "" });
 
   // Nur Admins dürfen hier rein
   useEffect(() => {
@@ -58,20 +66,25 @@ export default function SettingsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [teamRes, membersRes] = await Promise.allSettled([
+      const [teamRes, membersRes, notifyRes] = await Promise.allSettled([
         api.get<TeamSettings>("/api/team"),
         api.get<MemberData[]>("/api/team/members"),
+        api.get<NotificationConfig>("/api/team/notification-config"),
       ]);
       if (teamRes.status === "fulfilled" && teamRes.value.data) {
         const ts = teamRes.value.data;
         setTeamSettings(ts);
         setTeamForm({ name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" });
+        setNotificationChannel(ts.notificationChannel || "NONE");
       }
       if (membersRes.status === "fulfilled" && membersRes.value.data) {
         setMembers(membersRes.value.data);
       }
+      if (notifyRes.status === "fulfilled" && notifyRes.value.data) {
+        setNotifyConfig(notifyRes.value.data);
+      }
       if (user) {
-        setPersonalForm({ displayName: user.displayName, email: user.email || "" });
+        setPersonalForm({ displayName: user.displayName, email: user.email || "", phone: (user as any).phone || "" });
       }
     } catch {
       error("Fehler beim Laden");
@@ -98,7 +111,7 @@ export default function SettingsPage() {
   const savePersonal = async () => {
     setSaving(true);
     try {
-      await api.put("/api/users/me", personalForm);
+      await api.put("/api/users/me", { ...personalForm, phone: personalForm.phone || null });
       success("Gespeichert");
     } catch {
       error("Fehler beim Speichern");
@@ -140,6 +153,7 @@ export default function SettingsPage() {
         {[
           { id: "personal" as const, label: "Persönlich", icon: User },
           { id: "team" as const, label: "Team", icon: Settings },
+          { id: "notifications" as const, label: "Benachrichtigungen", icon: Bell },
           { id: "members" as const, label: "Mitglieder", icon: Shield },
         ].map((t) => (
           <button
@@ -172,6 +186,7 @@ export default function SettingsPage() {
             </div>
             <Input label="Anzeigename" value={personalForm.displayName} onChange={(e) => setPersonalForm({ ...personalForm, displayName: e.target.value })} />
             <Input label="E-Mail" type="email" value={personalForm.email} onChange={(e) => setPersonalForm({ ...personalForm, email: e.target.value })} />
+            <Input label="Telefon (WhatsApp)" value={personalForm.phone} onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })} placeholder="+491234567890" />
             <Button onClick={savePersonal} isLoading={saving}>
               <Save className="h-4 w-4" /> Speichern
             </Button>
@@ -216,6 +231,62 @@ export default function SettingsPage() {
             <Textarea label="Beschreibung" value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
             <Input label="Discord Webhook URL" value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder="https://discord.com/api/webhooks/..." />
             <Button onClick={saveTeam} isLoading={saving}>
+              <Save className="h-4 w-4" /> Speichern
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Notification Channel */}
+      {tab === "notifications" && (
+        <Card>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Benachrichtigungs-Kanal</h2>
+          <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+            Wähle wie Teammitglieder über neue Events, Änderungen und Erinnerungen benachrichtigt werden.
+            Discord-Webhooks funktionieren unabhängig davon immer, wenn konfiguriert.
+          </p>
+          <div className="space-y-3">
+            {([
+              { value: "NONE", label: "Aus", desc: "Keine externen Benachrichtigungen", available: true },
+              { value: "EMAIL", label: "E-Mail (SMTP)", desc: "Benachrichtigungen per E-Mail. Mitglieder brauchen eine E-Mail-Adresse.", available: notifyConfig.email },
+              { value: "WHATSAPP", label: "WhatsApp (WAHA)", desc: "Benachrichtigungen per WhatsApp. Mitglieder brauchen eine Telefonnummer. Erfordert eine laufende WAHA-Instanz.", available: notifyConfig.whatsapp },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                disabled={!opt.available}
+                onClick={() => setNotificationChannel(opt.value)}
+                className={`w-full rounded-lg border p-4 text-left transition-all ${
+                  notificationChannel === opt.value
+                    ? "border-[var(--primary)] bg-[var(--primary)]/10"
+                    : opt.available
+                      ? "border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)]/50"
+                      : "border-[var(--border)] bg-[var(--secondary)] opacity-40 cursor-not-allowed"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-[var(--foreground)]">{opt.label}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{opt.desc}</p>
+                  </div>
+                  {!opt.available && (
+                    <Badge variant="outline">Nicht konfiguriert</Badge>
+                  )}
+                  {notificationChannel === opt.value && opt.available && (
+                    <div className="h-3 w-3 rounded-full bg-[var(--primary)]" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4">
+            <Button onClick={async () => {
+              setSaving(true);
+              try {
+                await api.put("/api/team", { notificationChannel });
+                success("Gespeichert");
+              } catch { error("Fehler beim Speichern"); }
+              finally { setSaving(false); }
+            }} isLoading={saving}>
               <Save className="h-4 w-4" /> Speichern
             </Button>
           </div>

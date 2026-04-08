@@ -30,18 +30,19 @@ exportRouter.get("/matches", authenticate, teamContext, requireFeature("matches"
 
     const rows = matches.map(m => ({
       date: m.date.toISOString().split("T")[0],
+      type: m.type,
       opponent: m.opponent,
-      map: m.map,
-      result: m.result,
-      scoreUs: m.scoreUs,
-      scoreThem: m.scoreThem,
+      map: m.map || "",
+      result: m.result || "",
+      scoreUs: m.scoreUs ?? "",
+      scoreThem: m.scoreThem ?? "",
       competition: m.competition || "",
     }));
 
     if (format === "json") {
       res.json({ success: true, data: rows });
     } else {
-      const csv = toCsv(["date", "opponent", "map", "result", "scoreUs", "scoreThem", "competition"], rows);
+      const csv = toCsv(["date", "type", "opponent", "map", "result", "scoreUs", "scoreThem", "competition"], rows);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", "attachment; filename=matches.csv");
       res.send(csv);

@@ -12,6 +12,7 @@ const updateSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
   language: z.string().min(2).max(5).optional(),
   emailNotifications: z.boolean().optional(),
+  phone: z.string().optional().nullable(),
   r6Username: z.string().optional().nullable(),
 });
 
@@ -30,6 +31,7 @@ userRouter.get("/me", authenticate, async (req, res, next) => {
         isAdmin: true,
         language: true,
         emailNotifications: true,
+        phone: true,
         r6Username: true,
         createdAt: true,
         teamMemberships: {
@@ -61,6 +63,7 @@ userRouter.put("/me", authenticate, validate(updateSchema), async (req, res, nex
         isAdmin: true,
         language: true,
         emailNotifications: true,
+        phone: true,
         r6Username: true,
       },
     });
