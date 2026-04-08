@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Map, Upload, Download, Trash2, Edit2, Filter, Clock, FileText } from "lucide-react";
+import { Plus, Map, Upload, Download, Trash2, Edit2, Filter, Clock, FileText, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { useT } from "@/i18n/provider";
 import { Card } from "@/components/ui/Card";
@@ -21,6 +21,7 @@ interface Strat {
   content?: string;
   fileUrl?: string;
   version: number;
+  isFavorite?: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy?: { displayName: string };
@@ -126,6 +127,13 @@ export default function StratsPage() {
     }
   };
 
+  const toggleFavorite = async (id: string) => {
+    try {
+      await api.post(`/api/strats/${id}/favorite`);
+      load();
+    } catch { error(tc("saveError")); }
+  };
+
   const sideLabel = (side: string) => {
     if (side === "ATTACK") return t("attack");
     if (side === "DEFENSE") return t("defense");
@@ -193,6 +201,9 @@ export default function StratsPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  <button onClick={() => toggleFavorite(s.id)} className={`rounded p-1 transition-colors ${s.isFavorite ? "text-yellow-400" : "text-[var(--muted-foreground)] hover:text-yellow-400"}`}>
+                    <Star className={`h-4 w-4 ${s.isFavorite ? "fill-current" : ""}`} />
+                  </button>
                   <button onClick={() => openEdit(s)} className="rounded p-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                     <Edit2 className="h-4 w-4" />
                   </button>

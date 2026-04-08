@@ -8,6 +8,26 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.1.0",
+    date: "2026-04-09",
+    tags: ["feature", "improvement", "fix"],
+    title: "Alle API-Features im UI, Suche, Statistiken & Export",
+    changes: [
+      "Globale Suche im Header — durchsucht Trainings, Matches, Strategien, Wiki und Spieler in Echtzeit",
+      "Match-Statistiken: Detaillierte Auswertung pro Map und pro Gegner (Winrate, Runden, W/L) per Klick aufrufbar",
+      "Admin-Dashboard: Erweiterte Statistiken mit User-Aktivität (7 Tage), Entity-Counts, API-Requests (30 Tage) und Speicherverbrauch",
+      "Game Config in Einstellungen: Maps, Operatoren, Character-Label und Spieler-Rollen direkt im UI bearbeitbar",
+      "Daten-Export: Match-Statistiken, Training-Teilnahme und Verfügbarkeit als CSV oder JSON exportierbar (unter Team-Einstellungen)",
+      "Kommentar-System: Kommentare unter Match-Reviews schreiben, lesen und löschen",
+      "Strategie-Favoriten: Strats mit Stern als Favorit markieren/entmarkieren",
+      "Training-Vorlagen verwalten: Vorlagen-Manager zum Ansehen und Löschen von gespeicherten Vorlagen",
+      "Stimme zurückziehen: Bei Trainings, Matches und Umfragen kann die eigene Stimme durch erneutes Klicken zurückgezogen werden",
+      "Attendance-Token-Seite: Vote-Werte korrigiert (uppercase AVAILABLE/UNAVAILABLE/MAYBE) und Response-Mapping repariert",
+      "Admin-Rolle nicht mehr über UI setzbar — Admin wird ausschließlich über Discord-Rollen (ADMIN_ROLE_IDS) und .env (ADMIN_USER_IDS) vergeben",
+      "Mitglieder-Dropdown: ADMIN aus der Rollen-Auswahl entfernt (nur TRYOUT bis CAPTAIN wählbar)",
+    ],
+  },
+  {
     version: "2.0.0",
     date: "2026-04-09",
     tags: ["feature", "improvement", "fix"],

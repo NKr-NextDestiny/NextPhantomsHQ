@@ -57,6 +57,7 @@ export default function TrainingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   const TRAINING_TYPES = [
     { value: "RANKED", label: t("types.RANKED") },
@@ -143,6 +144,16 @@ export default function TrainingPage() {
     }
   };
 
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm(t("confirmDeleteTemplate") || "Vorlage löschen?")) return;
+    try {
+      await api.delete(`/api/training-templates/${id}`);
+      success(tc("deleted"));
+      const res = await api.get<TrainingTemplate[]>("/api/training-templates");
+      if (res.data) setTemplates(res.data);
+    } catch { error(tc("deleteError")); }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -183,9 +194,15 @@ export default function TrainingPage() {
   };
 
   const handleVote = async (trainingId: string, status: string) => {
+    const currentVote = trainings.find(tr => tr.id === trainingId)?.votes.find(v => v.user.id === user?.id)?.status;
     try {
-      await api.post(`/api/trainings/${trainingId}/vote`, { status });
-      success(t("voteSaved"));
+      if (currentVote === status) {
+        await api.delete(`/api/trainings/${trainingId}/vote`);
+        success(t("voteRetracted") || "Stimme zurückgezogen");
+      } else {
+        await api.post(`/api/trainings/${trainingId}/vote`, { status });
+        success(t("voteSaved"));
+      }
       load();
     } catch {
       error(tc("saveError"));
@@ -209,9 +226,16 @@ export default function TrainingPage() {
           <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
           <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> {t("new")}
-        </Button>
+        <div className="flex gap-2">
+          {templates.length > 0 && (
+            <Button variant="outline" onClick={() => setShowTemplateManager(true)}>
+              <BookTemplate className="h-4 w-4" /> {t("templates") || "Vorlagen"}
+            </Button>
+          )}
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> {t("new")}
+          </Button>
+        </div>
       </div>
 
       {trainings.length === 0 ? (
@@ -335,6 +359,27 @@ export default function TrainingPage() {
               <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? tc("save") : tc("create")}</Button>
             </div>
           </div>
+        </div>
+      </Modal>
+
+      {/* Template Manager */}
+      <Modal open={showTemplateManager} onClose={() => setShowTemplateManager(false)} title={t("manageTemplates") || "Vorlagen verwalten"}>
+        <div className="space-y-2">
+          {templates.length === 0 ? (
+            <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">{t("noTemplates") || "Keine Vorlagen"}</p>
+          ) : (
+            templates.map((tpl) => (
+              <div key={tpl.id} className="flex items-center justify-between rounded-lg bg-[var(--secondary)] p-3">
+                <div>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{tpl.title}</p>
+                  <p className="text-xs text-[var(--muted-foreground)]">{TRAINING_TYPES.find(tt => tt.value === tpl.type)?.label || tpl.type} · {tpl.createdBy.displayName}</p>
+                </div>
+                <button onClick={() => handleDeleteTemplate(tpl.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </Modal>
     </div>

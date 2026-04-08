@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
 import { useT } from "@/i18n/provider";
 import Link from "next/link";
+import { CommentSection } from "@/components/ui/CommentSection";
 
 type MatchType = "SCRIM" | "TOURNAMENT" | "LEAGUE" | "FRIENDLY" | "OTHER";
 
@@ -255,9 +256,15 @@ export default function MatchDetailPage() {
   };
 
   const handleVote = async (status: "AVAILABLE" | "UNAVAILABLE" | "MAYBE") => {
+    const currentVote = match?.votes?.find(v => v.userId === user?.id)?.status;
     try {
-      await api.post(`/api/matches/${matchId}/vote`, { status });
-      toastSuccess(t("voteSaved"));
+      if (currentVote === status) {
+        await api.delete(`/api/matches/${matchId}/vote`);
+        toastSuccess(t("voteRetracted") || "Stimme zurückgezogen");
+      } else {
+        await api.post(`/api/matches/${matchId}/vote`, { status });
+        toastSuccess(t("voteSaved"));
+      }
       load();
     } catch { toastError(t("detail.voteError")); }
   };
@@ -600,6 +607,7 @@ export default function MatchDetailPage() {
               </div>
             </div>
           )}
+          <CommentSection entityType="MATCH" entityId={matchId} />
         </Card>
       )}
 

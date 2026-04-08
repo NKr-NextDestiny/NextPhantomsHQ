@@ -34,9 +34,9 @@ export default function AttendancePage() {
           setStatus("error");
           return;
         }
-        setEvent(data.data);
-        if (data.data?.alreadyVoted) {
-          setVotedAs(data.data.vote);
+        setEvent({ title: data.data.eventTitle, type: data.data.eventType, date: data.data.eventDate });
+        if (data.data?.alreadyResponded) {
+          setVotedAs(data.data.currentResponse);
           setStatus("already_voted");
         } else {
           setStatus("ready");
@@ -72,8 +72,9 @@ export default function AttendancePage() {
   };
 
   const voteLabel = (v: string) => {
-    if (v === "available") return "Verfügbar";
-    if (v === "unavailable") return "Nicht verfügbar";
+    const upper = v.toUpperCase();
+    if (upper === "AVAILABLE") return "Verfügbar";
+    if (upper === "UNAVAILABLE") return "Nicht verfügbar";
     return "Vielleicht";
   };
 
@@ -115,21 +116,21 @@ export default function AttendancePage() {
 
             <div className="space-y-3">
               <button
-                onClick={() => handleVote("available")}
+                onClick={() => handleVote("AVAILABLE")}
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-500/20 py-3 font-semibold text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-50"
               >
                 <CheckCircle className="h-5 w-5" /> Verfügbar
               </button>
               <button
-                onClick={() => handleVote("maybe")}
+                onClick={() => handleVote("MAYBE")}
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-yellow-500/20 py-3 font-semibold text-yellow-400 transition-all hover:bg-yellow-500/30 disabled:opacity-50"
               >
                 <HelpCircle className="h-5 w-5" /> Vielleicht
               </button>
               <button
-                onClick={() => handleVote("unavailable")}
+                onClick={() => handleVote("UNAVAILABLE")}
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-500/20 py-3 font-semibold text-red-400 transition-all hover:bg-red-500/30 disabled:opacity-50"
               >

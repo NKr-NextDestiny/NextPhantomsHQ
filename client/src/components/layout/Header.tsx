@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Bell, LogOut, Check, Globe, Save, Monitor } from "lucide-react";
+import { Bell, LogOut, Check, Globe, Save, Monitor, Search, Dumbbell, Trophy, FileText, Users as UsersIcon, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -191,6 +191,122 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   );
 }
 
+interface SearchResults {
+  trainings: { id: string; title: string; date: string; type: string }[];
+  strats: { id: string; title: string; map: string; side: string }[];
+  matches: { id: string; opponent: string; map?: string; result?: string; date: string; type: string }[];
+  users: { id: string; displayName: string; username: string; avatarUrl?: string }[];
+  wiki: { id: string; title: string; slug: string }[];
+}
+
+function GlobalSearch() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResults | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const search = (q: string) => {
+    setQuery(q);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.length < 2) { setResults(null); setOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get<SearchResults>(`/api/search?q=${encodeURIComponent(q)}`);
+        if (res.data) { setResults(res.data); setOpen(true); }
+      } catch { /* ignore */ }
+    }, 300);
+  };
+
+  const navigate = (path: string) => { setOpen(false); setQuery(""); router.push(path); };
+
+  const hasResults = results && (results.trainings.length + results.strats.length + results.matches.length + results.users.length + results.wiki.length) > 0;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+        <input
+          value={query}
+          onChange={(e) => search(e.target.value)}
+          onFocus={() => { if (results) setOpen(true); }}
+          placeholder="Suche..."
+          className="w-48 rounded-lg border border-[var(--border)] bg-[var(--secondary)] py-1.5 pl-9 pr-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:w-64 focus:border-[var(--primary)] focus:outline-none transition-all"
+        />
+      </div>
+      {open && results && (
+        <div className="absolute right-0 top-full mt-2 w-96 max-h-[70vh] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-xl" style={{ zIndex: 50 }}>
+          {!hasResults && (
+            <p className="px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">Keine Ergebnisse</p>
+          )}
+          {results.trainings.length > 0 && (
+            <div className="border-b border-[var(--border)] p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">Training</p>
+              {results.trainings.map((t) => (
+                <button key={t.id} onClick={() => navigate("/training")} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[var(--secondary)]">
+                  <Dumbbell className="h-4 w-4 text-green-400" /> <span className="text-[var(--foreground)]">{t.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {results.matches.length > 0 && (
+            <div className="border-b border-[var(--border)] p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">Matches</p>
+              {results.matches.map((m) => (
+                <button key={m.id} onClick={() => navigate(`/matches/${m.id}`)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[var(--secondary)]">
+                  <Trophy className="h-4 w-4 text-blue-400" /> <span className="text-[var(--foreground)]">vs. {m.opponent}</span>
+                  {m.result && <span className={`text-xs ${m.result === "WIN" ? "text-green-400" : m.result === "LOSS" ? "text-red-400" : "text-yellow-400"}`}>{m.result}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {results.strats.length > 0 && (
+            <div className="border-b border-[var(--border)] p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">Strategien</p>
+              {results.strats.map((s) => (
+                <button key={s.id} onClick={() => navigate("/strats")} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[var(--secondary)]">
+                  <FileText className="h-4 w-4 text-orange-400" /> <span className="text-[var(--foreground)]">{s.title}</span> <span className="text-xs text-[var(--muted-foreground)]">{s.map}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {results.wiki.length > 0 && (
+            <div className="border-b border-[var(--border)] p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">Wiki</p>
+              {results.wiki.map((w) => (
+                <button key={w.id} onClick={() => navigate(`/wiki?page=${w.slug}`)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-[var(--secondary)]">
+                  <BookOpen className="h-4 w-4 text-purple-400" /> <span className="text-[var(--foreground)]">{w.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {results.users.length > 0 && (
+            <div className="p-2">
+              <p className="px-2 py-1 text-xs font-semibold text-[var(--muted-foreground)]">Spieler</p>
+              {results.users.map((u) => (
+                <div key={u.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm">
+                  {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="h-5 w-5 rounded-full" /> : <UsersIcon className="h-4 w-4 text-[var(--muted-foreground)]" />}
+                  <span className="text-[var(--foreground)]">{u.displayName}</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">@{u.username}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
@@ -290,6 +406,11 @@ export function Header() {
       <div className="hidden lg:block" />
 
       <div className="flex items-center gap-4">
+        {/* Global search */}
+        <div className="hidden sm:block">
+          <GlobalSearch />
+        </div>
+
         {/* Notifications bell */}
         <div className="relative" ref={dropdownRef}>
           <button

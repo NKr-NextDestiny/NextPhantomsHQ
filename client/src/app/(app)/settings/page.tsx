@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Settings, Shield, Save, Trash2, Bell, Monitor } from "lucide-react";
+import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -26,6 +26,13 @@ interface TeamSettings {
 interface NotificationConfig {
   email: boolean;
   whatsapp: boolean;
+}
+
+interface GameConfig {
+  maps: string[];
+  characters: string[];
+  characterLabel: string;
+  playerRoles: string[];
 }
 
 interface MemberData {
@@ -95,7 +102,7 @@ export default function SettingsPage() {
   const t = useT("settings");
   const tc = useT("common");
 
-  const validTabs = ["team", "notifications", "members"] as const;
+  const validTabs = ["team", "game", "notifications", "members"] as const;
   type Tab = typeof validTabs[number];
   const initialTab = validTabs.includes(searchParams.get("tab") as Tab) ? (searchParams.get("tab") as Tab) : "team";
   const [tab, setTabState] = useState<Tab>(initialTab);
@@ -113,6 +120,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const [notificationChannel, setNotificationChannel] = useState("NONE");
+  const [gameConfig, setGameConfig] = useState<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
+  const [newMap, setNewMap] = useState("");
+  const [newCharacter, setNewCharacter] = useState("");
+  const [newRole, setNewRole] = useState("");
+  const [savingConfig, setSavingConfig] = useState(false);
   const initialTeamForm = useRef({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const initialChannel = useRef("NONE");
 
@@ -125,10 +137,11 @@ export default function SettingsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [teamRes, membersRes, notifyRes] = await Promise.allSettled([
+      const [teamRes, membersRes, notifyRes, configRes] = await Promise.allSettled([
         api.get<TeamSettings>("/api/team"),
         api.get<MemberData[]>("/api/team/members"),
         api.get<NotificationConfig>("/api/team/notification-config"),
+        api.get<GameConfig>("/api/team/config"),
       ]);
       if (teamRes.status === "fulfilled" && teamRes.value.data) {
         const ts = teamRes.value.data;
@@ -145,6 +158,9 @@ export default function SettingsPage() {
       }
       if (notifyRes.status === "fulfilled" && notifyRes.value.data) {
         setNotifyConfig(notifyRes.value.data);
+      }
+      if (configRes.status === "fulfilled" && configRes.value.data) {
+        setGameConfig(configRes.value.data);
       }
     } catch {
       error(tc("loadError"));
@@ -217,6 +233,7 @@ export default function SettingsPage() {
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1">
         {[
           { id: "team" as const, label: t("tabs.team"), icon: Settings },
+          { id: "game" as const, label: "Game Config", icon: Gamepad2 },
           { id: "notifications" as const, label: t("tabs.notifications"), icon: Bell },
           { id: "members" as const, label: t("tabs.members"), icon: Shield },
         ].map((tb) => (
@@ -267,6 +284,104 @@ export default function SettingsPage() {
             <Textarea label={t("team.description")} value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
             <Input label={t("team.webhookUrl")} value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder={t("team.webhookPlaceholder")} />
             <Button onClick={saveTeam} isLoading={saving}>
+              <Save className="h-4 w-4" /> {tc("save")}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Data Export */}
+      {tab === "team" && (
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <Download className="h-5 w-5 text-[var(--primary)]" />
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Daten-Export</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Match-Statistiken", endpoint: "/api/export/matches" },
+              { label: "Training-Teilnahme", endpoint: "/api/export/training-attendance" },
+              { label: "Verfügbarkeit", endpoint: "/api/export/availability" },
+            ].map((exp) => (
+              <div key={exp.endpoint} className="flex flex-col gap-2 rounded-lg bg-[var(--secondary)] p-3">
+                <span className="text-sm font-medium text-[var(--foreground)]">{exp.label}</span>
+                <div className="flex gap-2">
+                  <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}${exp.endpoint}?format=csv`} className="flex-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-center text-xs font-medium text-[var(--foreground)] hover:bg-[var(--primary)]/10 transition-colors" download>CSV</a>
+                  <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}${exp.endpoint}?format=json`} className="flex-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-center text-xs font-medium text-[var(--foreground)] hover:bg-[var(--primary)]/10 transition-colors" download>JSON</a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Game Config */}
+      {tab === "game" && (
+        <Card>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Game Config</h2>
+          <div className="space-y-6">
+            {/* Maps */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Maps</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {gameConfig.maps.map((m) => (
+                  <span key={m} className="inline-flex items-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)]">
+                    {m}
+                    <button onClick={() => setGameConfig({ ...gameConfig, maps: gameConfig.maps.filter(x => x !== m) })} className="text-[var(--muted-foreground)] hover:text-[var(--destructive)]"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={newMap} onChange={(e) => setNewMap(e.target.value)} placeholder="Neue Map..." onKeyDown={(e) => { if (e.key === "Enter" && newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <Button size="sm" variant="outline" onClick={() => { if (newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
+              </div>
+            </div>
+
+            {/* Characters */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">{gameConfig.characterLabel || "Characters"}</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {gameConfig.characters.map((c) => (
+                  <span key={c} className="inline-flex items-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)]">
+                    {c}
+                    <button onClick={() => setGameConfig({ ...gameConfig, characters: gameConfig.characters.filter(x => x !== c) })} className="text-[var(--muted-foreground)] hover:text-[var(--destructive)]"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={newCharacter} onChange={(e) => setNewCharacter(e.target.value)} placeholder={`${gameConfig.characterLabel || "Character"} hinzufügen...`} onKeyDown={(e) => { if (e.key === "Enter" && newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <Button size="sm" variant="outline" onClick={() => { if (newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
+              </div>
+            </div>
+
+            {/* Character Label */}
+            <Input label="Character Label" value={gameConfig.characterLabel} onChange={(e) => setGameConfig({ ...gameConfig, characterLabel: e.target.value })} placeholder="z.B. Operator, Agent, Hero..." />
+
+            {/* Player Roles */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Spieler-Rollen</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {gameConfig.playerRoles.map((r) => (
+                  <span key={r} className="inline-flex items-center gap-1 rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)]">
+                    {r}
+                    <button onClick={() => setGameConfig({ ...gameConfig, playerRoles: gameConfig.playerRoles.filter(x => x !== r) })} className="text-[var(--muted-foreground)] hover:text-[var(--destructive)]"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Rolle hinzufügen..." onKeyDown={(e) => { if (e.key === "Enter" && newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <Button size="sm" variant="outline" onClick={() => { if (newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
+              </div>
+            </div>
+
+            <Button onClick={async () => {
+              setSavingConfig(true);
+              try {
+                await api.put("/api/team/config", gameConfig);
+                success(tc("saved"));
+              } catch { error(tc("saveError")); }
+              finally { setSavingConfig(false); }
+            }} isLoading={savingConfig}>
               <Save className="h-4 w-4" /> {tc("save")}
             </Button>
           </div>
@@ -366,7 +481,7 @@ export default function SettingsPage() {
                     }}
                     className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
                   >
-                    {["TRYOUT", "PLAYER", "ANALYST", "COACH", "CAPTAIN", "ADMIN"].map((r) => (
+                    {["TRYOUT", "PLAYER", "ANALYST", "COACH", "CAPTAIN"].map((r) => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>

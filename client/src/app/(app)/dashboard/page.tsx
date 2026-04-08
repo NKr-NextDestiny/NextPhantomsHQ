@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Calendar, Dumbbell, Trophy, Users } from "lucide-react";
+import { Calendar, Dumbbell, Trophy, Users, Database, Activity, HardDrive, BarChart3 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useToast } from "@/components/ui/Toast";
@@ -32,6 +32,18 @@ interface Activity {
   user?: { displayName: string };
 }
 
+interface AdminStats {
+  totalUsers: number;
+  activeUsers7d: number;
+  totalTrainings: number;
+  totalMatches: number;
+  totalStrats: number;
+  totalReplays: number;
+  totalPolls: number;
+  apiRequests30d: number;
+  storageMb: number;
+}
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { error: showError } = useToast();
@@ -40,19 +52,22 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ upcomingTrainings: 0, upcomingMatches: 0, totalMatches: 0, teamMembers: 0 });
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [statsRes, eventsRes, activityRes] = await Promise.allSettled([
+        const [statsRes, eventsRes, activityRes, adminRes] = await Promise.allSettled([
           api.get<Stats>("/api/dashboard/stats"),
           api.get<UpcomingEvent[]>("/api/dashboard/upcoming"),
           api.get<Activity[]>("/api/dashboard/activity"),
+          user?.isAdmin ? api.get<AdminStats>("/api/dashboard/admin-stats") : Promise.reject("not admin"),
         ]);
         if (statsRes.status === "fulfilled" && statsRes.value.data) setStats(statsRes.value.data);
         if (eventsRes.status === "fulfilled" && eventsRes.value.data) setEvents(eventsRes.value.data);
         if (activityRes.status === "fulfilled" && activityRes.value.data) setActivity(activityRes.value.data);
+        if (adminRes.status === "fulfilled" && adminRes.value.data) setAdminStats(adminRes.value.data);
       } catch {
         showError(t("loadError"));
       } finally {
@@ -171,6 +186,36 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {/* Admin Stats */}
+      {adminStats && (
+        <Card>
+          <div className="mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-[var(--primary)]" />
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("adminStats")}</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: t("totalUsers"), value: adminStats.totalUsers, icon: Users },
+              { label: t("activeUsers7d"), value: adminStats.activeUsers7d, icon: Activity },
+              { label: t("totalTrainings"), value: adminStats.totalTrainings, icon: Dumbbell },
+              { label: t("totalStrats"), value: adminStats.totalStrats, icon: Database },
+              { label: t("totalReplays"), value: adminStats.totalReplays, icon: Database },
+              { label: t("totalPolls"), value: adminStats.totalPolls, icon: Database },
+              { label: t("apiRequests30d"), value: adminStats.apiRequests30d, icon: Activity },
+              { label: t("storage"), value: `${adminStats.storageMb} MB`, icon: HardDrive },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
+                <s.icon className="h-5 w-5 text-[var(--primary)] opacity-60" />
+                <div>
+                  <p className="text-xs text-[var(--muted-foreground)]">{s.label}</p>
+                  <p className="text-lg font-bold text-[var(--foreground)]">{s.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

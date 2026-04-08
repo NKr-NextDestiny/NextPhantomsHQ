@@ -94,10 +94,15 @@ export default function PollsPage() {
     }
   };
 
-  const handleVote = async (pollId: string, optionId: string) => {
+  const handleVote = async (pollId: string, optionId: string, alreadyVoted: boolean) => {
     try {
-      await api.post(`/api/polls/${pollId}/vote`, { optionId });
-      success(t("voteSaved"));
+      if (alreadyVoted) {
+        await api.delete(`/api/polls/${pollId}/vote?optionId=${optionId}`);
+        success(t("voteRetracted") || "Stimme zurückgezogen");
+      } else {
+        await api.post(`/api/polls/${pollId}/vote`, { optionId });
+        success(t("voteSaved"));
+      }
       load();
     } catch {
       error(tc("saveError"));
@@ -173,7 +178,7 @@ export default function PollsPage() {
                     return (
                       <button
                         key={opt.id}
-                        onClick={() => !poll.isExpired && handleVote(poll.id, opt.id)}
+                        onClick={() => !poll.isExpired && handleVote(poll.id, opt.id, opt.votedByUser)}
                         disabled={poll.isExpired}
                         className={`relative w-full overflow-hidden rounded-lg p-3 text-left transition-all ${opt.votedByUser ? "ring-2 ring-[var(--primary)]" : "hover:bg-[var(--secondary)]"}`}
                       >

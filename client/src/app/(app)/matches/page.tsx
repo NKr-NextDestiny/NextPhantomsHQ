@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown, Eye, CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown, Eye, CheckCircle, XCircle, HelpCircle, BarChart3 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -78,6 +78,9 @@ export default function MatchesPage() {
     mapPool: [] as string[], format: "", contactInfo: "", serverRegion: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [mapStats, setMapStats] = useState<Record<string, { total: number; wins: number; losses: number; draws: number; roundsWon: number; roundsLost: number }>>({});
+  const [oppStats, setOppStats] = useState<Record<string, { total: number; wins: number; losses: number; draws: number }>>({});
 
   const TYPE_LABELS: Record<MatchType, string> = {
     SCRIM: t("types.SCRIM"),
@@ -194,13 +197,30 @@ export default function MatchesPage() {
   };
 
   const handleVote = async (matchId: string, status: "AVAILABLE" | "UNAVAILABLE" | "MAYBE") => {
+    const currentVote = matches.find(m => m.id === matchId)?.votes?.find(v => v.userId === user?.id)?.status;
     try {
-      await api.post(`/api/matches/${matchId}/vote`, { status });
-      success(t("voteSaved"));
+      if (currentVote === status) {
+        await api.delete(`/api/matches/${matchId}/vote`);
+        success(t("voteRetracted") || "Stimme zurückgezogen");
+      } else {
+        await api.post(`/api/matches/${matchId}/vote`, { status });
+        success(t("voteSaved"));
+      }
       load();
     } catch {
       error(t("voteError"));
     }
+  };
+
+  const loadStats = async () => {
+    try {
+      const [mapRes, oppRes] = await Promise.allSettled([
+        api.get<Record<string, { total: number; wins: number; losses: number; draws: number; roundsWon: number; roundsLost: number }>>("/api/matches/stats/maps"),
+        api.get<Record<string, { total: number; wins: number; losses: number; draws: number }>>("/api/matches/stats/opponents"),
+      ]);
+      if (mapRes.status === "fulfilled" && mapRes.value.data) setMapStats(mapRes.value.data);
+      if (oppRes.status === "fulfilled" && oppRes.value.data) setOppStats(oppRes.value.data);
+    } catch { /* ignore */ }
   };
 
   const toggleMapPool = (map: string) => {
@@ -231,9 +251,14 @@ export default function MatchesPage() {
           <h1 className="text-2xl font-bold text-[var(--foreground)]">{t("title")}</h1>
           <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> {t("new")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant={showStats ? "default" : "outline"} onClick={() => { setShowStats(!showStats); if (!showStats) loadStats(); }}>
+            <BarChart3 className="h-4 w-4" /> {t("statistics") || "Statistiken"}
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> {t("new")}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Bar */}
@@ -255,6 +280,62 @@ export default function MatchesPage() {
           <p className={`text-2xl font-bold ${winRate >= 50 ? "text-green-400" : "text-red-400"}`}>{winRate}%</p>
         </Card>
       </div>
+
+      {/* Detailed Stats */}
+      {showStats && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Map Stats */}
+          <Card>
+            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByMap") || "Statistiken pro Map"}</h3>
+            {Object.keys(mapStats).length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">{t("noMapStats") || "Keine Map-Daten"}</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(mapStats).sort((a, b) => b[1].total - a[1].total).map(([map, s]) => {
+                  const wr = s.total > 0 ? Math.round((s.wins / s.total) * 100) : 0;
+                  return (
+                    <div key={map} className="flex items-center justify-between rounded-lg bg-[var(--secondary)] px-3 py-2">
+                      <span className="text-sm font-medium text-[var(--foreground)]">{map}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-green-400">{s.wins}W</span>
+                        <span className="text-red-400">{s.losses}L</span>
+                        {s.draws > 0 && <span className="text-yellow-400">{s.draws}D</span>}
+                        <span className="text-[var(--muted-foreground)]">{s.roundsWon}:{s.roundsLost}</span>
+                        <span className={`font-bold ${wr >= 50 ? "text-green-400" : "text-red-400"}`}>{wr}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          {/* Opponent Stats */}
+          <Card>
+            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByOpponent") || "Statistiken pro Gegner"}</h3>
+            {Object.keys(oppStats).length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">{t("noOppStats") || "Keine Gegner-Daten"}</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(oppStats).sort((a, b) => b[1].total - a[1].total).map(([opp, s]) => {
+                  const wr = s.total > 0 ? Math.round((s.wins / s.total) * 100) : 0;
+                  return (
+                    <div key={opp} className="flex items-center justify-between rounded-lg bg-[var(--secondary)] px-3 py-2">
+                      <span className="text-sm font-medium text-[var(--foreground)]">{opp}</span>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-green-400">{s.wins}W</span>
+                        <span className="text-red-400">{s.losses}L</span>
+                        {s.draws > 0 && <span className="text-yellow-400">{s.draws}D</span>}
+                        <span className={`font-bold ${wr >= 50 ? "text-green-400" : "text-red-400"}`}>{wr}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* Type Filter */}
       <div className="flex flex-wrap gap-2">
