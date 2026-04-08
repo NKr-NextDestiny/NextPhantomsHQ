@@ -40,6 +40,7 @@ import { reminderRouter } from "./routes/reminder.routes.js";
 import { wikiRouter } from "./routes/wiki.routes.js";
 import { notesRouter } from "./routes/notes.routes.js";
 import { searchRouter } from "./routes/search.routes.js";
+import { dashboardRouter } from "./routes/dashboard.routes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -124,6 +125,7 @@ app.use("/api/reminders", reminderRouter);
 app.use("/api/wiki", wikiRouter);
 app.use("/api/notes", notesRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Error handler
 app.use(errorHandler);
