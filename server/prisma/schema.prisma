@@ -219,6 +219,7 @@ model Training {
   id          String         @id @default(cuid())
   title       String
   type        TrainingType
+  meetTime    DateTime
   date        DateTime
   endDate     DateTime?
   recurrence  RecurrenceType @default(NONE)
@@ -259,6 +260,7 @@ model TrainingVote {
 model Scrim {
   id           String   @id @default(cuid())
   opponent     String
+  meetTime     DateTime?
   date         DateTime
   endDate      DateTime?
   mapPool      String[]
@@ -436,9 +438,10 @@ model MatchPlayerStat {
   kd           Float?
   operators    String[] @default([])
   clutches     Json?
+  externalName String?
 
-  userId  String
-  user    User   @relation("MatchPlayerStats", fields: [userId], references: [id], onDelete: Cascade)
+  userId  String?
+  user    User?  @relation("MatchPlayerStats", fields: [userId], references: [id], onDelete: Cascade)
   matchId String
   match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
   teamId  String
@@ -606,10 +609,11 @@ model ReplayTag {
 
 // MOSS FILES
 model MossFile {
-  id       String @id @default(cuid())
-  fileName String
-  fileUrl  String
-  fileSize Int
+  id         String  @id @default(cuid())
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  playerName String?
 
   matchId      String
   match        Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)

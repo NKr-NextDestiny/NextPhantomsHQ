@@ -50,6 +50,7 @@ mossRouter.post("/match/:matchId", authenticate, teamContext, requireFeature("ma
         fileName: req.file.originalname,
         fileUrl,
         fileSize: req.file.size,
+        playerName: req.body.playerName || null,
         matchId: req.params.matchId,
         uploadedById: req.user!.id,
         teamId: req.teamId!,

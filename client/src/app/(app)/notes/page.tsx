@@ -66,7 +66,7 @@ export default function NotesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Notiz wirklich loeschen?")) return;
+    if (!confirm("Notiz wirklich löschen?")) return;
     try {
       await api.delete(`/api/notes/${id}`);
       load();
@@ -86,7 +86,7 @@ export default function NotesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Notizen</h1>
-          <p className="text-[var(--muted-foreground)]">Persoenliche und Team-Notizen</p>
+          <p className="text-[var(--muted-foreground)]">Persönliche und Team-Notizen</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> Neue Notiz
@@ -165,7 +165,7 @@ export default function NotesPage() {
               onChange={(e) => setForm({ ...form, isPrivate: e.target.checked })}
               className="h-4 w-4 rounded border-[var(--border)] accent-[var(--primary)]"
             />
-            <label htmlFor="isPrivate" className="text-sm text-[var(--foreground)]">Privat (nur fuer mich sichtbar)</label>
+            <label htmlFor="isPrivate" className="text-sm text-[var(--foreground)]">Privat (nur für mich sichtbar)</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => { setShowModal(false); setEditNote(null); }}>Abbrechen</Button>

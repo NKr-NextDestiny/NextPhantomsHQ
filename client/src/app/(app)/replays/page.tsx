@@ -69,7 +69,7 @@ export default function ReplaysPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Replay wirklich loeschen?")) return;
+    if (!confirm("Replay wirklich löschen?")) return;
     try {
       await api.delete(`/api/replays/${id}`);
       load();

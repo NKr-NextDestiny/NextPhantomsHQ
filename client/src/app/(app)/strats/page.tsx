@@ -97,7 +97,7 @@ export default function StratsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Strategie wirklich loeschen?")) return;
+    if (!confirm("Strategie wirklich löschen?")) return;
     try {
       await api.delete(`/api/strats/${id}`);
       load();
@@ -241,7 +241,7 @@ export default function StratsPage() {
               </div>
             ))
           ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">Keine Versionshistorie verfuegbar.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Keine Versionshistorie verfügbar.</p>
           )}
         </div>
       </Modal>

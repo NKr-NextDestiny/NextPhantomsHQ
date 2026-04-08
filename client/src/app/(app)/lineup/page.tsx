@@ -42,7 +42,7 @@ export default function LineupPage() {
     try {
       const [linRes, plRes] = await Promise.allSettled([
         api.get<Lineup[]>("/api/lineups"),
-        api.get<Player[]>("/api/members"),
+        api.get<Player[]>("/api/users"),
       ]);
       if (linRes.status === "fulfilled" && linRes.value.data) setLineups(linRes.value.data);
       if (plRes.status === "fulfilled" && plRes.value.data) setPlayers(plRes.value.data);
@@ -103,7 +103,7 @@ export default function LineupPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Lineup wirklich loeschen?")) return;
+    if (!confirm("Lineup wirklich löschen?")) return;
     try {
       await api.delete(`/api/lineups/${id}`);
       load();
@@ -217,7 +217,7 @@ export default function LineupPage() {
                     onChange={(e) => updateSlot(idx, "playerId", e.target.value)}
                     className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1.5 text-sm text-[var(--foreground)]"
                   >
-                    <option value="">Spieler waehlen...</option>
+                    <option value="">Spieler wählen...</option>
                     {players.map((p) => (
                       <option key={p.id} value={p.id}>{p.displayName}</option>
                     ))}
@@ -237,7 +237,7 @@ export default function LineupPage() {
                 </div>
               ))}
               {lineup.length === 0 && (
-                <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Noch keine Slots. Klicke &quot;+ Slot&quot; um Spieler hinzuzufuegen.</p>
+                <p className="py-4 text-center text-sm text-[var(--muted-foreground)]">Noch keine Slots. Klicke &quot;+ Slot&quot; um Spieler hinzuzufügen.</p>
               )}
             </div>
           </div>

@@ -95,7 +95,7 @@ export default function ScoutingPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Scouting-Eintrag wirklich loeschen?")) return;
+    if (!confirm("Scouting-Eintrag wirklich löschen?")) return;
     try {
       await api.delete(`/api/scouting/${id}`);
       load();
@@ -141,7 +141,7 @@ export default function ScoutingPage() {
       {entries.length === 0 ? (
         <Card className="py-12 text-center">
           <Eye className="mx-auto mb-4 h-12 w-12 text-[var(--muted-foreground)]" />
-          <p className="text-[var(--muted-foreground)]">Noch keine Scouting-Eintraege.</p>
+          <p className="text-[var(--muted-foreground)]">Noch keine Scouting-Einträge.</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -191,13 +191,13 @@ export default function ScoutingPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {e.strengths && (
                         <div>
-                          <h4 className="mb-1 text-sm font-medium text-green-400">Staerken</h4>
+                          <h4 className="mb-1 text-sm font-medium text-green-400">Stärken</h4>
                           <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.strengths}</p>
                         </div>
                       )}
                       {e.weaknesses && (
                         <div>
-                          <h4 className="mb-1 text-sm font-medium text-red-400">Schwaechen</h4>
+                          <h4 className="mb-1 text-sm font-medium text-red-400">Schwächen</h4>
                           <p className="text-sm text-[var(--muted-foreground)] whitespace-pre-wrap">{e.weaknesses}</p>
                         </div>
                       )}
@@ -251,8 +251,8 @@ export default function ScoutingPage() {
           </div>
           <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Textarea label="Staerken" value={form.strengths} onChange={(e) => setForm({ ...form, strengths: e.target.value })} />
-            <Textarea label="Schwaechen" value={form.weaknesses} onChange={(e) => setForm({ ...form, weaknesses: e.target.value })} />
+            <Textarea label="Stärken" value={form.strengths} onChange={(e) => setForm({ ...form, strengths: e.target.value })} />
+            <Textarea label="Schwächen" value={form.weaknesses} onChange={(e) => setForm({ ...form, weaknesses: e.target.value })} />
           </div>
 
           <div>

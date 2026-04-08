@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown, Eye } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import Link from "next/link";
 
 interface Match {
   id: string;
@@ -16,28 +17,48 @@ interface Match {
   map: string;
   scoreUs: number;
   scoreThem: number;
-  result: "win" | "loss" | "draw";
+  result: string;
   competition?: string;
   notes?: string;
-  demoUrl?: string;
+  playerStats?: any[];
+  mossFiles?: any[];
+  replay?: any;
 }
 
-const CS_MAPS = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2", "Vertigo"];
+interface GameConfig {
+  maps: string[];
+  characters: string[];
+  playerRoles: string[];
+}
+
+function calcResult(us: number, them: number): "WIN" | "LOSS" | "DRAW" {
+  if (us > them) return "WIN";
+  if (us < them) return "LOSS";
+  return "DRAW";
+}
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterMap, setFilterMap] = useState("");
-  const [form, setForm] = useState({ opponent: "", date: "", map: "Mirage", scoreUs: "0", scoreThem: "0", competition: "", notes: "", demoUrl: "" });
+  const [form, setForm] = useState({
+    opponent: "", date: "", map: "", scoreUs: "0", scoreThem: "0",
+    competition: "", notes: "", side: "",
+  });
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const params = filterMap ? `?map=${filterMap}` : "";
-      const res = await api.get<Match[]>(`/api/matches${params}`);
-      if (res.data) setMatches(res.data);
+      const [matchRes, configRes] = await Promise.allSettled([
+        api.get<Match[]>(`/api/matches${params}`),
+        api.get<GameConfig>("/api/team/config"),
+      ]);
+      if (matchRes.status === "fulfilled" && matchRes.value.data) setMatches(matchRes.value.data);
+      if (configRes.status === "fulfilled" && configRes.value.data) setMaps(configRes.value.data.maps);
     } catch {
       // ignore
     } finally {
@@ -49,7 +70,7 @@ export default function MatchesPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ opponent: "", date: "", map: "Mirage", scoreUs: "0", scoreThem: "0", competition: "", notes: "", demoUrl: "" });
+    setForm({ opponent: "", date: "", map: maps[0] || "", scoreUs: "0", scoreThem: "0", competition: "", notes: "", side: "" });
     setShowModal(true);
   };
 
@@ -63,7 +84,7 @@ export default function MatchesPage() {
       scoreThem: String(m.scoreThem),
       competition: m.competition || "",
       notes: m.notes || "",
-      demoUrl: m.demoUrl || "",
+      side: "",
     });
     setShowModal(true);
   };
@@ -71,7 +92,19 @@ export default function MatchesPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const body = { ...form, scoreUs: parseInt(form.scoreUs), scoreThem: parseInt(form.scoreThem) };
+      const us = parseInt(form.scoreUs);
+      const them = parseInt(form.scoreThem);
+      const body = {
+        opponent: form.opponent,
+        date: form.date,
+        map: form.map,
+        scoreUs: us,
+        scoreThem: them,
+        result: calcResult(us, them),
+        competition: form.competition || null,
+        notes: form.notes || null,
+        side: form.side || null,
+      };
       if (editingId) {
         await api.put(`/api/matches/${editingId}`, body);
       } else {
@@ -87,7 +120,7 @@ export default function MatchesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Match wirklich loeschen?")) return;
+    if (!confirm("Match wirklich löschen?")) return;
     try {
       await api.delete(`/api/matches/${id}`);
       load();
@@ -96,7 +129,7 @@ export default function MatchesPage() {
     }
   };
 
-  const wins = matches.filter((m) => m.result === "win").length;
+  const wins = matches.filter((m) => m.result === "WIN").length;
   const total = matches.length;
   const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
@@ -132,7 +165,7 @@ export default function MatchesPage() {
         </Card>
         <Card className="p-4 text-center">
           <p className="text-sm text-[var(--muted-foreground)]">Niederlagen</p>
-          <p className="text-2xl font-bold text-red-400">{matches.filter((m) => m.result === "loss").length}</p>
+          <p className="text-2xl font-bold text-red-400">{matches.filter((m) => m.result === "LOSS").length}</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-sm text-[var(--muted-foreground)]">Winrate</p>
@@ -140,24 +173,26 @@ export default function MatchesPage() {
         </Card>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilterMap("")}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${!filterMap ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
-        >
-          Alle
-        </button>
-        {CS_MAPS.map((map) => (
+      {/* Map Filter */}
+      {maps.length > 0 && (
+        <div className="flex flex-wrap gap-2">
           <button
-            key={map}
-            onClick={() => setFilterMap(map)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${filterMap === map ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
+            onClick={() => setFilterMap("")}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${!filterMap ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
           >
-            {map}
+            Alle
           </button>
-        ))}
-      </div>
+          {maps.map((map) => (
+            <button
+              key={map}
+              onClick={() => setFilterMap(map)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${filterMap === map ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
+            >
+              {map}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Match List */}
       {matches.length === 0 ? (
@@ -169,8 +204,8 @@ export default function MatchesPage() {
         <div className="space-y-3">
           {matches.map((m) => (
             <Card key={m.id} hover className="flex items-center gap-4 p-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${m.result === "win" ? "bg-green-500/20" : m.result === "loss" ? "bg-red-500/20" : "bg-yellow-500/20"}`}>
-                {m.result === "win" ? <TrendingUp className="h-5 w-5 text-green-400" /> : m.result === "loss" ? <TrendingDown className="h-5 w-5 text-red-400" /> : <Trophy className="h-5 w-5 text-yellow-400" />}
+              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${m.result === "WIN" ? "bg-green-500/20" : m.result === "LOSS" ? "bg-red-500/20" : "bg-yellow-500/20"}`}>
+                {m.result === "WIN" ? <TrendingUp className="h-5 w-5 text-green-400" /> : m.result === "LOSS" ? <TrendingDown className="h-5 w-5 text-red-400" /> : <Trophy className="h-5 w-5 text-yellow-400" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -181,11 +216,14 @@ export default function MatchesPage() {
                 <p className="text-xs text-[var(--muted-foreground)]">{formatDate(m.date)}</p>
               </div>
               <div className="text-center">
-                <span className={`text-xl font-bold ${m.result === "win" ? "text-green-400" : m.result === "loss" ? "text-red-400" : "text-yellow-400"}`}>
+                <span className={`text-xl font-bold ${m.result === "WIN" ? "text-green-400" : m.result === "LOSS" ? "text-red-400" : "text-yellow-400"}`}>
                   {m.scoreUs} : {m.scoreThem}
                 </span>
               </div>
               <div className="flex gap-1">
+                <Link href={`/matches/${m.id}`} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--primary)]">
+                  <Eye className="h-4 w-4" />
+                </Link>
                 <button onClick={() => openEdit(m)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
                   <Edit2 className="h-4 w-4" />
                 </button>
@@ -205,12 +243,14 @@ export default function MatchesPage() {
             <Input label="Datum & Zeit" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={CS_MAPS.map((m) => ({ value: m, label: m }))} />
+            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
             <Input label="Unser Score" type="number" value={form.scoreUs} onChange={(e) => setForm({ ...form, scoreUs: e.target.value })} />
             <Input label="Gegner Score" type="number" value={form.scoreThem} onChange={(e) => setForm({ ...form, scoreThem: e.target.value })} />
           </div>
-          <Input label="Wettbewerb" value={form.competition} onChange={(e) => setForm({ ...form, competition: e.target.value })} placeholder="z.B. 99damage Liga" />
-          <Input label="Demo URL" value={form.demoUrl} onChange={(e) => setForm({ ...form, demoUrl: e.target.value })} placeholder="https://..." />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Wettbewerb" value={form.competition} onChange={(e) => setForm({ ...form, competition: e.target.value })} placeholder="z.B. Faceit League" />
+            <Select label="Seite" value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value })} options={[{ value: "", label: "Keine Angabe" }, { value: "ATTACK", label: "Angriff" }, { value: "DEFENSE", label: "Verteidigung" }]} />
+          </div>
           <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>

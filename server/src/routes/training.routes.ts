@@ -18,6 +18,7 @@ export const trainingRouter = Router();
 const createSchema = z.object({
   title: z.string().min(1).max(200),
   type: z.enum(["RANKED", "CUSTOM", "AIM_TRAINING", "VOD_REVIEW", "STRAT_PRACTICE", "OTHER"]),
+  meetTime: z.string().transform(s => new Date(s)),
   date: z.string().transform(s => new Date(s)),
   endDate: z.string().transform(s => new Date(s)).optional().nullable(),
   recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).optional(),
@@ -84,6 +85,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
       data: {
         title: data.title,
         type: data.type,
+        meetTime: data.meetTime,
         date: data.date,
         endDate: data.endDate || null,
         recurrence: data.recurrence || "NONE",
@@ -144,6 +146,7 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.type !== undefined && { type: data.type }),
+        ...(data.meetTime !== undefined && { meetTime: data.meetTime }),
         ...(data.date !== undefined && { date: data.date }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.recurrence !== undefined && { recurrence: data.recurrence }),

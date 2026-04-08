@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Textarea } from "@/components/ui/Input";
+import { useRouter } from "next/navigation";
 
 interface TeamSettings {
   id: string;
@@ -14,40 +15,56 @@ interface TeamSettings {
   tag: string;
   description?: string;
   logoUrl?: string;
-  discordWebhook?: string;
+  discordWebhookUrl?: string;
   defaultTimezone?: string;
 }
 
-interface Member {
+interface MemberData {
   id: string;
-  displayName: string;
-  avatarUrl?: string;
   role: string;
-  isAdmin: boolean;
+  status: string;
   joinedAt: string;
+  user: {
+    id: string;
+    numericId: number;
+    username: string;
+    displayName: string;
+    avatarUrl?: string;
+    isAdmin: boolean;
+    r6Username?: string;
+    email?: string;
+  };
 }
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const router = useRouter();
   const [tab, setTab] = useState<"personal" | "team" | "members">("personal");
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<MemberData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhook: "" });
+  const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const [personalForm, setPersonalForm] = useState({ displayName: "", email: "" });
   const [message, setMessage] = useState("");
+
+  // Nur Admins dürfen hier rein
+  useEffect(() => {
+    if (!loading && user && !user.isAdmin) {
+      router.push("/dashboard");
+    }
+  }, [user, loading, router]);
 
   const load = useCallback(async () => {
     try {
       const [teamRes, membersRes] = await Promise.allSettled([
-        api.get<TeamSettings>("/api/teams/settings"),
-        api.get<Member[]>("/api/members"),
+        api.get<TeamSettings>("/api/team"),
+        api.get<MemberData[]>("/api/team/members"),
       ]);
       if (teamRes.status === "fulfilled" && teamRes.value.data) {
         const ts = teamRes.value.data;
         setTeamSettings(ts);
-        setTeamForm({ name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhook: ts.discordWebhook || "" });
+        setTeamForm({ name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" });
       }
       if (membersRes.status === "fulfilled" && membersRes.value.data) {
         setMembers(membersRes.value.data);
@@ -68,7 +85,7 @@ export default function SettingsPage() {
     setSaving(true);
     setMessage("");
     try {
-      await api.put("/api/teams/settings", teamForm);
+      await api.put("/api/team", teamForm);
       setMessage("Team-Einstellungen gespeichert!");
       load();
     } catch {
@@ -83,7 +100,7 @@ export default function SettingsPage() {
     setMessage("");
     try {
       await api.put("/api/users/me", personalForm);
-      setMessage("Persoenliche Einstellungen gespeichert!");
+      setMessage("Persönliche Einstellungen gespeichert!");
     } catch {
       setMessage("Fehler beim Speichern.");
     } finally {
@@ -91,28 +108,10 @@ export default function SettingsPage() {
     }
   };
 
-  const toggleAdmin = async (memberId: string) => {
-    try {
-      await api.patch(`/api/members/${memberId}/admin`);
-      load();
-    } catch {
-      // ignore
-    }
-  };
-
-  const removeMember = async (memberId: string) => {
+  const removeMember = async (userId: string) => {
     if (!confirm("Mitglied wirklich entfernen?")) return;
     try {
-      await api.delete(`/api/members/${memberId}`);
-      load();
-    } catch {
-      // ignore
-    }
-  };
-
-  const uploadLogo = async (file: File) => {
-    try {
-      await api.upload("/api/teams/logo", file);
+      await api.delete(`/api/team/members/${userId}`);
       load();
     } catch {
       // ignore
@@ -127,23 +126,21 @@ export default function SettingsPage() {
     );
   }
 
+  if (!user?.isAdmin) return null;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)]">Einstellungen</h1>
-        <p className="text-[var(--muted-foreground)]">Team- und persoenliche Einstellungen</p>
+        <p className="text-[var(--muted-foreground)]">Team- und persönliche Einstellungen</p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1">
         {[
-          { id: "personal" as const, label: "Persoenlich", icon: User },
-          ...(user?.isAdmin
-            ? [
-                { id: "team" as const, label: "Team", icon: Settings },
-                { id: "members" as const, label: "Mitglieder", icon: Shield },
-              ]
-            : []),
+          { id: "personal" as const, label: "Persönlich", icon: User },
+          { id: "team" as const, label: "Team", icon: Settings },
+          { id: "members" as const, label: "Mitglieder", icon: Shield },
         ].map((t) => (
           <button
             key={t.id}
@@ -164,7 +161,7 @@ export default function SettingsPage() {
       {/* Personal Settings */}
       {tab === "personal" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Persoenliche Einstellungen</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Persönliche Einstellungen</h2>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               {user?.avatarUrl ? (
@@ -188,8 +185,8 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Team Settings (Admin only) */}
-      {tab === "team" && user?.isAdmin && (
+      {/* Team Settings */}
+      {tab === "team" && (
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Team-Einstellungen</h2>
           <div className="space-y-4">
@@ -206,7 +203,14 @@ export default function SettingsPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const form = new FormData();
+                      form.append("file", file);
+                      api.upload("/api/team/logo", file).then(() => load());
+                    }
+                  }}
                   className="mt-1 text-sm text-[var(--muted-foreground)] file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--primary)] file:px-3 file:py-1.5 file:text-sm file:text-white"
                 />
               </div>
@@ -216,7 +220,7 @@ export default function SettingsPage() {
               <Input label="Team-Tag" value={teamForm.tag} onChange={(e) => setTeamForm({ ...teamForm, tag: e.target.value })} placeholder="z.B. NP" />
             </div>
             <Textarea label="Beschreibung" value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
-            <Input label="Discord Webhook URL" value={teamForm.discordWebhook} onChange={(e) => setTeamForm({ ...teamForm, discordWebhook: e.target.value })} placeholder="https://discord.com/api/webhooks/..." />
+            <Input label="Discord Webhook URL" value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder="https://discord.com/api/webhooks/..." />
             <Button onClick={saveTeam} isLoading={saving}>
               <Save className="h-4 w-4" /> Speichern
             </Button>
@@ -224,43 +228,41 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Members Management (Admin only) */}
-      {tab === "members" && user?.isAdmin && (
+      {/* Members Management */}
+      {tab === "members" && (
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Mitglieder ({members.length})</h2>
-          <div className="space-y-2">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
-                {m.avatarUrl ? (
-                  <img src={m.avatarUrl} alt="" className="h-10 w-10 rounded-full" />
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)]/20 text-sm font-bold text-[var(--primary)]">
-                    {m.displayName.charAt(0)}
+          {members.length === 0 ? (
+            <p className="text-[var(--muted-foreground)]">Noch keine Mitglieder. Sobald sich jemand über Discord anmeldet, erscheint er hier.</p>
+          ) : (
+            <div className="space-y-2">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
+                  {m.user.avatarUrl ? (
+                    <img src={m.user.avatarUrl} alt="" className="h-10 w-10 rounded-full" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--primary)]/20 text-sm font-bold text-[var(--primary)]">
+                      {m.user.displayName.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[var(--foreground)]">{m.user.displayName}</span>
+                      {m.user.isAdmin && <Badge variant="default">Admin</Badge>}
+                      <Badge variant="outline">{m.role}</Badge>
+                      <Badge variant="outline">{m.status}</Badge>
+                    </div>
+                    <span className="text-xs text-[var(--muted-foreground)]">@{m.user.username}</span>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-[var(--foreground)]">{m.displayName}</span>
-                    {m.isAdmin && <Badge variant="default">Admin</Badge>}
-                    <Badge variant="outline">{m.role}</Badge>
-                  </div>
-                </div>
-                {m.id !== user.id && (
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => toggleAdmin(m.id)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${m.isAdmin ? "bg-[var(--primary)]/20 text-[var(--primary)]" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:text-[var(--primary)]"}`}
-                    >
-                      <Shield className="inline h-3.5 w-3.5" /> {m.isAdmin ? "Admin" : "Admin machen"}
-                    </button>
-                    <button onClick={() => removeMember(m.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
+                  {m.user.id !== user?.id && (
+                    <button onClick={() => removeMember(m.user.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
     </div>

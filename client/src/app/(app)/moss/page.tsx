@@ -69,7 +69,7 @@ export default function MossPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("MOSS-Datei wirklich loeschen?")) return;
+    if (!confirm("MOSS-Datei wirklich löschen?")) return;
     try {
       await api.delete(`/api/moss/${id}`);
       load();
@@ -114,7 +114,7 @@ export default function MossPage() {
 
       <Card className="flex items-center gap-3 border-blue-500/30 bg-blue-500/5 p-4">
         <Lock className="h-5 w-5 text-blue-400" />
-        <p className="text-sm text-blue-300">MOSS-Dateien werden verschluesselt gespeichert und sind nur fuer Team-Admins sichtbar.</p>
+        <p className="text-sm text-blue-300">MOSS-Dateien werden verschlüsselt gespeichert und sind nur für Team-Admins sichtbar.</p>
       </Card>
 
       {files.length === 0 ? (

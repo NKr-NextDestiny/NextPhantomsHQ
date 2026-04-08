@@ -182,22 +182,11 @@ echo ============================================
 echo   SETUP ABGESCHLOSSEN!
 echo ============================================
 echo.
-echo Starte den Dev-Server mit:
-echo   pnpm dev
-echo.
-echo Oder starte jetzt direkt:
-set /p START_DEV="Dev-Server jetzt starten? (y/n): "
-if /i "!START_DEV!"=="y" goto :startdev
-if /i "!START_DEV!"=="j" goto :startdev
-echo.
-echo Spaeter starten mit: pnpm dev
-pause
-goto :eof
-
-:startdev
 echo.
 echo Starte Next Phantoms HQ...
 echo   Client: http://localhost:3000
 echo   Server: http://localhost:4000
 echo.
+:: Browser nach kurzer Verzoegerung oeffnen
+start "" cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:3000"
 call pnpm dev

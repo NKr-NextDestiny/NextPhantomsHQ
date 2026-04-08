@@ -92,6 +92,9 @@ app.use("/uploads", (req, res, next) => {
 });
 
 // Health check
+app.get("/", (_req, res) => {
+  res.json({ success: true, data: { name: "Next Phantoms HQ API", status: "ok", timestamp: new Date().toISOString() } });
+});
 app.get("/api/health", (_req, res) => {
   res.json({ success: true, data: { status: "ok", timestamp: new Date().toISOString() } });
 });

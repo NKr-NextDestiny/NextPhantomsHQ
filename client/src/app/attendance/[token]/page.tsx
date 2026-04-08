@@ -30,7 +30,7 @@ export default function AttendancePage() {
         const res = await fetch(`${API_URL}/api/attendance/${token}`);
         const data = await res.json();
         if (!res.ok) {
-          setErrorMsg(data.error || "Ungueeliger oder abgelaufener Link.");
+          setErrorMsg(data.error || "Ungültiger oder abgelaufener Link.");
           setStatus("error");
           return;
         }
@@ -72,8 +72,8 @@ export default function AttendancePage() {
   };
 
   const voteLabel = (v: string) => {
-    if (v === "available") return "Verfuegbar";
-    if (v === "unavailable") return "Nicht verfuegbar";
+    if (v === "available") return "Verfügbar";
+    if (v === "unavailable") return "Nicht verfügbar";
     return "Vielleicht";
   };
 
@@ -119,7 +119,7 @@ export default function AttendancePage() {
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-500/20 py-3 font-semibold text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-50"
               >
-                <CheckCircle className="h-5 w-5" /> Verfuegbar
+                <CheckCircle className="h-5 w-5" /> Verfügbar
               </button>
               <button
                 onClick={() => handleVote("maybe")}
@@ -133,7 +133,7 @@ export default function AttendancePage() {
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-500/20 py-3 font-semibold text-red-400 transition-all hover:bg-red-500/30 disabled:opacity-50"
               >
-                <XCircle className="h-5 w-5" /> Nicht verfuegbar
+                <XCircle className="h-5 w-5" /> Nicht verfügbar
               </button>
             </div>
           </>

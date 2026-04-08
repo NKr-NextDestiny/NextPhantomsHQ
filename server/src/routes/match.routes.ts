@@ -13,7 +13,8 @@ import { sendWebhookNotification, buildMatchEmbed } from "../services/discord-we
 export const matchRouter = Router();
 
 const playerStatSchema = z.object({
-  userId: z.string(),
+  userId: z.string().optional().nullable(),
+  externalName: z.string().optional().nullable(),
   kills: z.number().int().min(0).default(0),
   deaths: z.number().int().min(0).default(0),
   assists: z.number().int().min(0).default(0),
@@ -107,7 +108,8 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
         const headshotRate = ps.kills > 0 ? ps.headshots / ps.kills : 0;
         await prisma.matchPlayerStat.create({
           data: {
-            userId: ps.userId,
+            userId: ps.userId || null,
+            externalName: ps.externalName || null,
             matchId: match.id,
             teamId: req.teamId!,
             kills: ps.kills,
@@ -131,6 +133,8 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         playerStats: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+        mossFiles: true,
+        replay: true,
       },
     });
 
@@ -162,7 +166,8 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
         const headshotRate = ps.kills > 0 ? ps.headshots / ps.kills : 0;
         await prisma.matchPlayerStat.create({
           data: {
-            userId: ps.userId,
+            userId: ps.userId || null,
+            externalName: ps.externalName || null,
             matchId: match.id,
             teamId: req.teamId!,
             kills: ps.kills,
@@ -186,6 +191,8 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
       include: {
         createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
         playerStats: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+        mossFiles: true,
+        replay: true,
       },
     });
 

@@ -10,8 +10,6 @@ import {
   Map,
   Users,
   Eye,
-  Film,
-  Shield,
   BarChart3,
   Megaphone,
   Settings,
@@ -25,6 +23,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/lib/auth-store";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,22 +33,25 @@ const navItems = [
   { href: "/strats", label: "Strategien", icon: Map },
   { href: "/lineup", label: "Lineups", icon: Users },
   { href: "/scouting", label: "Scouting", icon: Eye },
-  { href: "/replays", label: "Replays", icon: Film },
-  { href: "/moss", label: "MOSS", icon: Shield },
   { href: "/polls", label: "Umfragen", icon: BarChart3 },
-  { href: "/announcements", label: "Ankuendigungen", icon: Megaphone },
+  { href: "/announcements", label: "Ankündigungen", icon: Megaphone },
   { href: "/wiki", label: "Wiki", icon: BookOpen },
   { href: "/notes", label: "Notizen", icon: StickyNote },
   { href: "/reminders", label: "Erinnerungen", icon: Bell },
-  { href: "/availability", label: "Verfuegbarkeit", icon: Calendar },
+  { href: "/availability", label: "Verfügbarkeit", icon: Calendar },
   { href: "/docs", label: "Dokumentation", icon: HelpCircle },
   { href: "/changelog", label: "Changelog", icon: History },
-  { href: "/settings", label: "Einstellungen", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuthStore();
+
+  const items = [
+    ...navItems,
+    ...(user?.isAdmin ? [{ href: "/settings", label: "Einstellungen", icon: Settings }] : []),
+  ];
 
   const navContent = (
     <>
@@ -59,7 +61,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link
