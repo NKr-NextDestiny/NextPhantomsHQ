@@ -122,7 +122,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
     await Promise.all(
       members
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendNewEventNotification(m.user.email, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+        .map(m => sendNewEventNotification(m.user.email!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
     );
 
     await logAudit(req.user!.id, "CREATE", "training", training.id, { title: training.title }, req.teamId);
@@ -175,7 +175,7 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
     await Promise.all(
       updateMembers
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventUpdatedNotification(m.user.email, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+        .map(m => sendEventUpdatedNotification(m.user.email!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
     );
 
     res.json({ success: true, data: training });
@@ -198,7 +198,7 @@ trainingRouter.delete("/:id", authenticate, teamContext, requireFeature("trainin
     await Promise.all(
       deleteMembers
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventDeletedNotification(m.user.email, "Training", existing.title, req.user!.displayName).catch(console.error))
+        .map(m => sendEventDeletedNotification(m.user.email!, "Training", existing.title, req.user!.displayName).catch(console.error))
     );
 
     await prisma.training.delete({ where: { id: String(req.params.id) } });

@@ -138,7 +138,7 @@ scrimRouter.post("/", authenticate, teamContext, requireFeature("scrims"), requi
     await Promise.all(
       members
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendNewEventNotification(m.user.email, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+        .map(m => sendNewEventNotification(m.user.email!, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
     );
 
     await logAudit(req.user!.id, "CREATE", "scrim", scrim.id, { opponent: scrim.opponent }, req.teamId);
@@ -191,7 +191,7 @@ scrimRouter.put("/:id", authenticate, teamContext, requireFeature("scrims"), req
     await Promise.all(
       updateMembers
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventUpdatedNotification(m.user.email, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
+        .map(m => sendEventUpdatedNotification(m.user.email!, "Scrim", `Scrim vs ${scrim.opponent}`, scrim.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error))
     );
 
     res.json({ success: true, data: scrim });
@@ -213,7 +213,7 @@ scrimRouter.delete("/:id", authenticate, teamContext, requireFeature("scrims"), 
     await Promise.all(
       deleteMembers
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendEventDeletedNotification(m.user.email, "Scrim", existing.opponent, req.user!.displayName).catch(console.error))
+        .map(m => sendEventDeletedNotification(m.user.email!, "Scrim", existing.opponent, req.user!.displayName).catch(console.error))
     );
 
     await prisma.scrim.delete({ where: { id: String(req.params.id) } });

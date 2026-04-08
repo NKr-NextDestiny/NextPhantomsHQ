@@ -103,7 +103,7 @@ announcementRouter.post("/", authenticate, teamContext, requireFeature("announce
     await Promise.all(
       members
         .filter(m => m.user.id !== req.user!.id && m.user.email && m.user.emailNotifications)
-        .map(m => sendAnnouncementNotification(m.user.email, announcement.title, req.user!.displayName).catch(console.error))
+        .map(m => sendAnnouncementNotification(m.user.email!, announcement.title, req.user!.displayName).catch(console.error))
     );
 
     res.status(201).json({ success: true, data: announcement });
