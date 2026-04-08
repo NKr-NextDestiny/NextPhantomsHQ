@@ -187,7 +187,7 @@ export default function PlaybooksPage() {
                         <div className="flex-1">
                           <span className="font-medium">{ps.strat.title}</span>
                           <div className="flex gap-2 mt-1">
-                            <Badge variant="secondary">{ps.strat.map}</Badge>
+                            <Badge variant="outline">{ps.strat.map}</Badge>
                             <Badge variant={ps.strat.side === "ATTACK" ? "warning" : "default"}>{ps.strat.side}</Badge>
                           </div>
                         </div>
@@ -215,7 +215,7 @@ export default function PlaybooksPage() {
           <Textarea label="Beschreibung" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button type="submit" loading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            <Button type="submit" isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
           </div>
         </form>
       </Modal>
