@@ -102,7 +102,7 @@ Lade einzelne .rec Dateien oder ZIP-Archive mit mehreren Runden hoch. Optional k
 R6 Siege .rec Dateien werden automatisch geparst. Kills, Deaths und Headshots werden pro Runde und Spieler erkannt.
 
 ## Spieler-Zuordnung
-Der Parser erkennt R6-Usernamen. Du kannst diese manuell Team-Mitgliedern zuordnen. Bei Zuordnung zu einem Match fliessen die Stats in die Match-Statistiken ein.
+Der Parser erkennt R6-Usernamen. Du kannst diese manuell Team-Mitgliedern zuordnen. Bei Zuordnung zu einem Match fließen die Stats in die Match-Statistiken ein.
 
 ## Tags
 Runden können mit Tags versehen werden (z.B. "Clutch", "Eco-Runde") für späteres Filtern.

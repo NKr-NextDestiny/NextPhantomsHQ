@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 cd /d "%~dp0"
 title Next Phantoms HQ - Clean / Uninstall
 color 0C
@@ -8,7 +9,7 @@ echo ============================================
 echo   Next Phantoms HQ - CLEAN
 echo ============================================
 echo.
-echo Was moechtest du loeschen?
+echo Was möchtest du löschen?
 echo.
 echo   [1] Nur Daten (DB-Volumes, Uploads)
 echo   [2] Alles (DB, Uploads, node_modules, Builds, Lock-Datei, Docker Images)
@@ -20,7 +21,7 @@ set /p CHOICE="Auswahl (1/2/3): "
 if "!CHOICE!"=="3" goto :cancelled
 if "!CHOICE!"=="1" goto :data_only
 if "!CHOICE!"=="2" goto :full_clean
-echo Ungueltige Auswahl.
+echo Ungültige Auswahl.
 pause
 exit /b 0
 
@@ -30,11 +31,11 @@ pause
 exit /b 0
 
 :: ============================================
-:: OPTION 1: Nur Daten loeschen
+:: OPTION 1: Nur Daten löschen
 :: ============================================
 :data_only
 echo.
-echo WARNUNG: Dies loescht die Datenbank und alle Uploads!
+echo WARNUNG: Dies löscht die Datenbank und alle Uploads!
 set /p CONFIRM="Bist du sicher? (y/n): "
 if /i "!CONFIRM!"=="y" goto :data_confirmed
 if /i "!CONFIRM!"=="j" goto :data_confirmed
@@ -45,25 +46,25 @@ exit /b 0
 :data_confirmed
 echo.
 
-:: Docker DB Volume loeschen
+:: Docker DB Volume löschen
 where docker >nul 2>&1
 if %ERRORLEVEL%==0 (
-    echo Stoppe und loesche PostgreSQL Container + Volume...
+    echo Stoppe und lösche PostgreSQL Container + Volume...
     docker compose down -v --remove-orphans 2>nul
-    echo [OK] Datenbank geloescht
+    echo [OK] Datenbank gelöscht
 ) else (
-    echo [INFO] Docker nicht verfuegbar
+    echo [INFO] Docker nicht verfügbar
 )
 
-:: Uploads loeschen
+:: Uploads löschen
 if exist server\uploads (
     rmdir /s /q server\uploads
-    echo [OK] Uploads geloescht
+    echo [OK] Uploads gelöscht
 )
 
 echo.
 echo ============================================
-echo   DATEN GELOESCHT
+echo   DATEN GELÖSCHT
 echo ============================================
 echo.
 echo Datenbank und Uploads wurden entfernt.
@@ -73,11 +74,11 @@ pause
 exit /b 0
 
 :: ============================================
-:: OPTION 2: Alles loeschen
+:: OPTION 2: Alles löschen
 :: ============================================
 :full_clean
 echo.
-echo WARNUNG: Dies loescht ALLES:
+echo WARNUNG: Dies löscht ALLES:
 echo   - Docker Container, Volumes und Images
 echo   - Datenbank (PostgreSQL Daten)
 echo   - node_modules (alle Pakete)
@@ -96,7 +97,7 @@ exit /b 0
 :full_confirmed
 echo.
 echo ============================================
-echo   1. Docker Container stoppen und loeschen
+echo   1. Docker Container stoppen und löschen
 echo ============================================
 echo.
 
@@ -105,7 +106,7 @@ if %ERRORLEVEL%==0 (
     echo Stoppe Docker Container...
     docker compose down -v --remove-orphans 2>nul
     if %ERRORLEVEL%==0 (
-        echo [OK] Docker Container und Volumes geloescht
+        echo [OK] Docker Container und Volumes gelöscht
     ) else (
         echo [INFO] Keine Docker Container gefunden
     )
@@ -116,96 +117,96 @@ if %ERRORLEVEL%==0 (
     )
     echo [OK] Docker Images bereinigt
 ) else (
-    echo [INFO] Docker nicht verfuegbar, ueberspringe...
+    echo [INFO] Docker nicht verfügbar, überspringe...
 )
 
 echo.
 echo ============================================
-echo   2. node_modules loeschen
+echo   2. node_modules löschen
 echo ============================================
 echo.
 
 if exist node_modules (
-    echo Loesche root node_modules...
+    echo Lösche root node_modules...
     rmdir /s /q node_modules
-    echo [OK] root node_modules geloescht
+    echo [OK] root node_modules gelöscht
 )
 
 if exist client\node_modules (
-    echo Loesche client node_modules...
+    echo Lösche client node_modules...
     rmdir /s /q client\node_modules
-    echo [OK] client node_modules geloescht
+    echo [OK] client node_modules gelöscht
 )
 
 if exist server\node_modules (
-    echo Loesche server node_modules...
+    echo Lösche server node_modules...
     rmdir /s /q server\node_modules
-    echo [OK] server node_modules geloescht
+    echo [OK] server node_modules gelöscht
 )
 
 if exist shared\node_modules (
-    echo Loesche shared node_modules...
+    echo Lösche shared node_modules...
     rmdir /s /q shared\node_modules
-    echo [OK] shared node_modules geloescht
+    echo [OK] shared node_modules gelöscht
 )
 
 echo.
 echo ============================================
-echo   3. Build-Artefakte loeschen
+echo   3. Build-Artefakte löschen
 echo ============================================
 echo.
 
 if exist client\.next (
     rmdir /s /q client\.next
-    echo [OK] client/.next geloescht
+    echo [OK] client/.next gelöscht
 )
 
 if exist server\dist (
     rmdir /s /q server\dist
-    echo [OK] server/dist geloescht
+    echo [OK] server/dist gelöscht
 )
 
 if exist shared\dist (
     rmdir /s /q shared\dist
-    echo [OK] shared/dist geloescht
+    echo [OK] shared/dist gelöscht
 )
 
 echo.
 echo ============================================
-echo   4. Generierte Dateien loeschen
+echo   4. Generierte Dateien löschen
 echo ============================================
 echo.
 
 if exist server\src\generated (
     rmdir /s /q server\src\generated
-    echo [OK] Prisma generated client geloescht
+    echo [OK] Prisma generated client gelöscht
 )
 
 echo.
 echo ============================================
-echo   5. Uploads loeschen
+echo   5. Uploads löschen
 echo ============================================
 echo.
 
 if exist server\uploads (
     rmdir /s /q server\uploads
-    echo [OK] Upload-Verzeichnis geloescht
+    echo [OK] Upload-Verzeichnis gelöscht
 )
 
 echo.
 echo ============================================
-echo   6. Lock-Dateien loeschen
+echo   6. Lock-Dateien löschen
 echo ============================================
 echo.
 
 if exist pnpm-lock.yaml (
     del /f pnpm-lock.yaml
-    echo [OK] pnpm-lock.yaml geloescht
+    echo [OK] pnpm-lock.yaml gelöscht
 )
 
 echo.
 echo ============================================
-echo   ALLES GELOESCHT
+echo   ALLES GELÖSCHT
 echo ============================================
 echo.
 echo Komplett bereinigt. Um neu zu starten:

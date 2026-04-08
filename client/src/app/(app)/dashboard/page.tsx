@@ -106,7 +106,7 @@ export default function DashboardPage() {
         <Card>
           <div className="mb-4 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[var(--primary)]" />
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Naechste Events</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Nächste Events</h2>
           </div>
           {events.length === 0 ? (
             <p className="text-sm text-[var(--muted-foreground)]">Keine anstehenden Events.</p>
