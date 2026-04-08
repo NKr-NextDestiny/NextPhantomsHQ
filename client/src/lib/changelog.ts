@@ -24,6 +24,7 @@ export const changelog: ChangelogEntry[] = [
       "Strats: Seiten von CT/T auf ATTACK/DEFENSE umgestellt (R6 Siege)",
       "Client-seitige Upload-Größen-Validierung (max. 50 MB)",
       "Alle 'as any' Type-Casts im Client entfernt — vollständig typsicher",
+      "Produktions-Update-Script (update.sh) für Debian-Server mit DB-Backup, Health-Checks und Smoke-Tests",
     ],
   },
   {
