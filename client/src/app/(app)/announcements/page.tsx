@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Announcement {
   id: string;
@@ -24,6 +25,7 @@ interface Announcement {
 
 export default function AnnouncementsPage() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -36,11 +38,11 @@ export default function AnnouncementsPage() {
       const res = await api.get<Announcement[]>("/api/announcements");
       if (res.data) setAnnouncements(res.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -61,13 +63,15 @@ export default function AnnouncementsPage() {
     try {
       if (editingId) {
         await api.put(`/api/announcements/${editingId}`, form);
+        success("Gespeichert");
       } else {
         await api.post("/api/announcements", form);
+        success("Ankündigung erstellt");
       }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -77,9 +81,10 @@ export default function AnnouncementsPage() {
     if (!confirm("Ankündigung wirklich löschen?")) return;
     try {
       await api.delete(`/api/announcements/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
@@ -88,7 +93,7 @@ export default function AnnouncementsPage() {
       await api.post(`/api/announcements/${id}/pin`);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     }
   };
 
@@ -97,11 +102,11 @@ export default function AnnouncementsPage() {
       await api.post(`/api/announcements/${id}/dismiss`);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     }
   };
 
-  const priorityColor = (p: string) => {
+  const priorityColor = (p: string): "destructive" | "warning" | "info" | "outline" => {
     switch (p) {
       case "urgent": return "destructive";
       case "high": return "warning";
@@ -170,7 +175,7 @@ export default function AnnouncementsPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-[var(--foreground)]">{a.title}</h3>
                     {a.isPinned && <Pin className="h-4 w-4 text-[var(--primary)]" />}
-                    <Badge variant={priorityColor(a.priority) as any}>{priorityLabel(a.priority)}</Badge>
+                    <Badge variant={priorityColor(a.priority)}>{priorityLabel(a.priority)}</Badge>
                   </div>
                   <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--muted-foreground)]">{a.content}</p>
                   <div className="mt-3 flex items-center gap-4 text-xs text-[var(--muted-foreground)]">

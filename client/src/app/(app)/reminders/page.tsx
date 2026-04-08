@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Reminder {
   id: string;
@@ -22,6 +23,7 @@ interface Reminder {
 
 export default function RemindersPage() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -33,8 +35,10 @@ export default function RemindersPage() {
     try {
       const res = await api.get<Reminder[]>("/api/reminders");
       if (res.data) setReminders(res.data);
-    } catch {} finally { setLoading(false); }
-  }, []);
+    } catch {
+      error("Fehler beim Laden");
+    } finally { setLoading(false); }
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -64,28 +68,37 @@ export default function RemindersPage() {
       };
       if (editReminder) {
         await api.put(`/api/reminders/${editReminder.id}`, body);
+        success("Gespeichert");
       } else {
         await api.post("/api/reminders", body);
+        success("Erinnerung erstellt");
       }
       setShowModal(false);
       setEditReminder(null);
       load();
-    } catch {} finally { setSubmitting(false); }
+    } catch {
+      error("Fehler beim Speichern");
+    } finally { setSubmitting(false); }
   };
 
   const handleToggle = async (id: string) => {
     try {
       await api.patch(`/api/reminders/${id}/toggle`);
       load();
-    } catch {}
+    } catch {
+      error("Fehler beim Speichern");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Erinnerung wirklich löschen?")) return;
     try {
       await api.delete(`/api/reminders/${id}`);
+      success("Gelöscht");
       load();
-    } catch {}
+    } catch {
+      error("Fehler beim Löschen");
+    }
   };
 
   const isOverdue = (deadline: string | null) => {

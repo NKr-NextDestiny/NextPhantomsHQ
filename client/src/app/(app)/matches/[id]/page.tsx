@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Upload, Trash2, Download, Users, Shield, Film, UserPlus } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Download, Users, Shield, Film, UserPlus, ClipboardList } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 import Link from "next/link";
 
 interface PlayerStat {
@@ -66,7 +67,7 @@ export default function MatchDetailPage() {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"stats" | "moss" | "replay">("stats");
+  const [tab, setTab] = useState<"stats" | "moss" | "replay" | "review">("stats");
 
   // Player form
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -77,6 +78,13 @@ export default function MatchDetailPage() {
   const [mossPlayerName, setMossPlayerName] = useState("");
   const [uploading, setUploading] = useState(false);
 
+  // Review
+  const [reviewExists, setReviewExists] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ positives: "", negatives: "", improvements: "", notes: "" });
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const { success: toastSuccess, error: toastError } = useToast();
+
   const load = useCallback(async () => {
     try {
       const [matchRes, membersRes] = await Promise.allSettled([
@@ -86,13 +94,70 @@ export default function MatchDetailPage() {
       if (matchRes.status === "fulfilled" && matchRes.value.data) setMatch(matchRes.value.data);
       if (membersRes.status === "fulfilled" && membersRes.value.data) setMembers(membersRes.value.data);
     } catch {
-      // ignore
+      toastError("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, toastError]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadReview = useCallback(async () => {
+    setReviewLoading(true);
+    try {
+      const res = await api.get<{ positives?: string; negatives?: string; improvements?: string; notes?: string } | null>(`/api/matches/${matchId}/review`);
+      if (res.data) {
+        setReviewExists(true);
+        setReviewForm({
+          positives: res.data.positives || "",
+          negatives: res.data.negatives || "",
+          improvements: res.data.improvements || "",
+          notes: res.data.notes || "",
+        });
+      } else {
+        setReviewExists(false);
+        setReviewForm({ positives: "", negatives: "", improvements: "", notes: "" });
+      }
+    } catch {
+      setReviewExists(false);
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    if (tab === "review") loadReview();
+  }, [tab, loadReview]);
+
+  const saveReview = async () => {
+    setReviewSubmitting(true);
+    try {
+      await api.put(`/api/matches/${matchId}/review`, {
+        positives: reviewForm.positives || null,
+        negatives: reviewForm.negatives || null,
+        improvements: reviewForm.improvements || null,
+        notes: reviewForm.notes || null,
+      });
+      setReviewExists(true);
+      toastSuccess("Review gespeichert.");
+    } catch {
+      toastError("Fehler beim Speichern des Reviews.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const deleteReview = async () => {
+    if (!confirm("Review wirklich löschen?")) return;
+    try {
+      await api.delete(`/api/matches/${matchId}/review`);
+      setReviewExists(false);
+      setReviewForm({ positives: "", negatives: "", improvements: "", notes: "" });
+      toastSuccess("Review gelöscht.");
+    } catch {
+      toastError("Fehler beim Löschen des Reviews.");
+    }
+  };
 
   const addPlayerStat = async () => {
     setSubmitting(true);
@@ -117,11 +182,12 @@ export default function MatchDetailPage() {
       })) || [];
 
       await api.put(`/api/matches/${matchId}`, { playerStats: [...existing, ...stats] });
+      toastSuccess("Gespeichert");
       setShowAddPlayer(false);
       setPlayerForm({ userId: "", externalName: "", kills: "0", deaths: "0", assists: "0", headshots: "0" });
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -141,9 +207,10 @@ export default function MatchDetailPage() {
           headshots: ps.headshots,
         })) || [];
       await api.put(`/api/matches/${matchId}`, { playerStats: remaining });
+      toastSuccess("Gelöscht");
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Löschen");
     }
   };
 
@@ -158,10 +225,11 @@ export default function MatchDetailPage() {
         credentials: "include",
         body: formData,
       });
+      toastSuccess("MOSS hochgeladen");
       setMossPlayerName("");
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Hochladen");
     } finally {
       setUploading(false);
     }
@@ -171,9 +239,10 @@ export default function MatchDetailPage() {
     if (!confirm("MOSS-Datei löschen?")) return;
     try {
       await api.delete(`/api/moss/${id}`);
+      toastSuccess("Gelöscht");
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Löschen");
     }
   };
 
@@ -193,9 +262,10 @@ export default function MatchDetailPage() {
         credentials: "include",
         body: formData,
       });
+      toastSuccess("Replay hochgeladen");
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Hochladen");
     } finally {
       setUploading(false);
     }
@@ -205,9 +275,10 @@ export default function MatchDetailPage() {
     if (!confirm("Replay löschen?")) return;
     try {
       await api.delete(`/api/replays/${id}`);
+      toastSuccess("Gelöscht");
       load();
     } catch {
-      // ignore
+      toastError("Fehler beim Löschen");
     }
   };
 
@@ -266,6 +337,7 @@ export default function MatchDetailPage() {
           { id: "stats" as const, label: "Spieler", icon: Users },
           { id: "moss" as const, label: "MOSS-Dateien", icon: Shield },
           { id: "replay" as const, label: "Replays", icon: Film },
+          { id: "review" as const, label: "Review", icon: ClipboardList },
         ].map((t) => (
           <button
             key={t.id}
@@ -426,6 +498,62 @@ export default function MatchDetailPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Review Tab */}
+      {tab === "review" && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Match Review</h2>
+            {reviewExists && (
+              <Button size="sm" variant="destructive" onClick={deleteReview}>
+                <Trash2 className="h-4 w-4" /> Review löschen
+              </Button>
+            )}
+          </div>
+
+          {reviewLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="h-6 w-6 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--primary)]" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Textarea
+                label="Positives"
+                value={reviewForm.positives}
+                onChange={(e) => setReviewForm({ ...reviewForm, positives: e.target.value })}
+                placeholder="Was lief gut?"
+                rows={3}
+              />
+              <Textarea
+                label="Negatives"
+                value={reviewForm.negatives}
+                onChange={(e) => setReviewForm({ ...reviewForm, negatives: e.target.value })}
+                placeholder="Was lief schlecht?"
+                rows={3}
+              />
+              <Textarea
+                label="Verbesserungen"
+                value={reviewForm.improvements}
+                onChange={(e) => setReviewForm({ ...reviewForm, improvements: e.target.value })}
+                placeholder="Was kann verbessert werden?"
+                rows={3}
+              />
+              <Textarea
+                label="Notizen"
+                value={reviewForm.notes}
+                onChange={(e) => setReviewForm({ ...reviewForm, notes: e.target.value })}
+                placeholder="Weitere Notizen..."
+                rows={3}
+              />
+              <div className="flex justify-end pt-2">
+                <Button onClick={saveReview} isLoading={reviewSubmitting}>
+                  {reviewExists ? "Review aktualisieren" : "Review speichern"}
+                </Button>
+              </div>
             </div>
           )}
         </Card>

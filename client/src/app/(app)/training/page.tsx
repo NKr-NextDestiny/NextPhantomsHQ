@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Dumbbell, Calendar, Clock, CheckCircle, XCircle, HelpCircle, Trash2, Edit2 } from "lucide-react";
+import { Plus, Dumbbell, Calendar, Clock, CheckCircle, XCircle, HelpCircle, Trash2, Edit2, BookTemplate } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/Card";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Vote {
   id: string;
@@ -29,6 +30,14 @@ interface Training {
   createdBy: { id: string; displayName: string };
 }
 
+interface TrainingTemplate {
+  id: string;
+  title: string;
+  type: string;
+  notes?: string;
+  createdBy: { displayName: string };
+}
+
 const TRAINING_TYPES = [
   { value: "RANKED", label: "Ranked" },
   { value: "CUSTOM", label: "Custom" },
@@ -44,34 +53,45 @@ function formatTime(dateStr: string) {
 
 export default function TrainingPage() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [trainings, setTrainings] = useState<Training[]>([]);
+  const [templates, setTemplates] = useState<TrainingTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", type: "RANKED", meetTime: "", date: "", endDate: "", notes: "", location: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get<Training[]>("/api/trainings");
-      if (res.data) setTrainings(res.data);
+      const [trainingsRes, templatesRes] = await Promise.allSettled([
+        api.get<Training[]>("/api/trainings"),
+        api.get<TrainingTemplate[]>("/api/training-templates"),
+      ]);
+      if (trainingsRes.status === "fulfilled" && trainingsRes.value.data) setTrainings(trainingsRes.value.data);
+      else if (trainingsRes.status === "rejected") error("Fehler beim Laden");
+      if (templatesRes.status === "fulfilled" && templatesRes.value.data) setTemplates(templatesRes.value.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
     setEditingId(null);
+    setSelectedTemplateId("");
     setForm({ title: "", type: "RANKED", meetTime: "", date: "", endDate: "", notes: "", location: "" });
     setShowModal(true);
   };
 
   const openEdit = (t: Training) => {
     setEditingId(t.id);
+    setSelectedTemplateId("");
     setForm({
       title: t.title,
       type: t.type,
@@ -82,6 +102,43 @@ export default function TrainingPage() {
       location: t.location || "",
     });
     setShowModal(true);
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return;
+    const tpl = templates.find(t => t.id === templateId);
+    if (tpl) {
+      setForm(prev => ({
+        ...prev,
+        title: tpl.title,
+        type: tpl.type,
+        notes: tpl.notes || "",
+      }));
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!form.title) {
+      error("Bitte zuerst einen Titel eingeben.");
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      await api.post("/api/training-templates", {
+        title: form.title,
+        type: form.type,
+        notes: form.notes || null,
+      });
+      // Reload templates in background
+      const res = await api.get<TrainingTemplate[]>("/api/training-templates");
+      if (res.data) setTemplates(res.data);
+      success("Als Vorlage gespeichert.");
+    } catch {
+      error("Fehler beim Speichern der Vorlage.");
+    } finally {
+      setSavingTemplate(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -98,13 +155,15 @@ export default function TrainingPage() {
       };
       if (editingId) {
         await api.put(`/api/trainings/${editingId}`, body);
+        success("Gespeichert");
       } else {
         await api.post("/api/trainings", body);
+        success("Training erstellt");
       }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -114,18 +173,20 @@ export default function TrainingPage() {
     if (!confirm("Training wirklich löschen?")) return;
     try {
       await api.delete(`/api/trainings/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
   const handleVote = async (trainingId: string, status: string) => {
     try {
       await api.post(`/api/trainings/${trainingId}/vote`, { status });
+      success("Abstimmung gespeichert");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     }
   };
 
@@ -228,6 +289,25 @@ export default function TrainingPage() {
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Training bearbeiten" : "Neues Training"}>
         <div className="space-y-4">
+          {/* Template loader — only show when creating */}
+          {!editingId && templates.length > 0 && (
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] p-3">
+              <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">Vorlage laden</label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              >
+                <option value="">— Vorlage wählen —</option>
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.title} ({TRAINING_TYPES.find(tt => tt.value === tpl.type)?.label || tpl.type})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Taktik Training" />
           <Select label="Typ" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={TRAINING_TYPES} />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -237,9 +317,21 @@ export default function TrainingPage() {
           <Input label="Ende (optional)" type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
           <Input label="Ort" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="z.B. Discord Channel" />
           <Textarea label="Notizen" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleSaveAsTemplate}
+              disabled={savingTemplate}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)] transition-colors disabled:opacity-50 disabled:pointer-events-none border border-[var(--border)]"
+            >
+              <BookTemplate className="h-3.5 w-3.5" />
+              {savingTemplate ? "Wird gespeichert..." : "Als Vorlage speichern"}
+            </button>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
+              <Button onClick={handleSubmit} isLoading={submitting}>{editingId ? "Speichern" : "Erstellen"}</Button>
+            </div>
           </div>
         </div>
       </Modal>

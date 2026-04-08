@@ -8,35 +8,46 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Strat {
   id: string;
   title: string;
   map: string;
-  side: "ct" | "t" | "both";
+  side: "ATTACK" | "DEFENSE";
+  type?: string;
   description?: string;
   content?: string;
   fileUrl?: string;
   version: number;
   createdAt: string;
   updatedAt: string;
-  author?: { displayName: string };
-  versions?: { version: number; updatedAt: string; author?: { displayName: string } }[];
+  createdBy?: { displayName: string };
+  versions?: { version: number; createdAt: string }[];
 }
 
-const CS_MAPS = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2", "Vertigo"];
-
 export default function StratsPage() {
+  const { success, error } = useToast();
   const [strats, setStrats] = useState<Strat[]>([]);
+  const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterMap, setFilterMap] = useState("");
   const [filterSide, setFilterSide] = useState("");
-  const [form, setForm] = useState({ title: "", map: "Mirage", side: "both", description: "", content: "" });
+  const [form, setForm] = useState({ title: "", map: "", side: "ATTACK" as "ATTACK" | "DEFENSE", description: "", content: "" });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [versionModal, setVersionModal] = useState<Strat | null>(null);
+
+  const loadMaps = useCallback(async () => {
+    try {
+      const res = await api.get<{ maps: string[] }>("/api/team/config");
+      if (res.data?.maps) setMaps(res.data.maps);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadMaps(); }, [loadMaps]);
 
   const load = useCallback(async () => {
     try {
@@ -47,17 +58,17 @@ export default function StratsPage() {
       const res = await api.get<Strat[]>(`/api/strats${q ? `?${q}` : ""}`);
       if (res.data) setStrats(res.data);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, [filterMap, filterSide]);
+  }, [filterMap, filterSide, error]);
 
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ title: "", map: "Mirage", side: "both", description: "", content: "" });
+    setForm({ title: "", map: maps[0] || "", side: "ATTACK", description: "", content: "" });
     setUploadFile(null);
     setShowModal(true);
   };
@@ -87,10 +98,15 @@ export default function StratsPage() {
           await api.post("/api/strats", form);
         }
       }
+      if (editingId) {
+        success("Gespeichert");
+      } else {
+        success("Strategie erstellt");
+      }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -100,16 +116,17 @@ export default function StratsPage() {
     if (!confirm("Strategie wirklich löschen?")) return;
     try {
       await api.delete(`/api/strats/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
   const sideLabel = (side: string) => {
-    if (side === "ct") return "CT";
-    if (side === "t") return "T";
-    return "Beide";
+    if (side === "ATTACK") return "Angriff";
+    if (side === "DEFENSE") return "Verteidigung";
+    return side;
   };
 
   if (loading) {
@@ -137,9 +154,9 @@ export default function StratsPage() {
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-[var(--muted-foreground)]" />
           <span className="text-sm text-[var(--muted-foreground)]">Map:</span>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             <button onClick={() => setFilterMap("")} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${!filterMap ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>Alle</button>
-            {CS_MAPS.map((m) => (
+            {maps.map((m) => (
               <button key={m} onClick={() => setFilterMap(m)} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${filterMap === m ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>{m}</button>
             ))}
           </div>
@@ -147,7 +164,7 @@ export default function StratsPage() {
         <div className="flex items-center gap-2">
           <span className="text-sm text-[var(--muted-foreground)]">Seite:</span>
           <div className="flex gap-1">
-            {[{ v: "", l: "Alle" }, { v: "ct", l: "CT" }, { v: "t", l: "T" }, { v: "both", l: "Beide" }].map((o) => (
+            {[{ v: "", l: "Alle" }, { v: "ATTACK", l: "Angriff" }, { v: "DEFENSE", l: "Verteidigung" }].map((o) => (
               <button key={o.v} onClick={() => setFilterSide(o.v)} className={`rounded-lg px-2 py-1 text-xs font-medium transition-all ${filterSide === o.v ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>{o.l}</button>
             ))}
           </div>
@@ -168,7 +185,7 @@ export default function StratsPage() {
                   <h3 className="font-semibold text-[var(--foreground)]">{s.title}</h3>
                   <div className="mt-1 flex gap-2">
                     <Badge variant="info">{s.map}</Badge>
-                    <Badge variant={s.side === "ct" ? "info" : s.side === "t" ? "destructive" : "outline"}>{sideLabel(s.side)}</Badge>
+                    <Badge variant={s.side === "ATTACK" ? "warning" : "info"}>{sideLabel(s.side)}</Badge>
                     <Badge variant="outline">v{s.version}</Badge>
                   </div>
                 </div>
@@ -183,7 +200,7 @@ export default function StratsPage() {
               </div>
               {s.description && <p className="mb-3 text-sm text-[var(--muted-foreground)]">{s.description}</p>}
               <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
-                <span>{s.author?.displayName}</span>
+                <span>{s.createdBy?.displayName}</span>
                 <span>{formatDate(s.updatedAt)}</span>
               </div>
               <div className="mt-3 flex gap-2 border-t border-[var(--border)] pt-3">
@@ -207,10 +224,10 @@ export default function StratsPage() {
       {/* Create/Edit Modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? "Strategie bearbeiten" : "Neue Strategie"} size="lg">
         <div className="space-y-4">
-          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. A Execute Mirage" />
+          <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Clubhouse Keller Push" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={CS_MAPS.map((m) => ({ value: m, label: m }))} />
-            <Select label="Seite" value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value as any })} options={[{ value: "ct", label: "CT" }, { value: "t", label: "T" }, { value: "both", label: "Beide" }]} />
+            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
+            <Select label="Seite" value={form.side} onChange={(e) => setForm({ ...form, side: e.target.value as "ATTACK" | "DEFENSE" })} options={[{ value: "ATTACK", label: "Angriff" }, { value: "DEFENSE", label: "Verteidigung" }]} />
           </div>
           <Textarea label="Beschreibung" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <Textarea label="Inhalt / Anleitung" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="min-h-[120px]" placeholder="Detaillierte Strategie-Beschreibung..." />
@@ -236,7 +253,7 @@ export default function StratsPage() {
                   <span className="text-sm font-medium text-[var(--foreground)]">Version {v.version}</span>
                 </div>
                 <div className="text-xs text-[var(--muted-foreground)]">
-                  {v.author?.displayName} - {formatDate(v.updatedAt)}
+                  {formatDate(v.createdAt)}
                 </div>
               </div>
             ))

@@ -4,6 +4,7 @@ import { Calendar, Save, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 
 const DAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
@@ -21,6 +22,7 @@ interface HeatmapData {
 }
 
 export default function AvailabilityPage() {
+  const { success, error } = useToast();
   const [mySlots, setMySlots] = useState<Slot[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,10 @@ export default function AvailabilityPage() {
         setSelected(sel);
       }
       if (heatRes.data) setHeatmap(heatRes.data);
-    } catch {} finally { setLoading(false); }
-  }, []);
+    } catch {
+      error("Fehler beim Laden");
+    } finally { setLoading(false); }
+  }, [error]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -67,8 +71,11 @@ export default function AvailabilityPage() {
         slots.push({ dayOfWeek, startTime, endTime });
       }
       await api.put("/api/availability/me", { slots });
+      success("Gespeichert");
       loadData();
-    } catch {} finally { setSaving(false); }
+    } catch {
+      error("Fehler beim Speichern");
+    } finally { setSaving(false); }
   };
 
   const getHeatColor = (count: number, maxCount: number) => {

@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
 
 interface Match {
   id: string;
@@ -38,6 +39,7 @@ function calcResult(us: number, them: number): "WIN" | "LOSS" | "DRAW" {
 }
 
 export default function MatchesPage() {
+  const { success, error } = useToast();
   const [matches, setMatches] = useState<Match[]>([]);
   const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,14 +59,16 @@ export default function MatchesPage() {
         api.get<Match[]>(`/api/matches${params}`),
         api.get<GameConfig>("/api/team/config"),
       ]);
+
       if (matchRes.status === "fulfilled" && matchRes.value.data) setMatches(matchRes.value.data);
+      else if (matchRes.status === "rejected") error("Fehler beim Laden");
       if (configRes.status === "fulfilled" && configRes.value.data) setMaps(configRes.value.data.maps);
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, [filterMap]);
+  }, [filterMap, error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -107,13 +111,15 @@ export default function MatchesPage() {
       };
       if (editingId) {
         await api.put(`/api/matches/${editingId}`, body);
+        success("Gespeichert");
       } else {
         await api.post("/api/matches", body);
+        success("Match erstellt");
       }
       setShowModal(false);
       load();
     } catch {
-      // ignore
+      error("Fehler beim Speichern");
     } finally {
       setSubmitting(false);
     }
@@ -123,9 +129,10 @@ export default function MatchesPage() {
     if (!confirm("Match wirklich löschen?")) return;
     try {
       await api.delete(`/api/matches/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Film, Upload, Download, Trash2, Edit2, Play, FileVideo } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -23,23 +24,28 @@ interface Replay {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const CS_MAPS = ["Mirage", "Inferno", "Nuke", "Overpass", "Ancient", "Anubis", "Dust2", "Vertigo"];
 
 export default function ReplaysPage() {
+  const { success, error: showError } = useToast();
   const [replays, setReplays] = useState<Replay[]>([]);
+  const [maps, setMaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
-  const [form, setForm] = useState({ title: "", map: "Mirage", opponent: "", date: "", notes: "" });
+  const [form, setForm] = useState({ title: "", map: "", opponent: "", date: "", notes: "" });
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [detailReplay, setDetailReplay] = useState<Replay | null>(null);
+
+  useEffect(() => {
+    api.get<{ maps: string[] }>("/api/team/config").then(r => { if (r.data?.maps) setMaps(r.data.maps); }).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const res = await api.get<Replay[]>("/api/replays");
       if (res.data) setReplays(res.data);
     } catch {
-      // ignore
+      showError("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
@@ -58,11 +64,12 @@ export default function ReplaysPage() {
         date: form.date,
         notes: form.notes,
       });
+      success("Replay hochgeladen");
       setShowUpload(false);
       setFile(null);
       load();
     } catch {
-      // ignore
+      showError("Fehler beim Hochladen");
     } finally {
       setSubmitting(false);
     }
@@ -72,9 +79,10 @@ export default function ReplaysPage() {
     if (!confirm("Replay wirklich löschen?")) return;
     try {
       await api.delete(`/api/replays/${id}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      showError("Fehler beim Löschen");
     }
   };
 
@@ -100,7 +108,7 @@ export default function ReplaysPage() {
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Replays</h1>
           <p className="text-[var(--muted-foreground)]">Demo-Dateien verwalten und analysieren</p>
         </div>
-        <Button onClick={() => { setForm({ title: "", map: "Mirage", opponent: "", date: "", notes: "" }); setFile(null); setShowUpload(true); }}>
+        <Button onClick={() => { setForm({ title: "", map: maps[0] || "", opponent: "", date: "", notes: "" }); setFile(null); setShowUpload(true); }}>
           <Upload className="h-4 w-4" /> Replay hochladen
         </Button>
       </div>
@@ -163,7 +171,7 @@ export default function ReplaysPage() {
         <div className="space-y-4">
           <Input label="Titel" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="z.B. Liga Match vs. Team X" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={CS_MAPS.map((m) => ({ value: m, label: m }))} />
+            <Select label="Map" value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={maps.map((m) => ({ value: m, label: m }))} />
             <Input label="Gegner" value={form.opponent} onChange={(e) => setForm({ ...form, opponent: e.target.value })} />
           </div>
           <Input label="Datum" type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />

@@ -8,6 +8,25 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.3.0",
+    date: "2026-04-08",
+    tags: ["feature", "improvement"],
+    title: "Toast-Benachrichtigungen, Notifications & UX-Verbesserungen",
+    changes: [
+      "Toast/Snackbar-System: Erfolgs- und Fehlermeldungen erscheinen als hübsche Benachrichtigungen statt inline-Text",
+      "Toast-Notifications auf allen 16 Seiten integriert — keine stillen Fehler mehr",
+      "Benachrichtigungs-Glocke im Header mit Ungelesen-Zähler und Dropdown",
+      "Match-Review-Tab: Positives, Negatives, Verbesserungen und Notizen pro Match",
+      "Training-Vorlagen: Trainings als Vorlage speichern und schnell laden",
+      "Scouting-Notizen: Detaillierte Notizen pro Gegner mit Map-Zuordnung",
+      "Dashboard-Aktivität: Lesbare Beschreibungen statt technischer Audit-Log-Daten",
+      "Alle CS:GO-Referenzen entfernt — Maps und Seiten laden dynamisch aus R6 Siege Config",
+      "Strats: Seiten von CT/T auf ATTACK/DEFENSE umgestellt (R6 Siege)",
+      "Client-seitige Upload-Größen-Validierung (max. 50 MB)",
+      "Alle 'as any' Type-Casts im Client entfernt — vollständig typsicher",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-04-08",
     tags: ["fix"],

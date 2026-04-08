@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Settings, Shield, User, Save, Upload, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -39,6 +40,7 @@ interface MemberData {
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const { success, error } = useToast();
   const [tab, setTab] = useState<"personal" | "team" | "members">("personal");
   const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
@@ -46,7 +48,6 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
   const [personalForm, setPersonalForm] = useState({ displayName: "", email: "" });
-  const [message, setMessage] = useState("");
 
   // Nur Admins dürfen hier rein
   useEffect(() => {
@@ -73,23 +74,22 @@ export default function SettingsPage() {
         setPersonalForm({ displayName: user.displayName, email: user.email || "" });
       }
     } catch {
-      // ignore
+      error("Fehler beim Laden");
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, error]);
 
   useEffect(() => { load(); }, [load]);
 
   const saveTeam = async () => {
     setSaving(true);
-    setMessage("");
     try {
       await api.put("/api/team", teamForm);
-      setMessage("Team-Einstellungen gespeichert!");
+      success("Gespeichert");
       load();
     } catch {
-      setMessage("Fehler beim Speichern.");
+      error("Fehler beim Speichern");
     } finally {
       setSaving(false);
     }
@@ -97,12 +97,11 @@ export default function SettingsPage() {
 
   const savePersonal = async () => {
     setSaving(true);
-    setMessage("");
     try {
       await api.put("/api/users/me", personalForm);
-      setMessage("Persönliche Einstellungen gespeichert!");
+      success("Gespeichert");
     } catch {
-      setMessage("Fehler beim Speichern.");
+      error("Fehler beim Speichern");
     } finally {
       setSaving(false);
     }
@@ -112,9 +111,10 @@ export default function SettingsPage() {
     if (!confirm("Mitglied wirklich entfernen?")) return;
     try {
       await api.delete(`/api/team/members/${userId}`);
+      success("Gelöscht");
       load();
     } catch {
-      // ignore
+      error("Fehler beim Löschen");
     }
   };
 
@@ -151,12 +151,6 @@ export default function SettingsPage() {
           </button>
         ))}
       </div>
-
-      {message && (
-        <div className={`rounded-lg p-3 text-sm ${message.includes("Fehler") ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"}`}>
-          {message}
-        </div>
-      )}
 
       {/* Personal Settings */}
       {tab === "personal" && (

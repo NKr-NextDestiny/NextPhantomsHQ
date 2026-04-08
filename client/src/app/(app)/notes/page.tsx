@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface Note {
   id: string;
@@ -22,6 +23,7 @@ interface Note {
 
 export default function NotesPage() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -34,8 +36,10 @@ export default function NotesPage() {
     try {
       const res = await api.get<Note[]>("/api/notes");
       if (res.data) setNotes(res.data);
-    } catch {} finally { setLoading(false); }
-  }, []);
+    } catch {
+      error("Fehler beim Laden");
+    } finally { setLoading(false); }
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -56,21 +60,28 @@ export default function NotesPage() {
     try {
       if (editNote) {
         await api.put(`/api/notes/${editNote.id}`, form);
+        success("Gespeichert");
       } else {
         await api.post("/api/notes", form);
+        success("Notiz erstellt");
       }
       setShowModal(false);
       setEditNote(null);
       load();
-    } catch {} finally { setSubmitting(false); }
+    } catch {
+      error("Fehler beim Speichern");
+    } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Notiz wirklich löschen?")) return;
     try {
       await api.delete(`/api/notes/${id}`);
+      success("Gelöscht");
       load();
-    } catch {}
+    } catch {
+      error("Fehler beim Löschen");
+    }
   };
 
   if (loading) {

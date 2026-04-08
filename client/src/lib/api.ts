@@ -88,7 +88,11 @@ class ApiClient {
     endpoint: string,
     file: File,
     data?: Record<string, string>,
+    maxSizeMB = 50,
   ) {
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      throw new ApiError(`Datei zu groß (max. ${maxSizeMB} MB)`, 413);
+    }
     const formData = new FormData();
     formData.append("file", file);
     if (data)

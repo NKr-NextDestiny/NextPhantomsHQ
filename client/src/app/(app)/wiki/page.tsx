@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea } from "@/components/ui/Input";
 import { formatDate } from "@/lib/utils";
+import { useToast } from "@/components/ui/Toast";
 
 interface WikiPage {
   id: string;
@@ -22,6 +23,7 @@ interface WikiPage {
 
 export default function WikiPageList() {
   const { user } = useAuthStore();
+  const { success, error } = useToast();
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -34,8 +36,10 @@ export default function WikiPageList() {
     try {
       const res = await api.get<WikiPage[]>("/api/wiki");
       if (res.data) setPages(res.data);
-    } catch {} finally { setLoading(false); }
-  }, []);
+    } catch {
+      error("Fehler beim Laden");
+    } finally { setLoading(false); }
+  }, [error]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -53,14 +57,18 @@ export default function WikiPageList() {
         setForm({ title: res.data.title, slug: res.data.slug, content: res.data.content });
         setShowModal(true);
       }
-    } catch {}
+    } catch {
+      error("Fehler beim Laden");
+    }
   };
 
   const openView = async (slug: string) => {
     try {
       const res = await api.get<WikiPage>(`/api/wiki/${slug}`);
       if (res.data) setViewPage(res.data);
-    } catch {}
+    } catch {
+      error("Fehler beim Laden");
+    }
   };
 
   const handleSubmit = async () => {
@@ -68,21 +76,28 @@ export default function WikiPageList() {
     try {
       if (editPage) {
         await api.put(`/api/wiki/${editPage.slug}`, form);
+        success("Gespeichert");
       } else {
         await api.post("/api/wiki", form);
+        success("Seite erstellt");
       }
       setShowModal(false);
       setEditPage(null);
       load();
-    } catch {} finally { setSubmitting(false); }
+    } catch {
+      error("Fehler beim Speichern");
+    } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (slug: string) => {
     if (!confirm("Wiki-Seite wirklich löschen?")) return;
     try {
       await api.delete(`/api/wiki/${slug}`);
+      success("Gelöscht");
       load();
-    } catch {}
+    } catch {
+      error("Fehler beim Löschen");
+    }
   };
 
   const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
