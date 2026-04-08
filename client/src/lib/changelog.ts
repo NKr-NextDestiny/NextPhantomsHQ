@@ -32,7 +32,6 @@ export const changelog: ChangelogEntry[] = [
       "Daten-Export: Match-Statistiken, Training-Teilnahme und Verfügbarkeit als CSV/JSON",
       "Error Boundary: React-Fehler crashen nicht mehr die ganze App",
       "PWA-Support: Manifest für 'Zum Startbildschirm hinzufügen' auf Mobilgeräten",
-      "Backup-Script: Automatisches Datenbank- und Upload-Backup mit Rotation",
       "Tests: Vitest-Konfiguration mit Tests für CSRF, Rollen, Cache und File-Validierung",
     ],
   },
