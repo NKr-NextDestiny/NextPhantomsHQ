@@ -224,20 +224,19 @@ export default function PlaybooksPage() {
       <Modal open={!!addStratModal} onClose={() => setAddStratModal(null)} title="Strat hinzufugen">
         <div className="space-y-4">
           <Select
-            label="Strat auswahlen"
+            label="Strat auswählen"
             value={selectedStratId}
             onChange={e => setSelectedStratId(e.target.value)}
-          >
-            <option value="">-- Strat wahlen --</option>
-            {allStrats
-              .filter(s => {
-                const pb = playbooks.find(p => p.id === addStratModal);
-                return !pb?.strats.some(ps => ps.strat.id === s.id);
-              })
-              .map(s => (
-                <option key={s.id} value={s.id}>{s.title} ({s.map} - {s.side})</option>
-              ))}
-          </Select>
+            options={[
+              { value: "", label: "-- Strat wählen --" },
+              ...allStrats
+                .filter(s => {
+                  const pb = playbooks.find(p => p.id === addStratModal);
+                  return !pb?.strats.some(ps => ps.strat.id === s.id);
+                })
+                .map(s => ({ value: s.id, label: `${s.title} (${s.map} - ${s.side})` })),
+            ]}
+          />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setAddStratModal(null)}>Abbrechen</Button>
             <Button onClick={() => addStratModal && handleAddStrat(addStratModal)} disabled={!selectedStratId}>Hinzufugen</Button>
