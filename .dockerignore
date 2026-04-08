@@ -1,0 +1,13 @@
+node_modules
+client/node_modules
+server/node_modules
+shared/node_modules
+client/.next
+server/dist
+shared/dist
+.git
+.env
+.env.*
+*.md
+backups
+uploads
