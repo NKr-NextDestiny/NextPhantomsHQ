@@ -17,8 +17,8 @@ COPY server/ server/
 # Build shared types
 RUN pnpm --filter shared build
 
-# Generate Prisma client
-RUN cd server && pnpm prisma generate
+# Generate Prisma client (dummy URL — only needed at runtime, not generate)
+RUN cd server && DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" pnpm prisma generate
 
 # Build server
 RUN pnpm --filter server build
