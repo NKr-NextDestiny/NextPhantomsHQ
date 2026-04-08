@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Settings, Shield, User, Save, Upload, Trash2, Bell, Globe } from "lucide-react";
+import { Settings, Shield, User, Save, Upload, Trash2, Bell, Globe, Monitor } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
+import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -43,6 +44,48 @@ interface MemberData {
     r6Username?: string;
     email?: string;
   };
+}
+
+function BrowserNotificationSettings() {
+  const t = useT("settings");
+  const { supported, permission, enabled, requestPermission, enable, disable } = useBrowserNotifications();
+
+  if (!supported) return null;
+
+  return (
+    <Card>
+      <div className="flex items-center gap-3 mb-4">
+        <Monitor className="h-5 w-5 text-[var(--primary)]" />
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("notifications.browser")}</h2>
+      </div>
+      <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+        {t("notifications.browserDesc")}
+      </p>
+      {permission === "denied" ? (
+        <p className="text-sm text-[var(--destructive)]">{t("notifications.browserDenied")}</p>
+      ) : permission === "granted" ? (
+        <button
+          onClick={() => enabled ? disable() : enable()}
+          className={`flex items-center gap-3 w-full rounded-lg border p-4 text-left transition-all ${
+            enabled
+              ? "border-[var(--primary)] bg-[var(--primary)]/10"
+              : "border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)]/50"
+          }`}
+        >
+          <div className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}>
+            <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+          </div>
+          <span className="text-sm font-medium text-[var(--foreground)]">
+            {enabled ? t("notifications.browserEnabled") : t("notifications.browserDisabled")}
+          </span>
+        </button>
+      ) : (
+        <Button onClick={requestPermission}>
+          <Bell className="h-4 w-4" /> {t("notifications.browserAllow")}
+        </Button>
+      )}
+    </Card>
+  );
 }
 
 export default function SettingsPage() {
@@ -269,6 +312,7 @@ export default function SettingsPage() {
 
       {/* Notification Channel */}
       {tab === "notifications" && (
+        <>
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("notifications.title")}</h2>
           <p className="mb-4 text-sm text-[var(--muted-foreground)]">
@@ -320,6 +364,8 @@ export default function SettingsPage() {
             </Button>
           </div>
         </Card>
+        <BrowserNotificationSettings />
+        </>
       )}
 
       {/* Members Management */}

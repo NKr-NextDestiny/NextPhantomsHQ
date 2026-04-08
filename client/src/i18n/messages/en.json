@@ -36,7 +36,11 @@
     "private": "Private",
     "team": "Team",
     "notConfigured": "Not configured",
-    "off": "Off"
+    "off": "Off",
+    "browserNotifications.title": "Enable browser notifications?",
+    "browserNotifications.description": "Get push notifications when new events, matches, or announcements are created — even when the tab is in the background.",
+    "browserNotifications.enable": "Enable",
+    "browserNotifications.dismiss": "No thanks"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -545,7 +549,13 @@
       "title": "Members",
       "empty": "No members yet. Once someone logs in via Discord, they'll appear here.",
       "confirmRemove": "Really remove this member?"
-    }
+    },
+    "notifications.browser": "Browser Notifications",
+    "notifications.browserDesc": "Show desktop notifications when new events are created or updated. Only works while the browser is open.",
+    "notifications.browserDenied": "Browser notifications have been blocked. Change the permission in your browser settings.",
+    "notifications.browserEnabled": "Browser notifications active",
+    "notifications.browserDisabled": "Browser notifications off",
+    "notifications.browserAllow": "Allow notifications"
   },
   "auth": {
     "loginWith": "Sign in with Discord",

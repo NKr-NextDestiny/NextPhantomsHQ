@@ -36,7 +36,11 @@
     "private": "Privat",
     "team": "Team",
     "notConfigured": "Nicht konfiguriert",
-    "off": "Aus"
+    "off": "Aus",
+    "browserNotifications.title": "Browser-Benachrichtigungen aktivieren?",
+    "browserNotifications.description": "Erhalte Push-Benachrichtigungen wenn neue Events, Matches oder Ankündigungen erstellt werden — auch wenn der Tab im Hintergrund ist.",
+    "browserNotifications.enable": "Aktivieren",
+    "browserNotifications.dismiss": "Nein danke"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -545,7 +549,13 @@
       "title": "Mitglieder",
       "empty": "Noch keine Mitglieder. Sobald sich jemand über Discord anmeldet, erscheint er hier.",
       "confirmRemove": "Mitglied wirklich entfernen?"
-    }
+    },
+    "notifications.browser": "Browser-Benachrichtigungen",
+    "notifications.browserDesc": "Zeige Desktop-Benachrichtigungen wenn neue Events erstellt oder aktualisiert werden. Funktioniert nur wenn der Browser geöffnet ist.",
+    "notifications.browserDenied": "Browser-Benachrichtigungen wurden blockiert. Ändere die Berechtigung in deinen Browser-Einstellungen.",
+    "notifications.browserEnabled": "Browser-Benachrichtigungen aktiv",
+    "notifications.browserDisabled": "Browser-Benachrichtigungen aus",
+    "notifications.browserAllow": "Benachrichtigungen erlauben"
   },
   "auth": {
     "loginWith": "Mit Discord anmelden",

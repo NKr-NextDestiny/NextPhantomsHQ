@@ -36,7 +36,11 @@
     "private": "Captain's eyes only",
     "team": "Crew",
     "notConfigured": "Not rigged",
-    "off": "Dead in the water"
+    "off": "Dead in the water",
+    "browserNotifications.title": "Browser-Benachrichtigungen aktivieren, Matrose?",
+    "browserNotifications.description": "Erhalte Flaschenpost wenn neue Schlachten, Kaperfahrten oder Befehle eintrudeln — auch wenn du gerade das Deck schruppst!",
+    "browserNotifications.enable": "Aye, her damit!",
+    "browserNotifications.dismiss": "Nee, lass mal"
   },
   "nav": {
     "dashboard": "Captain's Quarters",
@@ -113,7 +117,7 @@
     "confirmDelete": "Really scuttle this drill?",
     "voteSaved": "Vote counted, matey!",
     "loadTemplate": "Load Ship's Template",
-    "chooseTemplate": "\u2014 Pick a template \u2014",
+    "chooseTemplate": "— Pick a template —",
     "saveAsTemplate": "Save as Ship's Template",
     "templateSaved": "Template stowed away!",
     "templateSaveError": "Failed to stow the template.",
@@ -181,7 +185,7 @@
       "contactPlaceholder": "Discord etc.",
       "mapPool": "Water Pool",
       "map": "Waters",
-      "noMap": "\u2014 Uncharted \u2014",
+      "noMap": "— Uncharted —",
       "ourScore": "Our Cannons",
       "opponentScore": "Their Cannons",
       "competition": "Tournament",
@@ -545,7 +549,13 @@
       "title": "Crew",
       "empty": "No crew yet. Once a scallywag logs in via Discord, they'll appear here.",
       "confirmRemove": "Really maroon this crew member?"
-    }
+    },
+    "notifications.browser": "Flaschenpost (Browser)",
+    "notifications.browserDesc": "Zeig Seemanns-Meldungen aufm Schirm wenn neue Kaperfahrten oder Schlachten ausgerufen werden. Geht nur wenn der Browser offen is!",
+    "notifications.browserDenied": "Der Browser hat die Flaschenpost gekapert! Ändere die Berechtigung in deinen Browser-Einstellungen, Seebär.",
+    "notifications.browserEnabled": "Flaschenpost aktiv — Aye!",
+    "notifications.browserDisabled": "Flaschenpost aus — Stille See",
+    "notifications.browserAllow": "Flaschenpost erlauben"
   },
   "auth": {
     "loginWith": "Board via Discord",

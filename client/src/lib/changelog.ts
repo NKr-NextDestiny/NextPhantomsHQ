@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "1.8.0",
+    date: "2026-04-09",
+    tags: ["feature"],
+    title: "Browser-Benachrichtigungen",
+    changes: [
+      "Desktop-Benachrichtigungen: Pop-ups bei neuen Trainings, Matches und Ankündigungen — auch wenn der Tab im Hintergrund ist",
+      "Automatische Nachfrage beim ersten Besuch ob Browser-Benachrichtigungen aktiviert werden sollen",
+      "Ein/Aus-Schalter in den Einstellungen unter Benachrichtigungen",
+      "Benachrichtigungen werden nur angezeigt wenn der Tab nicht fokussiert ist",
+      "Fix: Migrations nutzten falsche Spaltennamen (snake_case statt camelCase) — Deployment schlug fehl",
+    ],
+  },
+  {
     version: "1.7.0",
     date: "2026-04-08",
     tags: ["feature"],
