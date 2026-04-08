@@ -135,10 +135,10 @@ export default function DashboardPage() {
         <Card>
           <div className="mb-4 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[var(--primary)]" />
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Letzte Aktivitaet</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Letzte Aktivität</h2>
           </div>
           {activity.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">Keine aktuelle Aktivitaet.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Keine aktuelle Aktivität.</p>
           ) : (
             <div className="space-y-3">
               {activity.map((a) => (
