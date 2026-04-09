@@ -54,11 +54,11 @@
     "scouting": "Fernrohr",
     "polls": "Abstimmung an Deck",
     "announcements": "Befehle vom Käptn",
-    "wiki": "Seemanns-Handbuch",
+    "docs": "Pergamentrollen",
     "notes": "Gekritzel",
     "reminders": "Papagei-Alarm",
     "availability": "Landgang",
-    "docs": "Schatzkarte",
+    "wiki": "Schatzkarte",
     "changelog": "Logbuch",
     "settings": "Steuerrad"
   },
@@ -412,15 +412,15 @@
       "contentPlaceholder": "Schreib deinen Befehl..."
     }
   },
-  "wiki": {
-    "title": "Seemanns-Handbuch 📖",
+  "docs": {
+    "title": "Pergamentrollen 📜",
     "subtitle": "Gesammeltes Wissen der Mannschaft",
     "new": "Neuer Eintrag",
-    "empty": "Das Handbuch is leer! Schreibt mal was rein! ✍️",
+    "empty": "Keine Pergamentrollen vorhanden! Schreibt mal was rein! ✍️",
     "editTitle": "Eintrag bearbeiten",
     "createTitle": "Neuer Eintrag",
     "created": "Eintrag hinzugefügt!",
-    "confirmDelete": "Diese Seite wirklich rausreißen?",
+    "confirmDelete": "Diese Rolle wirklich über Bord werfen?",
     "createdBy": "Geschrieben von {name} am {date}",
     "editedBy": "Überarbeitet von {name}",
     "form": {
@@ -573,7 +573,7 @@
       "inactive": "Dein Account schläft mit den Fischen... 🐟"
     }
   },
-  "docs": {
+  "wiki": {
     "title": "Schatzkarte 🗺️",
     "subtitle": "Hier findest du alle Geheimnisse des Schiffs, Matrose!",
     "selectSection": "Wähl ein Kapitel aus der Navigation, du Landratte!"

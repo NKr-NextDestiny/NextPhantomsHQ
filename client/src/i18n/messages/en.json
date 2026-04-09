@@ -54,11 +54,11 @@
     "scouting": "Scouting",
     "polls": "Polls",
     "announcements": "Announcements",
-    "wiki": "Wiki",
+    "docs": "Documents",
     "notes": "Notes",
     "reminders": "Reminders",
     "availability": "Availability",
-    "docs": "Wiki",
+    "wiki": "Wiki",
     "changelog": "Changelog",
     "settings": "Settings"
   },
@@ -412,15 +412,15 @@
       "contentPlaceholder": "Write announcement..."
     }
   },
-  "wiki": {
-    "title": "Wiki",
+  "docs": {
+    "title": "Documents",
     "subtitle": "Team knowledge base",
     "new": "New Page",
-    "empty": "No wiki pages created yet.",
+    "empty": "No documents created yet.",
     "editTitle": "Edit Page",
-    "createTitle": "New Wiki Page",
+    "createTitle": "New Document",
     "created": "Page created",
-    "confirmDelete": "Really delete this wiki page?",
+    "confirmDelete": "Really delete this document?",
     "createdBy": "Created by {name} on {date}",
     "editedBy": "Edited by {name}",
     "form": {
@@ -574,8 +574,8 @@
       "inactive": "Your account has been deactivated."
     }
   },
-  "docs": {
-    "title": "Documentation",
+  "wiki": {
+    "title": "Wiki",
     "subtitle": "Guides and help for all features",
     "selectSection": "Select a section from the navigation."
   },

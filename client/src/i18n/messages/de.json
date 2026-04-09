@@ -54,11 +54,11 @@
     "scouting": "Scouting",
     "polls": "Umfragen",
     "announcements": "Ankündigungen",
-    "wiki": "Wiki",
+    "docs": "Dokumente",
     "notes": "Notizen",
     "reminders": "Erinnerungen",
     "availability": "Verfügbarkeit",
-    "docs": "Wiki",
+    "wiki": "Wiki",
     "changelog": "Changelog",
     "settings": "Einstellungen"
   },
@@ -412,15 +412,15 @@
       "contentPlaceholder": "Ankündigung schreiben..."
     }
   },
-  "wiki": {
-    "title": "Wiki",
+  "docs": {
+    "title": "Dokumente",
     "subtitle": "Team-Wissensdatenbank",
     "new": "Neue Seite",
-    "empty": "Noch keine Wiki-Seiten erstellt.",
+    "empty": "Noch keine Dokumente erstellt.",
     "editTitle": "Seite bearbeiten",
-    "createTitle": "Neue Wiki-Seite",
+    "createTitle": "Neues Dokument",
     "created": "Seite erstellt",
-    "confirmDelete": "Wiki-Seite wirklich löschen?",
+    "confirmDelete": "Dokument wirklich löschen?",
     "createdBy": "Erstellt von {name} am {date}",
     "editedBy": "Bearbeitet von {name}",
     "form": {
@@ -574,8 +574,8 @@
       "inactive": "Dein Account wurde deaktiviert."
     }
   },
-  "docs": {
-    "title": "Dokumentation",
+  "wiki": {
+    "title": "Wiki",
     "subtitle": "Anleitung und Hilfe zu allen Funktionen",
     "selectSection": "Wähle einen Abschnitt aus der Navigation."
   },

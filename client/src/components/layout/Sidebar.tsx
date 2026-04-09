@@ -35,14 +35,14 @@ const mainNavDefs = [
   { href: "/scouting", key: "scouting", icon: Eye },
   { href: "/polls", key: "polls", icon: BarChart3 },
   { href: "/announcements", key: "announcements", icon: Megaphone },
-  { href: "/wiki", key: "wiki", icon: BookOpen },
+  { href: "/docs", key: "docs", icon: BookOpen },
   { href: "/notes", key: "notes", icon: StickyNote },
   { href: "/reminders", key: "reminders", icon: Bell },
   { href: "/availability", key: "availability", icon: Calendar },
 ];
 
 const bottomNavDefs = [
-  { href: "/docs", key: "docs", icon: HelpCircle },
+  { href: "/wiki", key: "wiki", icon: HelpCircle },
   { href: "/changelog", key: "changelog", icon: History },
 ];
 
