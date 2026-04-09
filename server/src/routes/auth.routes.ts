@@ -71,11 +71,22 @@ authRouter.get("/discord/callback", async (req, res) => {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!memberRes.ok) {
-          // Admin users (via ADMIN_USER_IDS) can bypass guild membership
-          if (isAdminUser) {
-            logger.info({ discordId: discordUser.id }, "[Auth] Admin user bypassed guild check");
+          // Fallback: check via /users/@me/guilds list
+          const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (guildsRes.ok) {
+            const guilds = await guildsRes.json();
+            const inGuild = guilds.some((g: { id: string }) => g.id === config.requiredGuildId);
+            if (!inGuild) {
+              logger.warn({ discordId: discordUser.id, guildId: config.requiredGuildId, memberStatus: memberRes.status }, "[Auth] User not in required guild");
+              res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
+              return;
+            }
+            // User IS in guild but member endpoint failed — proceed without roles
+            logger.info({ discordId: discordUser.id }, "[Auth] Guild member endpoint failed but user is in guild (fallback)");
           } else {
-            logger.warn({ discordId: discordUser.id, status: memberRes.status, statusText: memberRes.statusText }, "[Auth] Guild member check failed");
+            logger.warn({ discordId: discordUser.id, memberStatus: memberRes.status, guildsStatus: guildsRes.status }, "[Auth] Both guild checks failed");
             res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
             return;
           }
@@ -93,13 +104,9 @@ authRouter.get("/discord/callback", async (req, res) => {
           }
         }
       } catch (err) {
-        if (isAdminUser) {
-          logger.info({ discordId: discordUser.id }, "[Auth] Admin user bypassed guild check (fetch error)");
-        } else {
-          logger.error(err, "[Auth] Guild member check error");
-          res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
-          return;
-        }
+        logger.error(err, "[Auth] Guild member check error");
+        res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
+        return;
       }
     }
 
