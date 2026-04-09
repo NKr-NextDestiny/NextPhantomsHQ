@@ -104,9 +104,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-[var(--foreground)]">
+        <h1 className="text-2xl font-bold text-[var(--foreground)] glitch-text">
           {t("welcome", { name: user?.displayName || "" })}
         </h1>
         <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
@@ -114,8 +114,8 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((s) => (
-          <Card key={s.label} hover>
+        {statCards.map((s, i) => (
+          <Card key={s.label} hover className={`animate-slide-up stagger-${i + 1} card-hover-glow`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">{s.label}</p>

@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
 import { useT } from "@/i18n/provider";
 
-const navItemDefs = [
+const mainNavDefs = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/training", key: "training", icon: Dumbbell },
   { href: "/matches", key: "matches", icon: Trophy },
@@ -39,6 +39,9 @@ const navItemDefs = [
   { href: "/notes", key: "notes", icon: StickyNote },
   { href: "/reminders", key: "reminders", icon: Bell },
   { href: "/availability", key: "availability", icon: Calendar },
+];
+
+const bottomNavDefs = [
   { href: "/docs", key: "docs", icon: HelpCircle },
   { href: "/changelog", key: "changelog", icon: History },
 ];
@@ -49,44 +52,49 @@ export function Sidebar() {
   const { user } = useAuthStore();
   const t = useT("nav");
 
-  const navItems = navItemDefs.map((item) => ({ ...item, label: t(item.key) }));
-
-  const items = [
-    ...navItems,
+  const mainItems = mainNavDefs.map((item) => ({ ...item, label: t(item.key) }));
+  const bottomItems = [
+    ...bottomNavDefs.map((item) => ({ ...item, label: t(item.key) })),
     ...(user?.isAdmin ? [{ href: "/settings", label: t("settings"), key: "settings", icon: Settings }] : []),
   ];
+
+  const renderNavItem = (item: { href: string; label: string; key: string; icon: React.ComponentType<{ className?: string }> }) => {
+    const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+          isActive
+            ? "bg-[var(--primary)]/10 text-[var(--primary)]"
+            : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
+        )}
+      >
+        <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-[var(--primary)]")} />
+        {item.label}
+        {isActive && (
+          <div className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+        )}
+      </Link>
+    );
+  };
 
   const navContent = (
     <>
       <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-5">
         <img src="/images/logo_icon.png" alt="Next Phantoms HQ" className="h-9 w-9" />
-        <span className="text-lg font-bold text-[var(--primary)]">Next Phantoms HQ</span>
+        <span className="text-lg font-bold text-[var(--primary)] glitch-text">Next Phantoms HQ</span>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {items.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-[var(--primary)]/10 text-[var(--primary)]"
-                  : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-[var(--primary)]")} />
-              {item.label}
-              {isActive && (
-                <div className="ml-auto h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
-              )}
-            </Link>
-          );
-        })}
+        {mainItems.map(renderNavItem)}
       </nav>
+
+      <div className="border-t border-[var(--border)] px-3 py-3 space-y-1">
+        {bottomItems.map(renderNavItem)}
+      </div>
     </>
   );
 

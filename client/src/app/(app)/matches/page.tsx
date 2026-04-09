@@ -252,7 +252,7 @@ export default function MatchesPage() {
           <p className="text-[var(--muted-foreground)]">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant={showStats ? "default" : "outline"} onClick={() => { setShowStats(!showStats); if (!showStats) loadStats(); }}>
+          <Button variant={showStats ? "primary" : "outline"} onClick={() => { setShowStats(!showStats); if (!showStats) loadStats(); }}>
             <BarChart3 className="h-4 w-4" /> {t("statistics") || "Statistiken"}
           </Button>
           <Button onClick={openCreate}>
