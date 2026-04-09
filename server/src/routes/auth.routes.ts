@@ -55,58 +55,63 @@ authRouter.get("/discord/callback", async (req, res) => {
     const accessToken: string = tokenData.access_token;
 
     // Fetch Discord user
-    const userRes = await fetch("https://discord.com/api/users/@me", {
+    const userRes = await fetch("https://discord.com/api/v10/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const discordUser = await userRes.json();
     if (!discordUser.id) { res.redirect(config.appUrl + "/access-denied?reason=login_failed"); return; }
 
-    // Guild & Role check
+    // Guild check — mandatory for ALL users including admins
     let memberRoles: string[] = [];
     const isAdminUser = config.adminUserIds.includes(discordUser.id);
 
     if (config.requiredGuildId) {
+      let inGuild = false;
+
       try {
-        const memberRes = await fetch(`https://discord.com/api/users/@me/guilds/${config.requiredGuildId}/member`, {
+        const memberRes = await fetch(`https://discord.com/api/v10/users/@me/guilds/${config.requiredGuildId}/member`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (!memberRes.ok) {
-          // Fallback: check via /users/@me/guilds list
-          const guildsRes = await fetch("https://discord.com/api/users/@me/guilds", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          if (guildsRes.ok) {
-            const guilds = await guildsRes.json();
-            const inGuild = guilds.some((g: { id: string }) => g.id === config.requiredGuildId);
-            if (!inGuild) {
-              logger.warn({ discordId: discordUser.id, guildId: config.requiredGuildId, memberStatus: memberRes.status }, "[Auth] User not in required guild");
-              res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
-              return;
-            }
-            // User IS in guild but member endpoint failed — proceed without roles
-            logger.info({ discordId: discordUser.id }, "[Auth] Guild member endpoint failed but user is in guild (fallback)");
-          } else {
-            logger.warn({ discordId: discordUser.id, memberStatus: memberRes.status, guildsStatus: guildsRes.status }, "[Auth] Both guild checks failed");
-            res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
-            return;
-          }
-        } else {
+
+        if (memberRes.ok) {
           const memberData = await memberRes.json();
           memberRoles = memberData.roles || [];
-        }
-
-        if (config.allowedRoleIds.length > 0 && !isAdminUser) {
-          const hasAllowedRole = config.allowedRoleIds.some(roleId => memberRoles.includes(roleId));
-          if (!hasAllowedRole) {
-            logger.warn({ discordId: discordUser.id, roles: memberRoles }, "[Auth] Missing required role");
-            res.redirect(config.appUrl + "/access-denied?reason=missing_role");
-            return;
+          inGuild = true;
+        } else {
+          // Fallback: paginated guild list check (member endpoint can fail without bot)
+          let after = "0";
+          while (!inGuild) {
+            const guildsRes = await fetch(`https://discord.com/api/v10/users/@me/guilds?limit=200&after=${after}`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (!guildsRes.ok) break;
+            const guilds: { id: string }[] = await guildsRes.json();
+            if (guilds.length === 0) break;
+            if (guilds.some(g => g.id === config.requiredGuildId)) {
+              inGuild = true;
+              break;
+            }
+            after = guilds[guilds.length - 1].id;
+            if (guilds.length < 200) break;
           }
         }
       } catch (err) {
-        logger.error(err, "[Auth] Guild member check error");
+        logger.error(err, "[Auth] Guild check error");
+      }
+
+      if (!inGuild) {
+        logger.warn({ discordId: discordUser.id, guildId: config.requiredGuildId }, "[Auth] User not in required guild");
         res.redirect(config.appUrl + "/access-denied?reason=not_in_server");
         return;
+      }
+
+      if (config.allowedRoleIds.length > 0 && !isAdminUser) {
+        const hasAllowedRole = config.allowedRoleIds.some(roleId => memberRoles.includes(roleId));
+        if (!hasAllowedRole) {
+          logger.warn({ discordId: discordUser.id, roles: memberRoles }, "[Auth] Missing required role");
+          res.redirect(config.appUrl + "/access-denied?reason=missing_role");
+          return;
+        }
       }
     }
 
