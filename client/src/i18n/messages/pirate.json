@@ -58,7 +58,7 @@
     "notes": "Gekritzel",
     "reminders": "Papagei-Alarm",
     "availability": "Landgang",
-    "docs": "Wiki",
+    "docs": "Schatzkarte",
     "changelog": "Logbuch",
     "settings": "Steuerrad"
   },
@@ -574,8 +574,8 @@
     }
   },
   "docs": {
-    "title": "Schiffs-Handbuch 📚",
-    "subtitle": "Anleitungen und Hilfe für alle Schiffsfunktionen",
+    "title": "Schatzkarte 🗺️",
+    "subtitle": "Hier findest du alle Geheimnisse des Schiffs, Matrose!",
     "selectSection": "Wähl ein Kapitel aus der Navigation, du Landratte!"
   },
   "changelog": {
