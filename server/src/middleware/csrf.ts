@@ -10,15 +10,18 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   if (!req.cookies[CSRF_COOKIE]) {
     const token = crypto.randomBytes(32).toString("hex");
     res.cookie(CSRF_COOKIE, token, {
-      httpOnly: false, // Client JS must be able to read it
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     // For the current request, treat this as the cookie value
     req.cookies[CSRF_COOKIE] = token;
   }
+
+  // Always expose CSRF token in response header so cross-origin clients can read it
+  res.setHeader(CSRF_HEADER, req.cookies[CSRF_COOKIE]);
 
   // Safe methods don't need CSRF validation
   if (SAFE_METHODS.has(req.method)) return next();

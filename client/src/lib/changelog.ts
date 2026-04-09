@@ -8,6 +8,19 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.2.0",
+    date: "2026-04-09",
+    tags: ["feature", "fix"],
+    title: "Match-Modus, Training-Verknüpfung & CSRF-Fix",
+    changes: [
+      "Matches: Zwei Modi beim Erstellen — 'Geplant' (mit Treffzeit, Abstimmung, Kontakt, Region) und 'Nachträglich' (mit optionaler Training-Verknüpfung)",
+      "Matches: Nachträgliche Matches können mit einem bestehenden Training verknüpft werden (Dropdown im Formular)",
+      "Fix: Speichern funktioniert wieder — CSRF-Token wird jetzt korrekt zwischen Client und Server ausgetauscht (behebt 'Fehler beim Speichern' auf allen Seiten)",
+      "Fix: CSRF-Cookie von 'strict' auf 'lax' geändert für bessere Kompatibilität mit Cross-Origin-Setups",
+      "Fix: Auth — Admin-User müssen jetzt auch auf dem Discord-Server sein (kein Guild-Bypass mehr)",
+    ],
+  },
+  {
     version: "2.1.0",
     date: "2026-04-09",
     tags: ["feature", "improvement", "fix"],

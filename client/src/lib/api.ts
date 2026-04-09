@@ -20,6 +20,7 @@ export class ApiError extends Error {
 
 class ApiClient {
   private baseUrl: string;
+  private csrfToken: string | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -37,15 +38,18 @@ class ApiClient {
     if (teamId) headers["x-team-id"] = teamId;
     if (options.body instanceof FormData) delete headers["Content-Type"];
 
-    // CSRF token from cookie (Double-Submit Cookie pattern)
-    const csrfToken = document.cookie.split("; ").find(c => c.startsWith("csrf-token="))?.split("=")[1];
-    if (csrfToken) headers["x-csrf-token"] = csrfToken;
+    // CSRF token from previous response header (Double-Submit Cookie pattern)
+    if (this.csrfToken) headers["x-csrf-token"] = this.csrfToken;
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       credentials: "include",
       headers,
     });
+
+    // Store CSRF token from response header for subsequent requests
+    const newCsrfToken = response.headers.get("x-csrf-token");
+    if (newCsrfToken) this.csrfToken = newCsrfToken;
 
     if (response.status === 204) {
       return { success: true } as ApiResponse<T>;

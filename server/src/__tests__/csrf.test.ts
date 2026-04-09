@@ -15,6 +15,7 @@ function mockRes(): Partial<Response> {
   res.cookie = vi.fn().mockReturnValue(res);
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn().mockReturnValue(res);
+  res.setHeader = vi.fn().mockReturnValue(res);
   return res;
 }
 
@@ -28,7 +29,7 @@ describe("CSRF Middleware", () => {
 
     expect(res.cookie).toHaveBeenCalledWith("csrf-token", expect.any(String), expect.objectContaining({
       httpOnly: false,
-      sameSite: "strict",
+      sameSite: "lax",
     }));
     expect(next).toHaveBeenCalled();
   });

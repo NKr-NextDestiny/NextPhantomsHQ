@@ -56,6 +56,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
   origin: config.appUrl,
   credentials: true,
+  exposedHeaders: ["x-csrf-token"],
 }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
