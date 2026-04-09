@@ -179,6 +179,8 @@
     "statsByOpponent": "Statistiken nach Gegner",
     "noMapStats": "Keine Map-Statistiken vorhanden.",
     "noOppStats": "Keine Gegner-Statistiken vorhanden.",
+    "modePlanned": "Geplant",
+    "modeRetrospective": "Nachträglich",
     "total": "Gesamt",
     "wins": "Siege",
     "losses": "Niederlagen",
@@ -213,7 +215,9 @@
       "opponentScore": "Gegner Score",
       "competition": "Wettbewerb",
       "competitionPlaceholder": "z.B. Faceit League",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "linkedTraining": "Verknüpftes Training",
+      "noTraining": "Kein Training verknüpfen"
     },
     "detail": {
       "info": "Info",

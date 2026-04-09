@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown, Eye, CheckCircle, XCircle, HelpCircle, BarChart3 } from "lucide-react";
+import { Plus, Trophy, Trash2, Edit2, TrendingUp, TrendingDown, Eye, CheckCircle, XCircle, HelpCircle, BarChart3, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { useT } from "@/i18n/provider";
 
 type MatchType = "SCRIM" | "TOURNAMENT" | "LEAGUE" | "FRIENDLY" | "OTHER";
+type MatchMode = "planned" | "retrospective";
 
 interface MatchVote {
   id: string;
@@ -39,11 +40,20 @@ interface Match {
   format?: string | null;
   contactInfo?: string | null;
   serverRegion?: string | null;
+  trainingId?: string | null;
+  training?: { id: string; title: string; date: string; type: string } | null;
   votes?: MatchVote[];
 }
 
 interface GameConfig {
   maps: string[];
+}
+
+interface TrainingOption {
+  id: string;
+  title: string;
+  date: string;
+  type: string;
 }
 
 const TYPE_COLORS: Record<MatchType, string> = {
@@ -67,15 +77,18 @@ export default function MatchesPage() {
   const tc = useT("common");
   const [matches, setMatches] = useState<Match[]>([]);
   const [maps, setMaps] = useState<string[]>([]);
+  const [trainings, setTrainings] = useState<TrainingOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<MatchType | "">("");
+  const [matchMode, setMatchMode] = useState<MatchMode>("retrospective");
   const [form, setForm] = useState({
     type: "OTHER" as MatchType,
     opponent: "", date: "", map: "", scoreUs: "", scoreThem: "",
     competition: "", notes: "", meetTime: "", endDate: "",
     mapPool: [] as string[], format: "", contactInfo: "", serverRegion: "",
+    trainingId: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -93,14 +106,16 @@ export default function MatchesPage() {
   const load = useCallback(async () => {
     try {
       const params = filterType ? `?type=${filterType}` : "";
-      const [matchRes, configRes] = await Promise.allSettled([
+      const [matchRes, configRes, trainingRes] = await Promise.allSettled([
         api.get<Match[]>(`/api/matches${params}`),
         api.get<GameConfig>("/api/team/config"),
+        api.get<TrainingOption[]>("/api/trainings"),
       ]);
 
       if (matchRes.status === "fulfilled" && matchRes.value.data) setMatches(matchRes.value.data);
       else if (matchRes.status === "rejected") error(tc("loadError"));
       if (configRes.status === "fulfilled" && configRes.value.data) setMaps(configRes.value.data.maps);
+      if (trainingRes.status === "fulfilled" && trainingRes.value.data) setTrainings(trainingRes.value.data);
     } catch {
       error(tc("loadError"));
     } finally {
@@ -112,16 +127,20 @@ export default function MatchesPage() {
 
   const openCreate = () => {
     setEditingId(null);
+    setMatchMode("retrospective");
     setForm({
       type: "OTHER", opponent: "", date: "", map: maps[0] || "", scoreUs: "", scoreThem: "",
       competition: "", notes: "", meetTime: "", endDate: "",
       mapPool: [], format: "", contactInfo: "", serverRegion: "",
+      trainingId: "",
     });
     setShowModal(true);
   };
 
   const openEdit = (m: Match) => {
     setEditingId(m.id);
+    // Determine mode: if meetTime is set, it was planned
+    setMatchMode(m.meetTime ? "planned" : "retrospective");
     setForm({
       type: m.type,
       opponent: m.opponent,
@@ -137,6 +156,7 @@ export default function MatchesPage() {
       format: m.format || "",
       contactInfo: m.contactInfo || "",
       serverRegion: m.serverRegion || "",
+      trainingId: m.trainingId || "",
     });
     setShowModal(true);
   };
@@ -158,15 +178,24 @@ export default function MatchesPage() {
         result: us != null && them != null ? calcResult(us, them) : null,
         competition: form.competition || null,
         notes: form.notes || null,
+        mapPool: form.mapPool,
+        format: form.format || null,
       };
 
-      if (form.type === "SCRIM") {
+      if (matchMode === "planned") {
+        // Planned match: include meet time, contact, etc.
         body.meetTime = form.meetTime || null;
         body.endDate = form.endDate || null;
-        body.mapPool = form.mapPool;
-        body.format = form.format || null;
         body.contactInfo = form.contactInfo || null;
         body.serverRegion = form.serverRegion || null;
+        body.trainingId = null;
+      } else {
+        // Retrospective: include training link, no meet time
+        body.trainingId = form.trainingId || null;
+        body.meetTime = null;
+        body.endDate = null;
+        body.contactInfo = null;
+        body.serverRegion = null;
       }
 
       if (editingId) {
@@ -201,7 +230,7 @@ export default function MatchesPage() {
     try {
       if (currentVote === status) {
         await api.delete(`/api/matches/${matchId}/vote`);
-        success(t("voteRetracted") || "Stimme zurückgezogen");
+        success(t("voteRetracted"));
       } else {
         await api.post(`/api/matches/${matchId}/vote`, { status });
         success(t("voteSaved"));
@@ -230,6 +259,7 @@ export default function MatchesPage() {
     }));
   };
 
+  const isPlannedMatch = (m: Match) => !!m.meetTime;
   const matchesWithResult = matches.filter(m => m.result);
   const wins = matchesWithResult.filter(m => m.result === "WIN").length;
   const losses = matchesWithResult.filter(m => m.result === "LOSS").length;
@@ -253,7 +283,7 @@ export default function MatchesPage() {
         </div>
         <div className="flex gap-2">
           <Button variant={showStats ? "primary" : "outline"} onClick={() => { setShowStats(!showStats); if (!showStats) loadStats(); }}>
-            <BarChart3 className="h-4 w-4" /> {t("statistics") || "Statistiken"}
+            <BarChart3 className="h-4 w-4" /> {t("statistics")}
           </Button>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" /> {t("new")}
@@ -284,11 +314,10 @@ export default function MatchesPage() {
       {/* Detailed Stats */}
       {showStats && (
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Map Stats */}
           <Card>
-            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByMap") || "Statistiken pro Map"}</h3>
+            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByMap")}</h3>
             {Object.keys(mapStats).length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">{t("noMapStats") || "Keine Map-Daten"}</p>
+              <p className="text-sm text-[var(--muted-foreground)]">{t("noMapStats")}</p>
             ) : (
               <div className="space-y-2">
                 {Object.entries(mapStats).sort((a, b) => b[1].total - a[1].total).map(([map, s]) => {
@@ -309,12 +338,10 @@ export default function MatchesPage() {
               </div>
             )}
           </Card>
-
-          {/* Opponent Stats */}
           <Card>
-            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByOpponent") || "Statistiken pro Gegner"}</h3>
+            <h3 className="mb-3 font-semibold text-[var(--foreground)]">{t("statsByOpponent")}</h3>
             {Object.keys(oppStats).length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">{t("noOppStats") || "Keine Gegner-Daten"}</p>
+              <p className="text-sm text-[var(--muted-foreground)]">{t("noOppStats")}</p>
             ) : (
               <div className="space-y-2">
                 {Object.entries(oppStats).sort((a, b) => b[1].total - a[1].total).map(([opp, s]) => {
@@ -388,6 +415,11 @@ export default function MatchesPage() {
                         <span className="text-xs text-[var(--muted-foreground)]">{m.mapPool.length} {t("maps")}</span>
                       )}
                       {m.competition && <Badge variant="info">{m.competition}</Badge>}
+                      {m.training && (
+                        <span className="flex items-center gap-1 text-xs text-[var(--primary)]">
+                          <Link2 className="h-3 w-3" /> {m.training.title}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-[var(--muted-foreground)]">{formatDate(m.date)}</p>
                   </div>
@@ -398,7 +430,7 @@ export default function MatchesPage() {
                       </span>
                     </div>
                   )}
-                  {m.type === "SCRIM" && m.votes && m.votes.length > 0 && (
+                  {isPlannedMatch(m) && m.votes && m.votes.length > 0 && (
                     <div className="flex gap-2 text-xs">
                       <span className="text-green-400">{m.votes.filter(v => v.status === "AVAILABLE").length} ✓</span>
                       <span className="text-red-400">{m.votes.filter(v => v.status === "UNAVAILABLE").length} ✗</span>
@@ -417,7 +449,7 @@ export default function MatchesPage() {
                     </button>
                   </div>
                 </div>
-                {m.type === "SCRIM" && !hasResult && (
+                {isPlannedMatch(m) && !hasResult && (
                   <div className="mt-3 flex items-center gap-2 border-t border-[var(--border)] pt-3">
                     <span className="text-xs text-[var(--muted-foreground)]">{t("attendance")}:</span>
                     <button
@@ -448,6 +480,24 @@ export default function MatchesPage() {
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? t("editTitle") : t("createTitle")} size="lg">
         <div className="space-y-4">
+          {/* Mode toggle */}
+          <div className="flex rounded-lg bg-[var(--secondary)] p-1">
+            <button
+              type="button"
+              onClick={() => setMatchMode("retrospective")}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${matchMode === "retrospective" ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+            >
+              {t("modeRetrospective")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMatchMode("planned")}
+              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all ${matchMode === "planned" ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+            >
+              {t("modePlanned")}
+            </button>
+          </div>
+
           <Select
             label={t("form.type")}
             value={form.type}
@@ -460,44 +510,62 @@ export default function MatchesPage() {
             <Input label={t("form.dateTime")} type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
 
-          {form.type === "SCRIM" && (
+          {/* Planned mode: meet time, contact, etc. */}
+          {matchMode === "planned" && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label={t("form.meetTime")} type="datetime-local" value={form.meetTime} onChange={(e) => setForm({ ...form, meetTime: e.target.value })} />
                 <Input label={t("form.end")} type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Input label={t("form.format")} value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} placeholder={t("form.formatPlaceholder")} />
                 <Input label={t("form.serverRegion")} value={form.serverRegion} onChange={(e) => setForm({ ...form, serverRegion: e.target.value })} placeholder={t("form.serverRegionPlaceholder")} />
+                <Input label={t("form.contact")} value={form.contactInfo} onChange={(e) => setForm({ ...form, contactInfo: e.target.value })} placeholder={t("form.contactPlaceholder")} />
               </div>
-              <Input label={t("form.contact")} value={form.contactInfo} onChange={(e) => setForm({ ...form, contactInfo: e.target.value })} placeholder={t("form.contactPlaceholder")} />
-              {maps.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-[var(--foreground)]">{t("form.mapPool")}</label>
-                  <div className="flex flex-wrap gap-2">
-                    {maps.map((map) => (
-                      <button
-                        key={map}
-                        type="button"
-                        onClick={() => toggleMapPool(map)}
-                        className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${form.mapPool.includes(map) ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
-                      >
-                        {map}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
 
-          {form.type !== "SCRIM" && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Select label={t("form.map")} value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={[{ value: "", label: t("form.noMap") }, ...maps.map(m => ({ value: m, label: m }))]} />
-              <Input label={t("form.ourScore")} type="number" value={form.scoreUs} onChange={(e) => setForm({ ...form, scoreUs: e.target.value })} />
-              <Input label={t("form.opponentScore")} type="number" value={form.scoreThem} onChange={(e) => setForm({ ...form, scoreThem: e.target.value })} />
+          {/* Retrospective mode: training link */}
+          {matchMode === "retrospective" && trainings.length > 0 && (
+            <Select
+              label={t("form.linkedTraining")}
+              value={form.trainingId}
+              onChange={(e) => setForm({ ...form, trainingId: e.target.value })}
+              options={[
+                { value: "", label: t("form.noTraining") },
+                ...trainings.map(tr => ({ value: tr.id, label: `${tr.title} — ${formatDate(tr.date)}` })),
+              ]}
+            />
+          )}
+
+          {/* Shared fields: map pool, format */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label={t("form.format")} value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} placeholder={t("form.formatPlaceholder")} />
+            <Select label={t("form.map")} value={form.map} onChange={(e) => setForm({ ...form, map: e.target.value })} options={[{ value: "", label: t("form.noMap") }, ...maps.map(m => ({ value: m, label: m }))]} />
+          </div>
+
+          {maps.length > 0 && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-[var(--foreground)]">{t("form.mapPool")}</label>
+              <div className="flex flex-wrap gap-2">
+                {maps.map((map) => (
+                  <button
+                    key={map}
+                    type="button"
+                    onClick={() => toggleMapPool(map)}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${form.mapPool.includes(map) ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)] text-[var(--muted-foreground)] hover:bg-[var(--primary)]/20"}`}
+                  >
+                    {map}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Score */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label={t("form.ourScore")} type="number" value={form.scoreUs} onChange={(e) => setForm({ ...form, scoreUs: e.target.value })} />
+            <Input label={t("form.opponentScore")} type="number" value={form.scoreThem} onChange={(e) => setForm({ ...form, scoreThem: e.target.value })} />
+          </div>
 
           <Input label={t("form.competition")} value={form.competition} onChange={(e) => setForm({ ...form, competition: e.target.value })} placeholder={t("form.competitionPlaceholder")} />
           <Textarea label={t("form.notes")} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />

@@ -179,6 +179,8 @@
     "statsByOpponent": "Nach Feind",
     "noMapStats": "Keine Gewässer-Statistiken vorhanden.",
     "noOppStats": "Keine Feind-Statistiken vorhanden.",
+    "modePlanned": "Voraus geplant ⚓",
+    "modeRetrospective": "Aus dem Logbuch 📜",
     "total": "Gesamt",
     "wins": "Siege 🏆",
     "losses": "Niederlagen 💀",
@@ -213,7 +215,9 @@
       "opponentScore": "Deren Kanonen",
       "competition": "Turnier",
       "competitionPlaceholder": "z.B. Piraten-Liga",
-      "notes": "Käptn-Notizen"
+      "notes": "Käptn-Notizen",
+      "linkedTraining": "Verknüpftes Manöver 🔗",
+      "noTraining": "Kein Manöver verknüpfen"
     },
     "detail": {
       "info": "Aufklärung",

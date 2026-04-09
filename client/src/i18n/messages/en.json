@@ -179,6 +179,8 @@
     "statsByOpponent": "Stats by Opponent",
     "noMapStats": "No map statistics available.",
     "noOppStats": "No opponent statistics available.",
+    "modePlanned": "Planned",
+    "modeRetrospective": "Retrospective",
     "total": "Total",
     "wins": "Wins",
     "losses": "Losses",
@@ -213,7 +215,9 @@
       "opponentScore": "Opponent Score",
       "competition": "Competition",
       "competitionPlaceholder": "e.g. Faceit League",
-      "notes": "Notes"
+      "notes": "Notes",
+      "linkedTraining": "Linked Training",
+      "noTraining": "No training linked"
     },
     "detail": {
       "info": "Info",

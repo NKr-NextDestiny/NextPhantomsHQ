@@ -55,6 +55,7 @@ const createSchema = z.object({
   recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).optional().default("NONE"),
   reminderIntervals: z.array(z.number()).optional().default([]),
   playerStats: z.array(playerStatSchema).optional().default([]),
+  trainingId: z.string().optional().nullable(),
 });
 
 const updateSchema = createSchema.partial();
@@ -78,6 +79,7 @@ const matchInclude = {
   createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
   playerStats: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
   votes: { include: { user: { select: { id: true, displayName: true, avatarUrl: true } } } },
+  training: { select: { id: true, title: true, date: true, type: true } },
   mossFiles: true,
   replay: true,
   review: true,

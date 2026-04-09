@@ -249,7 +249,8 @@ model Training {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  votes TrainingVote[]
+  votes    TrainingVote[]
+  matches  Match[]        @relation("MatchTraining")
   @@index([createdById])
   @@index([teamId, date])
   @@map("trainings")
@@ -378,6 +379,10 @@ model Match {
   communicationRating Int?
   punctualityRating   Int?
   mapResults          Json?
+
+  // Optional link to a training session
+  trainingId String?
+  training   Training? @relation("MatchTraining", fields: [trainingId], references: [id])
 
   createdById String
   createdBy   User   @relation("CreatedMatches", fields: [createdById], references: [id])
