@@ -281,3 +281,6 @@ docker compose logs server
 ss -tlnp | grep :80
 # Anderen Dienst stoppen oder in docker-compose.yml Port ändern
 ```
+
+---
+_Last reviewed: 2026-04-11_
