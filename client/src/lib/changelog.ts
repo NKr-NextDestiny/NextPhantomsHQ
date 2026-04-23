@@ -17,6 +17,7 @@ export const changelog: ChangelogEntry[] = [
       "Admin-UI fuer Evolution API erweitert: Instanz erstellen, QR/Pairing-Code holen, Webhook setzen und WhatsApp-Gruppen-IDs abrufen",
       "Automatische WhatsApp-Gruppenbeschreibung eingebaut: naechster Termin, Abstimmungsstatus, offene Umfragen, Folgetermine und eigene Zusatzbloecke",
       "Neue WhatsApp-Befehle fuer Gruppen: !hilfe, !befehle, !naechstes, !termine, !umfragen, !ankuendigungen und !status",
+      "Bot-Befehle akzeptieren jetzt sowohl Schreibweisen mit Umlauten als auch ae/oe/ue-Varianten, also z.B. !nächstes und !naechstes",
       "Admin kann die fertige Befehlsliste direkt in die WhatsApp-Gruppe posten, damit sie angepinnt werden kann",
       "E-Mail-Erinnerungen zeigen bei bereits vorhandener Abstimmung jetzt direkt den bestehenden Status statt einen zweiten Aenderungsweg",
       "CLI-Helfer hinzugefuegt, um Gruppen-IDs auch direkt auf dem Server ueber Evolution API auszulesen",

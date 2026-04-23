@@ -164,7 +164,14 @@ async function formatStatus(teamId: string) {
 }
 
 function extractCommand(text: string) {
-  return text.trim().split(/\s+/)[0]?.toLowerCase() || "";
+  return text
+    .trim()
+    .split(/\s+/)[0]
+    ?.toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss") || "";
 }
 
 export async function handleIncomingGroupCommand(instanceName: string, remoteJid: string, text: string) {
