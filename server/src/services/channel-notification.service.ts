@@ -230,6 +230,8 @@ export async function sendPrivateAttendanceReminder(
   date: string,
   emailToken?: string,
   whatsappToken?: string,
+  existingResponse?: string | null,
+  existingReason?: string | null,
 ): Promise<void> {
   const settings = await getSettings(teamId);
   const baseText = `Automatisierte Erinnerung: ${title}\nTyp: ${eventType}\n${date}\n\nBitte gib deine Verfuegbarkeit an.`;
@@ -237,14 +239,25 @@ export async function sendPrivateAttendanceReminder(
   const tasks: Promise<void>[] = [];
 
   if (settings.emailNotificationsEnabled && member.emailNotifications && member.email && emailToken) {
-    tasks.push(emailService.sendAttendanceReminder(
-      member.email,
-      eventType,
-      title,
-      date,
-      emailToken,
-      config.appUrl,
-    ));
+    tasks.push(
+      existingResponse
+        ? emailService.sendAttendanceAlreadyResponded(
+            member.email,
+            eventType,
+            title,
+            date,
+            existingResponse,
+            existingReason,
+          )
+        : emailService.sendAttendanceReminder(
+            member.email,
+            eventType,
+            title,
+            date,
+            emailToken,
+            config.appUrl,
+          ),
+    );
   }
 
   if (settings.whatsappNotificationsEnabled && member.phone && whatsappToken) {

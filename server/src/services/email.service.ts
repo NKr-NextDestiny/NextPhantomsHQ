@@ -82,3 +82,22 @@ export async function sendAttendanceReminder(to: string, eventType: string, titl
     `<p>Erinnerung an <strong>${title}</strong> (${eventType})</p>
      <p>Datum: ${date}</p>${links}${AUTOMATED_NOTICE}`);
 }
+
+export async function sendAttendanceAlreadyResponded(
+  to: string,
+  eventType: string,
+  title: string,
+  date: string,
+  response: string,
+  reason?: string | null,
+) {
+  await sendEmail(
+    to,
+    `[Next Phantoms HQ] Bereits abgestimmt: ${title}`,
+    `<p>Du hast fuer <strong>${title}</strong> (${eventType}) bereits abgestimmt.</p>
+     <p>Datum: ${date}</p>
+     <p>Aktuelle Antwort: <strong>${response}</strong></p>
+     ${reason ? `<p>Grund: ${reason}</p>` : ""}
+     <p>Der E-Mail-Link ist nur noch zur Information sichtbar und kann deine Antwort nicht mehr aendern.</p>${AUTOMATED_NOTICE}`,
+  );
+}

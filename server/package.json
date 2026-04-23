@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "evolution:groups": "tsx src/scripts/evolution-list-groups.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

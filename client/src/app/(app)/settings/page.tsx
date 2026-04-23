@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Download } from "lucide-react";
+import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Download, RefreshCw, QrCode, Send, Bot, MessageSquare } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/provider";
+import QRCode from "qrcode";
 
 interface TeamSettings {
   id: string;
@@ -57,6 +58,43 @@ interface MemberData {
     phone?: string;
     emailNotifications?: boolean;
   };
+}
+
+interface EvolutionInstance {
+  instance?: {
+    instanceName?: string;
+    owner?: string;
+    profileName?: string;
+    status?: string;
+  };
+}
+
+interface EvolutionStatus {
+  configured: boolean;
+  apiUrl?: string;
+  instance?: string;
+  attendanceInstance?: string;
+  groupJid?: string | null;
+  instances: EvolutionInstance[];
+}
+
+interface EvolutionGroup {
+  id: string;
+  subject?: string;
+  desc?: string | null;
+  size?: number;
+}
+
+interface DescriptionBlock {
+  id: string;
+  content: string;
+  position: "ABOVE" | "BELOW";
+  sortOrder: number;
+}
+
+interface CommandInfo {
+  command: string;
+  description: string;
 }
 
 function BrowserNotificationSettings() {
@@ -132,6 +170,21 @@ export default function SettingsPage() {
   const [announcementNotificationMode, setAnnouncementNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const [matchResultNotificationMode, setMatchResultNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const [pollResultNotificationMode, setPollResultNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
+  const [evolutionGroups, setEvolutionGroups] = useState<EvolutionGroup[]>([]);
+  const [descriptionBlocks, setDescriptionBlocks] = useState<DescriptionBlock[]>([]);
+  const [descriptionPreview, setDescriptionPreview] = useState("");
+  const [descriptionLength, setDescriptionLength] = useState(0);
+  const [newBlockContent, setNewBlockContent] = useState("");
+  const [newBlockPosition, setNewBlockPosition] = useState<"ABOVE" | "BELOW">("BELOW");
+  const [newBlockSortOrder, setNewBlockSortOrder] = useState("0");
+  const [commandHelpMessage, setCommandHelpMessage] = useState("");
+  const [botCommands, setBotCommands] = useState<CommandInfo[]>([]);
+  const [instanceNameInput, setInstanceNameInput] = useState("");
+  const [instanceNumberInput, setInstanceNumberInput] = useState("");
+  const [qrCodeData, setQrCodeData] = useState("");
+  const [pairingCode, setPairingCode] = useState("");
+  const [loadingWhatsAppOps, setLoadingWhatsAppOps] = useState(false);
   const [gameConfig, setGameConfig] = useState<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
   const [newMap, setNewMap] = useState("");
   const [newCharacter, setNewCharacter] = useState("");
@@ -200,6 +253,37 @@ export default function SettingsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const loadWhatsAppAdmin = useCallback(async () => {
+    setLoadingWhatsAppOps(true);
+    try {
+      const [statusRes, groupsRes, blocksRes, previewRes, commandsRes] = await Promise.all([
+        api.get<EvolutionStatus>("/api/team/whatsapp/status"),
+        api.get<EvolutionGroup[]>("/api/team/whatsapp/groups"),
+        api.get<DescriptionBlock[]>("/api/team/whatsapp/description/blocks"),
+        api.get<{ description: string; length: number; maxLength: number }>("/api/team/whatsapp/description/preview"),
+        api.get<{ commands: CommandInfo[]; helpMessage: string }>("/api/team/whatsapp/commands"),
+      ]);
+      setEvolutionStatus(statusRes.data || null);
+      setEvolutionGroups(groupsRes.data || []);
+      setDescriptionBlocks(blocksRes.data || []);
+      setDescriptionPreview(previewRes.data?.description || "");
+      setDescriptionLength(previewRes.data?.length || 0);
+      setBotCommands(commandsRes.data?.commands || []);
+      setCommandHelpMessage(commandsRes.data?.helpMessage || "");
+      if (statusRes.data?.instance) setInstanceNameInput(statusRes.data.instance);
+    } catch {
+      error("WhatsApp-Admin-Daten konnten nicht geladen werden.");
+    } finally {
+      setLoadingWhatsAppOps(false);
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (tab === "notifications") {
+      void loadWhatsAppAdmin();
+    }
+  }, [tab, loadWhatsAppAdmin]);
+
   const hasUnsavedChanges = () => {
     const tf = initialTeamForm.current;
     const teamDirty = teamForm.name !== tf.name || teamForm.tag !== tf.tag || teamForm.description !== tf.description || teamForm.discordWebhookUrl !== tf.discordWebhookUrl;
@@ -243,6 +327,125 @@ export default function SettingsPage() {
       load();
     } catch {
       error(tc("deleteError"));
+    }
+  };
+
+  const saveNotificationSettings = async () => {
+    setSaving(true);
+    try {
+      await api.put("/api/team", {
+        emailNotificationsEnabled,
+        whatsappNotificationsEnabled,
+        whatsappGroupJid: whatsappGroupJid || null,
+        announcementNotificationMode,
+        matchResultNotificationMode,
+        pollResultNotificationMode,
+      });
+      success(tc("saved"));
+      await Promise.all([load(), loadWhatsAppAdmin()]);
+    } catch {
+      error(tc("saveError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createInstance = async () => {
+    if (!instanceNameInput.trim()) {
+      error("Bitte einen Instanznamen angeben.");
+      return;
+    }
+    try {
+      await api.post("/api/team/whatsapp/instances", {
+        instanceName: instanceNameInput.trim(),
+        number: instanceNumberInput.trim() || null,
+        groupsIgnore: false,
+      });
+      success("Instanz erstellt.");
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Instanz konnte nicht erstellt werden.");
+    }
+  };
+
+  const fetchQr = async () => {
+    if (!instanceNameInput.trim()) {
+      error("Bitte einen Instanznamen angeben.");
+      return;
+    }
+    try {
+      const res = await api.post<{ pairingCode?: string; code?: string }>("/api/team/whatsapp/connect", {
+        instanceName: instanceNameInput.trim(),
+        number: instanceNumberInput.trim() || null,
+      });
+      setPairingCode(res.data?.pairingCode || "");
+      setQrCodeData(res.data?.code ? await QRCode.toDataURL(res.data.code) : "");
+      success("QR/Pairing-Code geladen.");
+    } catch {
+      error("QR-Code konnte nicht geladen werden.");
+    }
+  };
+
+  const setupWebhook = async () => {
+    if (!instanceNameInput.trim()) {
+      error("Bitte einen Instanznamen angeben.");
+      return;
+    }
+    try {
+      await api.post("/api/team/whatsapp/webhook", { instanceName: instanceNameInput.trim() });
+      success("Webhook gesetzt.");
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Webhook konnte nicht gesetzt werden.");
+    }
+  };
+
+  const postCommands = async () => {
+    try {
+      await api.post("/api/team/whatsapp/commands/post", { message: commandHelpMessage });
+      success("Befehlsliste wurde in die Gruppe gesendet.");
+    } catch {
+      error("Befehlsliste konnte nicht gesendet werden.");
+    }
+  };
+
+  const addDescriptionBlock = async () => {
+    if (!newBlockContent.trim()) {
+      error("Bitte Text fuer den Block eingeben.");
+      return;
+    }
+    try {
+      await api.post("/api/team/whatsapp/description/blocks", {
+        content: newBlockContent.trim(),
+        position: newBlockPosition,
+        sortOrder: Number.parseInt(newBlockSortOrder || "0", 10) || 0,
+      });
+      setNewBlockContent("");
+      setNewBlockSortOrder("0");
+      success("Block gespeichert.");
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Block konnte nicht gespeichert werden.");
+    }
+  };
+
+  const deleteDescriptionBlock = async (id: string) => {
+    try {
+      await api.delete(`/api/team/whatsapp/description/blocks/${id}`);
+      success("Block geloescht.");
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Block konnte nicht geloescht werden.");
+    }
+  };
+
+  const updateGroupDescriptionNow = async () => {
+    try {
+      await api.post("/api/team/whatsapp/description/update");
+      success("Gruppenbeschreibung aktualisiert.");
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Gruppenbeschreibung konnte nicht aktualisiert werden.");
     }
   };
 
@@ -500,23 +703,156 @@ export default function SettingsPage() {
             />
           </div>
           <div className="mt-4">
-            <Button onClick={async () => {
-              setSaving(true);
-              try {
-                await api.put("/api/team", {
-                  emailNotificationsEnabled,
-                  whatsappNotificationsEnabled,
-                  whatsappGroupJid: whatsappGroupJid || null,
-                  announcementNotificationMode,
-                  matchResultNotificationMode,
-                  pollResultNotificationMode,
-                });
-                success(tc("saved"));
-              } catch { error(tc("saveError")); }
-              finally { setSaving(false); }
-            }} isLoading={saving}>
+            <Button onClick={saveNotificationSettings} isLoading={saving}>
               <Save className="h-4 w-4" /> {tc("save")}
             </Button>
+          </div>
+        </Card>
+        <Card>
+          <div className="mb-4 flex items-center gap-3">
+            <QrCode className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Evolution API</h2>
+              <p className="text-sm text-[var(--muted-foreground)]">Instanz, QR-Code, Webhook und Gruppen abrufen</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Input label="Instanzname" value={instanceNameInput} onChange={(e) => setInstanceNameInput(e.target.value)} />
+            <Input label="Optional Telefonnummer" value={instanceNumberInput} onChange={(e) => setInstanceNumberInput(e.target.value)} placeholder="491234567890" />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="outline" onClick={createInstance}>
+              <Plus className="h-4 w-4" /> Instanz erstellen
+            </Button>
+            <Button variant="outline" onClick={fetchQr}>
+              <QrCode className="h-4 w-4" /> QR laden
+            </Button>
+            <Button variant="outline" onClick={setupWebhook}>
+              <RefreshCw className="h-4 w-4" /> Webhook setzen
+            </Button>
+            <Button variant="outline" onClick={loadWhatsAppAdmin} isLoading={loadingWhatsAppOps}>
+              <RefreshCw className="h-4 w-4" /> Gruppen aktualisieren
+            </Button>
+          </div>
+
+          {evolutionStatus && (
+            <div className="mt-4 rounded-lg bg-[var(--secondary)] p-4 text-sm text-[var(--muted-foreground)]">
+              <p><strong className="text-[var(--foreground)]">API:</strong> {evolutionStatus.apiUrl || "Nicht gesetzt"}</p>
+              <p><strong className="text-[var(--foreground)]">Hauptinstanz:</strong> {evolutionStatus.instance || "Nicht gesetzt"}</p>
+              <p><strong className="text-[var(--foreground)]">Private Instanz:</strong> {evolutionStatus.attendanceInstance || "Nicht gesetzt"}</p>
+              <p><strong className="text-[var(--foreground)]">Gruppen-JID:</strong> {evolutionStatus.groupJid || "Nicht gesetzt"}</p>
+            </div>
+          )}
+
+          {pairingCode && (
+            <div className="mt-4 rounded-lg bg-[var(--secondary)] p-4">
+              <p className="text-sm font-medium text-[var(--foreground)]">Pairing-Code</p>
+              <p className="mt-1 font-mono text-sm text-[var(--primary)]">{pairingCode}</p>
+            </div>
+          )}
+
+          {qrCodeData && (
+            <div className="mt-4 rounded-lg bg-white p-4">
+              <img src={`data:image/png;base64,${qrCodeData}`} alt="Evolution QR" className="mx-auto max-h-72 w-auto" />
+            </div>
+          )}
+
+          <div className="mt-6">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">Gefundene Gruppen</h3>
+            <div className="space-y-2">
+              {evolutionGroups.map((group) => (
+                <div key={group.id} className="rounded-lg border border-[var(--border)] p-3">
+                  <p className="font-medium text-[var(--foreground)]">{group.subject || "Ohne Namen"}</p>
+                  <p className="text-xs text-[var(--muted-foreground)]">{group.id}</p>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">Mitglieder: {group.size ?? "-"}</p>
+                </div>
+              ))}
+              {evolutionGroups.length === 0 && (
+                <p className="text-sm text-[var(--muted-foreground)]">Noch keine Gruppen geladen.</p>
+              )}
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="mb-4 flex items-center gap-3">
+            <Bot className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Bot-Befehle</h2>
+              <p className="text-sm text-[var(--muted-foreground)]">Diese Befehle funktionieren in der WhatsApp-Gruppe.</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {botCommands.map((entry) => (
+              <div key={entry.command} className="rounded-lg bg-[var(--secondary)] p-3">
+                <p className="font-mono text-sm text-[var(--foreground)]">{entry.command}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">{entry.description}</p>
+              </div>
+            ))}
+          </div>
+          <Textarea label="Nachricht fuer den angepinnten Befehlspost" value={commandHelpMessage} onChange={(e) => setCommandHelpMessage(e.target.value)} />
+          <div className="mt-4">
+            <Button variant="outline" onClick={postCommands}>
+              <Send className="h-4 w-4" /> Befehlsliste in Gruppe senden
+            </Button>
+          </div>
+        </Card>
+        <Card>
+          <div className="mb-4 flex items-center gap-3">
+            <MessageSquare className="h-5 w-5 text-[var(--primary)]" />
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Gruppenbeschreibung</h2>
+              <p className="text-sm text-[var(--muted-foreground)]">Naechster Termin, offene Umfragen, Folgetermine und deine Zusatzbloecke.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-[1fr_140px_120px]">
+            <Textarea label="Neuer Zusatzblock" value={newBlockContent} onChange={(e) => setNewBlockContent(e.target.value)} />
+            <Select
+              label="Position"
+              value={newBlockPosition}
+              onChange={(e) => setNewBlockPosition(e.target.value as "ABOVE" | "BELOW")}
+              options={[
+                { value: "ABOVE", label: "Oberhalb" },
+                { value: "BELOW", label: "Unterhalb" },
+              ]}
+            />
+            <Input label="Sortierung" value={newBlockSortOrder} onChange={(e) => setNewBlockSortOrder(e.target.value)} />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="outline" onClick={addDescriptionBlock}>
+              <Plus className="h-4 w-4" /> Block speichern
+            </Button>
+            <Button variant="outline" onClick={updateGroupDescriptionNow}>
+              <RefreshCw className="h-4 w-4" /> Jetzt in WhatsApp aktualisieren
+            </Button>
+          </div>
+
+          <div className="mt-6 space-y-2">
+            {descriptionBlocks.map((block) => (
+              <div key={block.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--secondary)] p-3">
+                <div>
+                  <p className="text-xs uppercase text-[var(--muted-foreground)]">{block.position} | Sort {block.sortOrder}</p>
+                  <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{block.content}</p>
+                </div>
+                <button onClick={() => deleteDescriptionBlock(block.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            {descriptionBlocks.length === 0 && (
+              <p className="text-sm text-[var(--muted-foreground)]">Noch keine Zusatzbloecke vorhanden.</p>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-lg border border-[var(--border)] p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[var(--foreground)]">Vorschau</h3>
+              <span className="text-xs text-[var(--muted-foreground)]">{descriptionLength} / 2048</span>
+            </div>
+            <pre className="whitespace-pre-wrap text-sm text-[var(--muted-foreground)]">{descriptionPreview || "Noch keine Vorschau geladen."}</pre>
           </div>
         </Card>
         <BrowserNotificationSettings />

@@ -10,6 +10,9 @@ It includes:
 - WhatsApp notifications through Evolution API
 - WhatsApp output modes for announcements, match results and poll results: `TEXT`, `IMAGE`, `BOTH`
 - admin-managed group and private delivery rules
+- automatic WhatsApp group description with custom text blocks
+- admin tools for QR pairing, webhook setup and group ID lookup
+- WhatsApp bot commands for quick group information
 
 ## Stack
 
@@ -37,6 +40,20 @@ The notification model is now:
 - every outgoing email and WhatsApp message contains an automated-message notice
 
 Only admins can change notification settings. Email can be enabled globally and additionally per player. WhatsApp is enabled globally and uses a group JID for public delivery, while private attendance reminders use the stored player phone number.
+
+## WhatsApp Bot Commands
+
+The WhatsApp bot currently supports:
+
+- `!hilfe`
+- `!befehle`
+- `!naechstes`
+- `!termine`
+- `!umfragen`
+- `!ankuendigungen`
+- `!status`
+
+Admins can send a ready-to-pin command overview directly into the WhatsApp group from the settings UI.
 
 ## Docker-First Operation
 
@@ -225,6 +242,18 @@ In `Settings -> Members`, admins can additionally:
 1. enable or disable email per player
 2. maintain the player phone number used for private WhatsApp reminders
 
+### 9. Admin WhatsApp setup
+
+In `Settings -> Notifications`, admins can also:
+
+1. create an Evolution instance
+2. fetch the pairing QR code / pairing code
+3. set the Evolution webhook automatically
+4. fetch all WhatsApp groups and their IDs
+5. post the bot command help text to the group
+6. manage custom text blocks for the WhatsApp group description
+7. preview and manually push the current group description
+
 ## Evolution API on a Separate Debian 13 VM
 
 This is the recommended setup for WhatsApp delivery.
@@ -362,7 +391,7 @@ curl --request POST \
     "integration": "WHATSAPP-BAILEYS",
     "qrcode": true,
     "rejectCall": false,
-    "groupsIgnore": true,
+    "groupsIgnore": false,
     "alwaysOnline": false,
     "readMessages": false,
     "readStatus": false,
@@ -433,6 +462,42 @@ Member-specific controls are managed in `Settings -> Members`.
   - can be updated while the 5-minute token window is valid
   - players can include a reason, for example why they cannot attend
 
+If a player has already responded and later receives another email reminder, the email now directly states that a vote already exists instead of presenting a second change path.
+
+## WhatsApp Group Description
+
+The app can automatically maintain the WhatsApp group description.
+
+It includes:
+
+- the next upcoming training or match
+- event notes when available
+- attendance summary including reasons
+- open polls
+- the following upcoming events
+- admin-managed custom blocks above and below the generated section
+
+The admin UI also shows a live preview and character count before pushing the description to WhatsApp.
+
+## Evolution Admin Access
+
+You can fetch group IDs and connect WhatsApp in two ways:
+
+1. in the app under `Settings -> Notifications`
+2. directly on the server with:
+
+```bash
+cd /opt/NextPhantomsHQ/server
+pnpm evolution:groups
+```
+
+Optional with explicit instance name:
+
+```bash
+cd /opt/NextPhantomsHQ/server
+pnpm evolution:groups -- my-other-instance
+```
+
 ## Replay Parsing Notes
 
 Rainbow Six replay parsing is best-effort and works against real `.rec` files.
@@ -480,6 +545,9 @@ docker compose ps
 docker compose restart
 docker compose down
 docker compose up -d --build
+
+cd server
+pnpm evolution:groups
 ```
 
 ## Last Reviewed

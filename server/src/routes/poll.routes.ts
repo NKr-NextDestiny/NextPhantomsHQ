@@ -8,6 +8,7 @@ import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { parsePagination } from "../middleware/pagination.js";
 import { safeEmit } from "../config/socket.js";
+import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
 export const pollRouter = Router();
 
@@ -91,6 +92,7 @@ pollRouter.post("/", authenticate, teamContext, requireFeature("polls"), require
     });
 
     safeEmit(`team:${req.teamId}`, "poll:created", poll);
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.status(201).json({ success: true, data: poll });
   } catch (error) { next(error); }
@@ -135,6 +137,7 @@ pollRouter.post("/:id/vote", authenticate, teamContext, requireFeature("polls"),
     });
 
     safeEmit(`team:${req.teamId}`, "poll:vote", { pollId: String(req.params.id), vote });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -166,6 +169,7 @@ pollRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("polls"
     }
 
     safeEmit(`team:${req.teamId}`, "poll:vote:retracted", { pollId: String(req.params.id), userId: req.user!.id });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
@@ -185,6 +189,7 @@ pollRouter.delete("/:id", authenticate, teamContext, requireFeature("polls"), re
     await prisma.poll.delete({ where: { id: String(req.params.id) } });
 
     safeEmit(`team:${req.teamId}`, "poll:deleted", { id: String(req.params.id) });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, message: "Poll deleted" });
   } catch (error) { next(error); }

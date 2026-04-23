@@ -12,6 +12,7 @@ import { sendWebhookNotification, buildTrainingEmbed } from "../services/discord
 import * as channelNotify from "../services/channel-notification.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
 import { safeEmit } from "../config/socket.js";
+import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
 export const trainingRouter = Router();
 
@@ -120,6 +121,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
 
     safeEmit(`team:${req.teamId}`, "training:created", training);
     sendWebhookNotification(buildTrainingEmbed({ title: training.title, type: training.type, date: training.date.toISOString() })).catch(console.error);
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.status(201).json({ success: true, data: training });
   } catch (error) { next(error); }
@@ -157,6 +159,7 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
 
     await logAudit(req.user!.id, "UPDATE", "training", training.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "training:updated", training);
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     channelNotify.notifyEventUpdated(req.teamId!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
 
@@ -178,6 +181,7 @@ trainingRouter.delete("/:id", authenticate, teamContext, requireFeature("trainin
 
     await logAudit(req.user!.id, "DELETE", "training", String(req.params.id), { title: existing.title }, req.teamId);
     safeEmit(`team:${req.teamId}`, "training:deleted", { id: String(req.params.id) });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, message: "Training deleted" });
   } catch (error) { next(error); }
@@ -197,6 +201,7 @@ trainingRouter.post("/:id/vote", authenticate, teamContext, requireFeature("trai
     });
 
     safeEmit(`team:${req.teamId}`, "training:vote", { trainingId: String(req.params.id), vote });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
@@ -207,6 +212,7 @@ trainingRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("tr
   try {
     await prisma.trainingVote.deleteMany({ where: { userId: req.user!.id, trainingId: String(req.params.id) } });
     safeEmit(`team:${req.teamId}`, "training:vote:retracted", { trainingId: String(req.params.id), userId: req.user!.id });
+    scheduleGroupDescriptionUpdate(req.teamId!);
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
 });

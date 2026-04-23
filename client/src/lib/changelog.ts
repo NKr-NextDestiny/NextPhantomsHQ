@@ -8,6 +8,22 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.0",
+    date: "2026-04-23",
+    tags: ["feature", "improvement", "breaking"],
+    title: "Evolution Admin-Werkzeuge, Gruppenbeschreibung & WhatsApp-Befehle",
+    changes: [
+      "Alle Altlasten des frueheren WhatsApp-Providers aus dem aktiven Projekt entfernt; frische Evolution-API-Ausrichtung fuer Neuinstallationen",
+      "Admin-UI fuer Evolution API erweitert: Instanz erstellen, QR/Pairing-Code holen, Webhook setzen und WhatsApp-Gruppen-IDs abrufen",
+      "Automatische WhatsApp-Gruppenbeschreibung eingebaut: naechster Termin, Abstimmungsstatus, offene Umfragen, Folgetermine und eigene Zusatzbloecke",
+      "Neue WhatsApp-Befehle fuer Gruppen: !hilfe, !befehle, !naechstes, !termine, !umfragen, !ankuendigungen und !status",
+      "Admin kann die fertige Befehlsliste direkt in die WhatsApp-Gruppe posten, damit sie angepinnt werden kann",
+      "E-Mail-Erinnerungen zeigen bei bereits vorhandener Abstimmung jetzt direkt den bestehenden Status statt einen zweiten Aenderungsweg",
+      "CLI-Helfer hinzugefuegt, um Gruppen-IDs auch direkt auf dem Server ueber Evolution API auszulesen",
+      "README fuer Setup, Evolution-Adminfunktionen, Gruppenbeschreibung und Bot-Befehle aktualisiert",
+    ],
+  },
+  {
     version: "2.3.0",
     date: "2026-04-23",
     tags: ["feature", "improvement", "breaking"],

@@ -44,6 +44,8 @@ import { notesRouter } from "./routes/notes.routes.js";
 import { searchRouter } from "./routes/search.routes.js";
 import { dashboardRouter } from "./routes/dashboard.routes.js";
 import { exportRouter } from "./routes/export.routes.js";
+import { teamWhatsAppRouter } from "./routes/team-whatsapp.routes.js";
+import { evolutionWebhookRouter } from "./routes/evolution-webhook.routes.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -157,6 +159,8 @@ app.use("/api/notes", mutationLimiter, notesRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/export", mutationLimiter, exportRouter);
+app.use("/api/team/whatsapp", mutationLimiter, teamWhatsAppRouter);
+app.use("/evolution/webhook", evolutionWebhookRouter);
 
 // Error handler
 app.use(errorHandler);

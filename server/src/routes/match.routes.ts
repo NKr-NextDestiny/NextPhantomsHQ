@@ -12,6 +12,7 @@ import { sendWebhookNotification, buildMatchEmbed } from "../services/discord-we
 import * as channelNotify from "../services/channel-notification.service.js";
 import { notifyTeam } from "../services/notification.service.js";
 import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
+import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
 export const matchRouter = Router();
 
@@ -179,6 +180,7 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
     await logAudit(req.user!.id, "CREATE", "match", match.id, { opponent: match.opponent, type: match.type }, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:created", full);
     sendWebhookNotification(buildMatchEmbed({ opponent: match.opponent, map: match.map, result: match.result, scoreUs: match.scoreUs, scoreThem: match.scoreThem, competition: match.competition, type: match.type })).catch(console.error);
+    scheduleGroupDescriptionUpdate(req.teamId!);
     if (match.scoreUs !== null && match.scoreThem !== null && match.result) {
       channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
     }
@@ -229,6 +231,7 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
 
     await logAudit(req.user!.id, "UPDATE", "match", match.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:updated", full);
+    scheduleGroupDescriptionUpdate(req.teamId!);
     if (match.scoreUs !== null && match.scoreThem !== null && match.result) {
       channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
     }
@@ -255,6 +258,7 @@ matchRouter.delete("/:id", authenticate, teamContext, requireFeature("matches"),
 
     await logAudit(req.user!.id, "DELETE", "match", String(req.params.id), { opponent: existing.opponent, type: existing.type }, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:deleted", { id: String(req.params.id) });
+    scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, message: "Match deleted" });
   } catch (error) { next(error); }
@@ -274,6 +278,7 @@ matchRouter.post("/:id/vote", authenticate, teamContext, requireFeature("matches
     });
 
     safeEmit(`team:${req.teamId}`, "match:vote", { matchId: match.id, vote });
+    scheduleGroupDescriptionUpdate(req.teamId!);
     res.json({ success: true, data: vote });
   } catch (error) { next(error); }
 });
@@ -283,6 +288,7 @@ matchRouter.delete("/:id/vote", authenticate, teamContext, requireFeature("match
   try {
     await prisma.matchVote.deleteMany({ where: { userId: req.user!.id, matchId: String(req.params.id) } });
     safeEmit(`team:${req.teamId}`, "match:vote:retracted", { matchId: String(req.params.id), userId: req.user!.id });
+    scheduleGroupDescriptionUpdate(req.teamId!);
     res.json({ success: true, message: "Vote retracted" });
   } catch (error) { next(error); }
 });
@@ -304,6 +310,7 @@ matchRouter.post("/:id/result", authenticate, teamContext, requireFeature("match
 
     await logAudit(req.user!.id, "UPDATE", "match_result", match.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:result", match);
+    scheduleGroupDescriptionUpdate(req.teamId!);
     channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
 
     res.json({ success: true, data: match });

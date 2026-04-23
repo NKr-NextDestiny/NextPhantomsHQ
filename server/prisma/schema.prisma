@@ -94,6 +94,11 @@ enum AttendanceLinkChannel {
   WHATSAPP
 }
 
+enum DescriptionBlockPosition {
+  ABOVE
+  BELOW
+}
+
 enum CommentEntityType {
   TRAINING
   SCRIM
@@ -201,6 +206,7 @@ model Team {
   reminders     Reminder[]
   wikiPages     WikiPage[]
   notes         Note[]
+  groupDescriptionBlocks GroupDescriptionBlock[]
 
   @@map("teams")
 }
@@ -922,4 +928,20 @@ model AppSetting {
   value     String
   updatedAt DateTime @updatedAt
   @@map("app_settings")
+}
+
+model GroupDescriptionBlock {
+  id        String                   @id @default(cuid())
+  content   String
+  position  DescriptionBlockPosition @default(BELOW)
+  sortOrder Int                      @default(0)
+
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teamId, position, sortOrder])
+  @@map("group_description_blocks")
 }

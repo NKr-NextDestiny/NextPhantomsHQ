@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "TeamRole" AS ENUM ('TRYOUT', 'PLAYER', 'ANALYST', 'COACH', 'CAPTAIN', 'ADMIN');
 
@@ -23,7 +26,19 @@ CREATE TYPE "StratType" AS ENUM ('DEFAULT', 'ANTI_STRAT', 'RETAKE', 'POST_PLANT'
 CREATE TYPE "MatchResult" AS ENUM ('WIN', 'LOSS', 'DRAW');
 
 -- CreateEnum
+CREATE TYPE "MatchType" AS ENUM ('SCRIM', 'TOURNAMENT', 'LEAGUE', 'FRIENDLY', 'OTHER');
+
+-- CreateEnum
 CREATE TYPE "ThreatLevel" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
+
+-- CreateEnum
+CREATE TYPE "NotificationContentMode" AS ENUM ('TEXT', 'IMAGE', 'BOTH');
+
+-- CreateEnum
+CREATE TYPE "AttendanceLinkChannel" AS ENUM ('EMAIL', 'WHATSAPP');
+
+-- CreateEnum
+CREATE TYPE "DescriptionBlockPosition" AS ENUM ('ABOVE', 'BELOW');
 
 -- CreateEnum
 CREATE TYPE "CommentEntityType" AS ENUM ('TRAINING', 'SCRIM', 'STRAT', 'MATCH', 'LINEUP', 'REPLAY');
@@ -42,6 +57,7 @@ CREATE TABLE "users" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "discordAccessToken" TEXT,
     "emailNotifications" BOOLEAN NOT NULL DEFAULT true,
+    "phone" TEXT,
     "r6Username" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -60,7 +76,13 @@ CREATE TABLE "teams" (
     "discordWebhookUrl" TEXT,
     "defaultReminderIntervals" INTEGER[] DEFAULT ARRAY[60, 1440]::INTEGER[],
     "autoEmailEvents" BOOLEAN NOT NULL DEFAULT false,
-    "enabledFeatures" TEXT[] DEFAULT ARRAY['training', 'scrims', 'strats', 'matches', 'lineup', 'scouting', 'replays', 'announcements', 'polls', 'wiki', 'notes', 'reminders', 'availability']::TEXT[],
+    "emailNotificationsEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "whatsappNotificationsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "whatsappGroupJid" TEXT,
+    "announcementNotificationMode" "NotificationContentMode" NOT NULL DEFAULT 'TEXT',
+    "matchResultNotificationMode" "NotificationContentMode" NOT NULL DEFAULT 'TEXT',
+    "pollResultNotificationMode" "NotificationContentMode" NOT NULL DEFAULT 'TEXT',
+    "enabledFeatures" TEXT[] DEFAULT ARRAY['training', 'strats', 'matches', 'lineup', 'scouting', 'replays', 'announcements', 'polls', 'wiki', 'notes', 'reminders', 'availability']::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -100,6 +122,7 @@ CREATE TABLE "trainings" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "type" "TrainingType" NOT NULL,
+    "meetTime" TIMESTAMP(3) NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3),
     "recurrence" "RecurrenceType" NOT NULL DEFAULT 'NONE',
@@ -125,56 +148,6 @@ CREATE TABLE "training_votes" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "training_votes_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "scrims" (
-    "id" TEXT NOT NULL,
-    "opponent" TEXT NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3),
-    "mapPool" TEXT[],
-    "format" TEXT,
-    "contactInfo" TEXT,
-    "serverRegion" TEXT,
-    "notes" TEXT,
-    "recurrence" "RecurrenceType" NOT NULL DEFAULT 'NONE',
-    "reminderIntervals" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
-    "createdById" TEXT NOT NULL,
-    "teamId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "scrims_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "scrim_votes" (
-    "id" TEXT NOT NULL,
-    "status" "AttendanceStatus" NOT NULL,
-    "comment" TEXT,
-    "userId" TEXT NOT NULL,
-    "scrimId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "scrim_votes_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "scrim_results" (
-    "id" TEXT NOT NULL,
-    "scoreUs" INTEGER NOT NULL,
-    "scoreThem" INTEGER NOT NULL,
-    "maps" JSONB,
-    "notes" TEXT,
-    "skillRating" INTEGER,
-    "communicationRating" INTEGER,
-    "punctualityRating" INTEGER,
-    "scrimId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "scrim_results_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -239,25 +212,51 @@ CREATE TABLE "playbook_strats" (
 -- CreateTable
 CREATE TABLE "matches" (
     "id" TEXT NOT NULL,
+    "type" "MatchType" NOT NULL DEFAULT 'OTHER',
     "opponent" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "competition" TEXT,
-    "map" TEXT NOT NULL,
+    "map" TEXT,
     "side" "MapSide",
-    "scoreUs" INTEGER NOT NULL,
-    "scoreThem" INTEGER NOT NULL,
-    "result" "MatchResult" NOT NULL,
+    "scoreUs" INTEGER,
+    "scoreThem" INTEGER,
+    "result" "MatchResult",
     "notes" TEXT,
     "operatorBans" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "overtimeUs" INTEGER,
     "overtimeThem" INTEGER,
-    "scrimId" TEXT,
+    "meetTime" TIMESTAMP(3),
+    "endDate" TIMESTAMP(3),
+    "mapPool" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "format" TEXT,
+    "contactInfo" TEXT,
+    "serverRegion" TEXT,
+    "recurrence" "RecurrenceType" NOT NULL DEFAULT 'NONE',
+    "reminderIntervals" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+    "skillRating" INTEGER,
+    "communicationRating" INTEGER,
+    "punctualityRating" INTEGER,
+    "mapResults" JSONB,
+    "trainingId" TEXT,
     "createdById" TEXT NOT NULL,
     "teamId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "matches_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "match_votes" (
+    "id" TEXT NOT NULL,
+    "status" "AttendanceStatus" NOT NULL,
+    "comment" TEXT,
+    "userId" TEXT NOT NULL,
+    "matchId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "match_votes_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -274,7 +273,8 @@ CREATE TABLE "match_player_stats" (
     "kd" DOUBLE PRECISION,
     "operators" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "clutches" JSONB,
-    "userId" TEXT NOT NULL,
+    "externalName" TEXT,
+    "userId" TEXT,
     "matchId" TEXT NOT NULL,
     "teamId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -415,6 +415,7 @@ CREATE TABLE "moss_files" (
     "fileName" TEXT NOT NULL,
     "fileUrl" TEXT NOT NULL,
     "fileSize" INTEGER NOT NULL,
+    "playerName" TEXT,
     "matchId" TEXT NOT NULL,
     "uploadedById" TEXT NOT NULL,
     "teamId" TEXT NOT NULL,
@@ -442,6 +443,8 @@ CREATE TABLE "announcements" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "content" TEXT NOT NULL,
+    "imageUrl" TEXT,
+    "imageFileName" TEXT,
     "pinned" BOOLEAN NOT NULL DEFAULT false,
     "expiresAt" TIMESTAMP(3),
     "teamId" TEXT NOT NULL,
@@ -469,6 +472,7 @@ CREATE TABLE "polls" (
     "description" TEXT,
     "deadline" TIMESTAMP(3),
     "allowMultiple" BOOLEAN NOT NULL DEFAULT false,
+    "resultsSentAt" TIMESTAMP(3),
     "teamId" TEXT NOT NULL,
     "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -533,6 +537,7 @@ CREATE TABLE "attendance_tokens" (
     "userId" TEXT NOT NULL,
     "eventType" TEXT NOT NULL,
     "eventId" TEXT NOT NULL,
+    "channel" "AttendanceLinkChannel" NOT NULL,
     "response" TEXT,
     "reason" TEXT,
     "respondedAt" TIMESTAMP(3),
@@ -653,6 +658,19 @@ CREATE TABLE "app_settings" (
     CONSTRAINT "app_settings_pkey" PRIMARY KEY ("key")
 );
 
+-- CreateTable
+CREATE TABLE "group_description_blocks" (
+    "id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "position" "DescriptionBlockPosition" NOT NULL DEFAULT 'BELOW',
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "teamId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "group_description_blocks_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_numericId_key" ON "users"("numericId");
 
@@ -675,19 +693,34 @@ CREATE UNIQUE INDEX "team_members_userId_teamId_key" ON "team_members"("userId",
 CREATE UNIQUE INDEX "game_configs_teamId_key" ON "game_configs"("teamId");
 
 -- CreateIndex
+CREATE INDEX "trainings_createdById_idx" ON "trainings"("createdById");
+
+-- CreateIndex
+CREATE INDEX "trainings_teamId_date_idx" ON "trainings"("teamId", "date");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "training_votes_userId_trainingId_key" ON "training_votes"("userId", "trainingId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "scrim_votes_userId_scrimId_key" ON "scrim_votes"("userId", "scrimId");
+CREATE INDEX "strats_createdById_idx" ON "strats"("createdById");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "scrim_results_scrimId_key" ON "scrim_results"("scrimId");
+CREATE INDEX "strats_teamId_updatedAt_idx" ON "strats"("teamId", "updatedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "playbook_strats_playbookId_stratId_key" ON "playbook_strats"("playbookId", "stratId");
 
 -- CreateIndex
-CREATE INDEX "matches_scrimId_idx" ON "matches"("scrimId");
+CREATE INDEX "matches_createdById_idx" ON "matches"("createdById");
+
+-- CreateIndex
+CREATE INDEX "matches_teamId_date_idx" ON "matches"("teamId", "date");
+
+-- CreateIndex
+CREATE INDEX "matches_teamId_type_date_idx" ON "matches"("teamId", "type", "date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "match_votes_userId_matchId_key" ON "match_votes"("userId", "matchId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "match_player_stats_userId_matchId_key" ON "match_player_stats"("userId", "matchId");
@@ -702,6 +735,12 @@ CREATE UNIQUE INDEX "opponents_name_teamId_key" ON "opponents"("name", "teamId")
 CREATE UNIQUE INDEX "replays_matchId_key" ON "replays"("matchId");
 
 -- CreateIndex
+CREATE INDEX "replays_uploadedById_idx" ON "replays"("uploadedById");
+
+-- CreateIndex
+CREATE INDEX "replays_teamId_createdAt_idx" ON "replays"("teamId", "createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "replay_rounds_replayId_roundNumber_key" ON "replay_rounds"("replayId", "roundNumber");
 
 -- CreateIndex
@@ -714,7 +753,22 @@ CREATE UNIQUE INDEX "replay_tags_teamId_name_key" ON "replay_tags"("teamId", "na
 CREATE INDEX "comments_entityType_entityId_idx" ON "comments"("entityType", "entityId");
 
 -- CreateIndex
+CREATE INDEX "comments_userId_idx" ON "comments"("userId");
+
+-- CreateIndex
+CREATE INDEX "comments_teamId_createdAt_idx" ON "comments"("teamId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "announcements_createdById_idx" ON "announcements"("createdById");
+
+-- CreateIndex
+CREATE INDEX "announcements_teamId_createdAt_idx" ON "announcements"("teamId", "createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "announcement_dismissals_announcementId_userId_key" ON "announcement_dismissals"("announcementId", "userId");
+
+-- CreateIndex
+CREATE INDEX "poll_options_pollId_idx" ON "poll_options"("pollId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "poll_votes_pollOptionId_userId_key" ON "poll_votes"("pollOptionId", "userId");
@@ -729,13 +783,22 @@ CREATE INDEX "event_reminders_scheduledAt_sentAt_idx" ON "event_reminders"("sche
 CREATE UNIQUE INDEX "attendance_tokens_token_key" ON "attendance_tokens"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "attendance_tokens_userId_eventType_eventId_key" ON "attendance_tokens"("userId", "eventType", "eventId");
+CREATE UNIQUE INDEX "attendance_tokens_userId_eventType_eventId_channel_key" ON "attendance_tokens"("userId", "eventType", "eventId", "channel");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_userId_idx" ON "audit_logs"("userId");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_entity_createdAt_idx" ON "audit_logs"("entity", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "match_reviews_matchId_key" ON "match_reviews"("matchId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "wiki_pages_teamId_slug_key" ON "wiki_pages"("teamId", "slug");
+
+-- CreateIndex
+CREATE INDEX "group_description_blocks_teamId_position_sortOrder_idx" ON "group_description_blocks"("teamId", "position", "sortOrder");
 
 -- AddForeignKey
 ALTER TABLE "team_members" ADD CONSTRAINT "team_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -759,21 +822,6 @@ ALTER TABLE "training_votes" ADD CONSTRAINT "training_votes_userId_fkey" FOREIGN
 ALTER TABLE "training_votes" ADD CONSTRAINT "training_votes_trainingId_fkey" FOREIGN KEY ("trainingId") REFERENCES "trainings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "scrims" ADD CONSTRAINT "scrims_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "scrims" ADD CONSTRAINT "scrims_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "teams"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "scrim_votes" ADD CONSTRAINT "scrim_votes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "scrim_votes" ADD CONSTRAINT "scrim_votes_scrimId_fkey" FOREIGN KEY ("scrimId") REFERENCES "scrims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "scrim_results" ADD CONSTRAINT "scrim_results_scrimId_fkey" FOREIGN KEY ("scrimId") REFERENCES "scrims"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "strats" ADD CONSTRAINT "strats_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -795,13 +843,19 @@ ALTER TABLE "playbook_strats" ADD CONSTRAINT "playbook_strats_playbookId_fkey" F
 ALTER TABLE "playbook_strats" ADD CONSTRAINT "playbook_strats_stratId_fkey" FOREIGN KEY ("stratId") REFERENCES "strats"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "matches" ADD CONSTRAINT "matches_scrimId_fkey" FOREIGN KEY ("scrimId") REFERENCES "scrims"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "matches" ADD CONSTRAINT "matches_trainingId_fkey" FOREIGN KEY ("trainingId") REFERENCES "trainings"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "matches" ADD CONSTRAINT "matches_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "matches" ADD CONSTRAINT "matches_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "teams"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "match_votes" ADD CONSTRAINT "match_votes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "match_votes" ADD CONSTRAINT "match_votes_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "matches"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "match_player_stats" ADD CONSTRAINT "match_player_stats_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -949,3 +1003,7 @@ ALTER TABLE "notes" ADD CONSTRAINT "notes_createdById_fkey" FOREIGN KEY ("create
 
 -- AddForeignKey
 ALTER TABLE "notes" ADD CONSTRAINT "notes_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "group_description_blocks" ADD CONSTRAINT "group_description_blocks_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

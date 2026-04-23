@@ -72,6 +72,34 @@ export function startScheduler() {
             const promises = members.map(async (member) => {
               let emailToken: string | undefined;
               let whatsappToken: string | undefined;
+              let existingResponse: string | null = null;
+              let existingReason: string | null = null;
+
+              if (reminder.eventType === "TRAINING") {
+                const vote = await prisma.trainingVote.findUnique({
+                  where: {
+                    userId_trainingId: {
+                      userId: member.user.id,
+                      trainingId: reminder.eventId,
+                    },
+                  },
+                  select: { status: true, comment: true },
+                });
+                existingResponse = vote?.status ?? null;
+                existingReason = vote?.comment ?? null;
+              } else if (reminder.eventType === "MATCH") {
+                const vote = await prisma.matchVote.findUnique({
+                  where: {
+                    userId_matchId: {
+                      userId: member.user.id,
+                      matchId: reminder.eventId,
+                    },
+                  },
+                  select: { status: true, comment: true },
+                });
+                existingResponse = vote?.status ?? null;
+                existingReason = vote?.comment ?? null;
+              }
 
               if (member.user.email) {
                 const emailAttendance = await prisma.attendanceToken.upsert({
@@ -125,6 +153,8 @@ export function startScheduler() {
                 date.toLocaleString("de-DE"),
                 emailToken,
                 whatsappToken,
+                existingResponse,
+                existingReason,
               ).catch((e) => logger.error(e, "Failed to send reminder"));
             });
 

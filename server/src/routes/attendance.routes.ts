@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
 export const attendanceRouter = Router();
 
@@ -67,19 +68,27 @@ attendanceRouter.post("/:token", async (req, res, next) => {
     });
 
     // Also create/update the actual vote
+    let teamId: string | null = null;
+
     if (at.eventType === "TRAINING") {
       await prisma.trainingVote.upsert({
         where: { userId_trainingId: { userId: at.userId, trainingId: at.eventId } },
         update: { status: vote, comment: reason || null },
         create: { userId: at.userId, trainingId: at.eventId, status: vote, comment: reason || null },
       });
+      const training = await prisma.training.findUnique({ where: { id: at.eventId }, select: { teamId: true } });
+      teamId = training?.teamId ?? null;
     } else if (at.eventType === "MATCH") {
       await prisma.matchVote.upsert({
         where: { userId_matchId: { userId: at.userId, matchId: at.eventId } },
         update: { status: vote, comment: reason || null },
         create: { userId: at.userId, matchId: at.eventId, status: vote, comment: reason || null },
       });
+      const match = await prisma.match.findUnique({ where: { id: at.eventId }, select: { teamId: true } });
+      teamId = match?.teamId ?? null;
     }
+
+    if (teamId) scheduleGroupDescriptionUpdate(teamId);
 
     res.json({ success: true, message: "Attendance recorded" });
   } catch (error) { next(error); }
