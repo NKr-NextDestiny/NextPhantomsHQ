@@ -37,7 +37,7 @@ replayRouter.get("/", authenticate, teamContext, requireFeature("replays"), asyn
       include: {
         uploadedBy: { select: { id: true, displayName: true, avatarUrl: true } },
         match:      { select: { id: true, opponent: true, map: true, date: true, result: true, scoreUs: true, scoreThem: true } },
-        rounds:     { orderBy: { roundNumber: "asc" }, select: { id: true, roundNumber: true, fileName: true, tags: true, roundEndReason: true, events: true, playerStats: { select: { r6Username: true, kills: true, deaths: true, headshots: true, userId: true, operator: true }, take: 20 } } },
+        rounds:     { orderBy: { roundNumber: "asc" }, select: { id: true, roundNumber: true, fileName: true, tags: true, endReason: true, events: true, playerStats: { select: { r6Username: true, kills: true, deaths: true, headshots: true, userId: true, operator: true }, take: 20 } } },
       },
       orderBy: { createdAt: "desc" },
     });

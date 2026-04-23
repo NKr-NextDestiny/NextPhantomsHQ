@@ -8,6 +8,24 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.3.0",
+    date: "2026-04-23",
+    tags: ["feature", "improvement", "breaking"],
+    title: "Evolution API, Docker-First Betrieb & Admin-gesteuerte Benachrichtigungen",
+    changes: [
+      "WhatsApp komplett auf Evolution API umgestellt",
+      "Ankündigungen, Match-Ergebnisse und Poll-Ergebnisse können per WhatsApp als Text, Bild oder Bild+Text verschickt werden",
+      "Allgemeine WhatsApp-Nachrichten werden an eine konfigurierbare Gruppe gesendet; Abstimmungs-Links gehen privat an einzelne Spieler",
+      "E-Mail ist global aktivierbar und pro Spieler durch Admins zusätzlich ein- oder ausschaltbar",
+      "WhatsApp ist global aktivierbar; private Reminder nutzen die beim Spieler hinterlegte Telefonnummer",
+      "Attendance-Links per E-Mail sind nach einer Antwort read-only; private WhatsApp-Links erlauben Updates innerhalb eines 5-Minuten-Fensters",
+      "Jede externe Nachricht enthält jetzt einen klaren Hinweis, dass sie automatisiert erzeugt wurde",
+      "Replay-Parser gegen echte Rainbow-Six-Replays nachgeschärft: bessere Spielererkennung, alle zstd-Frames werden ausgewertet",
+      "Docker-First Betrieb vereinheitlicht: Development unter Windows und Updates laufen jetzt über Docker Compose",
+      "Dokumentation für App-Deployment und separate Evolution-API-VM auf Debian 13 vollständig überarbeitet",
+    ],
+  },
+  {
     version: "2.2.0",
     date: "2026-04-09",
     tags: ["feature", "fix"],
@@ -90,11 +108,11 @@ export const changelog: ChangelogEntry[] = [
     version: "1.6.0",
     date: "2026-04-08",
     tags: ["feature"],
-    title: "WhatsApp-Benachrichtigungen (WAHA) & Kanal-Auswahl",
+    title: "WhatsApp-Benachrichtigungen & Kanal-Auswahl",
     changes: [
-      "Benachrichtigungs-Kanal in Einstellungen wählbar: E-Mail (SMTP), WhatsApp (WAHA) oder Aus",
-      "WAHA-Integration: Trainings, Matches, Ankündigungen und Erinnerungen werden per WhatsApp verschickt",
-      "Wenn SMTP- oder WAHA-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option ausgegraut",
+      "Benachrichtigungs-Kanal in Einstellungen wählbar: E-Mail (SMTP), WhatsApp oder Aus",
+      "WhatsApp-Integration: Trainings, Matches, Ankündigungen und Erinnerungen werden per WhatsApp verschickt",
+      "Wenn SMTP- oder WhatsApp-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option ausgegraut",
       "Discord-Webhooks funktionieren immer unabhängig vom gewählten Kanal",
       "Neues Telefon-Feld in persönlichen Einstellungen für WhatsApp-Nummer",
       "Alle bestehenden E-Mail-Benachrichtigungen (Trainings, Matches, Ankündigungen, Erinnerungen) laufen jetzt über den konfigurierten Kanal",
@@ -283,3 +301,4 @@ export const changelog: ChangelogEntry[] = [
     ],
   },
 ];
+

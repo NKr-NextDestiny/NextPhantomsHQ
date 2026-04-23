@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.1.0",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -33,6 +33,7 @@
     "pg": "^8.20.0",
     "pino": "^10.3.1",
     "shared": "workspace:*",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "zod": "^4.3.6"
   },

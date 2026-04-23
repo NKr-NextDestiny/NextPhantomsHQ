@@ -1,254 +1,63 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Next Phantoms HQ — Production Update Script ───
-# Usage: ./update.sh [--no-backup] [--branch main]
-
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-BRANCH="main"
-SKIP_BACKUP=false
-BACKUP_DIR="$REPO_DIR/backups"
+BRANCH="${BRANCH:-main}"
+MODE="${1:-update}"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
+log() { printf '\033[0;36m[INFO]\033[0m %s\n' "$1"; }
+ok() { printf '\033[0;32m[ OK ]\033[0m %s\n' "$1"; }
+err() { printf '\033[0;31m[ERR ]\033[0m %s\n' "$1"; exit 1; }
 
-log()  { echo -e "${CYAN}[UPDATE]${NC} $1"; }
-ok()   { echo -e "${GREEN}[  OK  ]${NC} $1"; }
-warn() { echo -e "${YELLOW}[ WARN ]${NC} $1"; }
-err()  { echo -e "${RED}[ERROR ]${NC} $1"; exit 1; }
-
-# ─── Parse arguments ───
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --no-backup) SKIP_BACKUP=true; shift ;;
-    --branch)    BRANCH="$2"; shift 2 ;;
-    -h|--help)
-      echo "Usage: ./update.sh [--no-backup] [--branch <branch>]"
-      echo ""
-      echo "  --no-backup   Skip database backup before update"
-      echo "  --branch      Branch to pull (default: main)"
-      exit 0
-      ;;
-    *) err "Unknown option: $1" ;;
-  esac
-done
+install_docker_debian() {
+  log "Installiere Docker + Compose Plugin fuer Debian..."
+  apt-get update
+  apt-get install -y ca-certificates curl gnupg
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list >/dev/null
+  apt-get update
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin git
+}
 
 cd "$REPO_DIR"
 
-# ─── Pre-flight checks ───
-command -v docker >/dev/null 2>&1        || err "docker not found"
-command -v docker compose >/dev/null 2>&1 || err "docker compose not found"
-command -v git >/dev/null 2>&1           || err "git not found"
-[ -f ".env" ]                            || err ".env file missing"
-[ -f "docker-compose.yml" ]              || err "docker-compose.yml missing"
-
-# ─── Menu ───
-echo ""
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  Next Phantoms HQ — Update${NC}"
-echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo -e "  ${GREEN}1)${NC} Update           — Code pullen, Container neu bauen"
-echo -e "  ${RED}2)${NC} Reset & Update   — ${RED}ALLES löschen${NC} (DB, Volumes, Images) und neu aufsetzen"
-echo -e "  ${CYAN}3)${NC} Abbrechen"
-echo ""
-read -rp "Auswahl [1/2/3]: " CHOICE
-
-case "$CHOICE" in
-  1)
-    log "Normales Update gestartet..."
-    ;;
-  2)
-    echo ""
-    echo -e "  ${RED}${BOLD}WARNUNG: Das löscht ALLES!${NC}"
-    echo -e "  ${RED}• Datenbank (alle Daten, Benutzer, Matches, Trainings, ...)${NC}"
-    echo -e "  ${RED}• Alle Docker Volumes (Uploads, DB-Daten)${NC}"
-    echo -e "  ${RED}• Alle Docker Images werden neu gebaut${NC}"
-    echo ""
-    read -rp "$(echo -e "${RED}Wirklich alles löschen? Tippe 'RESET' zum Bestätigen: ${NC}")" CONFIRM1
-    if [ "$CONFIRM1" != "RESET" ]; then
-      echo "Abgebrochen."
-      exit 0
-    fi
-    read -rp "$(echo -e "${RED}Bist du WIRKLICH sicher? (ja/nein): ${NC}")" CONFIRM2
-    if [ "$CONFIRM2" != "ja" ]; then
-      echo "Abgebrochen."
-      exit 0
-    fi
-    echo ""
-    log "Reset gestartet — alles wird gelöscht..."
-
-    # Backup before destroying (safety net)
-    if docker compose ps postgres --status running --quiet 2>/dev/null | grep -q .; then
-      mkdir -p "$BACKUP_DIR"
-      DB_USER=$(grep -oP '^DB_USER=\K.*' .env 2>/dev/null || echo "phantoms")
-      DB_NAME=$(grep -oP '^DB_NAME=\K.*' .env 2>/dev/null || echo "next_phantoms_hq")
-      TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-      BACKUP_FILE="$BACKUP_DIR/db_backup_pre_reset_${TIMESTAMP}.sql.gz"
-      docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE" 2>/dev/null || true
-      ok "Sicherheits-Backup erstellt: $BACKUP_FILE"
-    fi
-
-    log "Container und Volumes werden entfernt..."
-    docker compose down -v --remove-orphans 2>/dev/null || true
-
-    log "Alte Images werden entfernt..."
-    docker compose down --rmi local 2>/dev/null || true
-
-    SKIP_BACKUP=true  # DB is gone, no backup needed
-    ok "Reset abgeschlossen — Neuaufbau startet..."
-    echo ""
-    ;;
-  3|"")
-    echo "Abgebrochen."
-    exit 0
-    ;;
-  *)
-    err "Ungültige Auswahl: $CHOICE"
-    ;;
-esac
-
-# ─── Show current vs remote version ───
-log "Fetching latest changes from origin/$BRANCH..."
-git fetch origin "$BRANCH" --quiet
-
-LOCAL_SHA=$(git rev-parse HEAD)
-REMOTE_SHA=$(git rev-parse "origin/$BRANCH")
-LOCAL_SHORT="${LOCAL_SHA:0:7}"
-REMOTE_SHORT="${REMOTE_SHA:0:7}"
-
-COMMITS_BEHIND=$(git rev-list HEAD.."origin/$BRANCH" --count)
-
-if [ "$COMMITS_BEHIND" -gt 0 ]; then
-  log "Current: $LOCAL_SHORT | Remote: $REMOTE_SHORT | $COMMITS_BEHIND commit(s) behind"
-  echo ""
-  git log --oneline HEAD.."origin/$BRANCH" | head -15
-  echo ""
-else
-  ok "Already up to date ($LOCAL_SHORT) — rebuilding anyway"
-fi
-
-# ─── Backup database ───
-if [ "$SKIP_BACKUP" = false ]; then
-  log "Backing up database..."
-  mkdir -p "$BACKUP_DIR"
-
-  # Read DB credentials from .env or use defaults
-  DB_USER=$(grep -oP '^DB_USER=\K.*' .env 2>/dev/null || echo "phantoms")
-  DB_NAME=$(grep -oP '^DB_NAME=\K.*' .env 2>/dev/null || echo "next_phantoms_hq")
-  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-  BACKUP_FILE="$BACKUP_DIR/db_backup_${TIMESTAMP}.sql.gz"
-
-  # Check if postgres container is running
-  if docker compose ps postgres --status running --quiet 2>/dev/null | grep -q .; then
-    docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
-    BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    ok "Database backup: $BACKUP_FILE ($BACKUP_SIZE)"
+if ! command -v git >/dev/null 2>&1; then
+  if [ "$MODE" = "install" ] && command -v apt-get >/dev/null 2>&1; then
+    apt-get update && apt-get install -y git
   else
-    warn "Postgres container not running, skipping backup"
+    err "git fehlt"
   fi
-
-  # Keep only last 10 backups
-  ls -t "$BACKUP_DIR"/db_backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -- || true
 fi
 
-# ─── Pull latest code ───
-log "Pulling origin/$BRANCH..."
-git pull origin "$BRANCH" --ff-only || err "Pull failed — resolve conflicts manually"
-NEW_SHA=$(git rev-parse --short HEAD)
-ok "Now at $NEW_SHA"
-
-# ─── Rebuild and restart containers ───
-log "Rebuilding containers (this may take a few minutes)..."
-docker compose build --no-cache
-
-log "Stopping old containers..."
-docker compose down
-
-log "Starting updated containers..."
-docker compose up -d
-
-# ─── Wait for health checks ───
-log "Waiting for services to become healthy..."
-TIMEOUT=120
-ELAPSED=0
-while [ $ELAPSED -lt $TIMEOUT ]; do
-  if docker compose ps postgres --status running --quiet 2>/dev/null | grep -q .; then
-    PG_HEALTH=$(docker compose ps postgres --format json 2>/dev/null | grep -o '"Health":"[^"]*"' | head -1 || echo "")
-    if echo "$PG_HEALTH" | grep -qi "healthy"; then
-      break
-    fi
+if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+  if [ "$MODE" = "install" ] && command -v apt-get >/dev/null 2>&1; then
+    install_docker_debian
+  else
+    err "docker oder docker compose fehlt"
   fi
-  sleep 2
-  ELAPSED=$((ELAPSED + 2))
-done
-
-if [ $ELAPSED -ge $TIMEOUT ]; then
-  warn "Postgres health check timed out after ${TIMEOUT}s — check logs"
-else
-  ok "Postgres healthy"
 fi
 
-# Wait a bit for server + client to start
-sleep 5
-
-# ─── Verify services are running ───
-RUNNING=$(docker compose ps --status running --quiet 2>/dev/null | wc -l)
-EXPECTED=4  # postgres, server, client, nginx
-
-if [ "$RUNNING" -ge "$EXPECTED" ]; then
-  ok "All $EXPECTED services running"
-else
-  warn "Only $RUNNING/$EXPECTED services running — check with: docker compose ps"
-  docker compose ps
+if [ ! -f .env ]; then
+  cp .env.example .env
+  ok ".env aus .env.example erstellt"
 fi
 
-# ─── Quick smoke test ───
-log "Running smoke test..."
-API_OK=false
-for i in $(seq 1 10); do
-  if curl -sf http://localhost:4000/api/health >/dev/null 2>&1; then
-    API_OK=true
-    break
-  fi
-  sleep 2
-done
+log "Hole neuesten Stand von origin/$BRANCH..."
+git fetch origin "$BRANCH"
+git checkout "$BRANCH"
+git pull --ff-only origin "$BRANCH"
 
-if [ "$API_OK" = true ]; then
-  ok "API responding on :4000"
-else
-  warn "API not responding yet — check: docker compose logs server"
-fi
+log "Baue und starte Docker-Stack..."
+docker compose up -d --build
 
-CLIENT_OK=false
-for i in $(seq 1 10); do
-  if curl -sf http://localhost:3000 >/dev/null 2>&1; then
-    CLIENT_OK=true
-    break
-  fi
-  sleep 2
-done
+log "Fuehre Prisma Migrationen im Server-Container aus..."
+docker compose exec -T server sh -lc "cd server && npx prisma migrate deploy && npx prisma generate"
 
-if [ "$CLIENT_OK" = true ]; then
-  ok "Client responding on :3000"
-else
-  warn "Client not responding yet — check: docker compose logs client"
-fi
-
-# ─── Done ───
-echo ""
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}  Update complete!  $LOCAL_SHORT → $NEW_SHA${NC}"
-echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo "  Useful commands:"
-echo "    docker compose ps          — service status"
-echo "    docker compose logs -f     — live logs"
-echo "    docker compose logs server — server logs"
-echo "    docker compose down        — stop everything"
-echo ""
+ok "Deployment abgeschlossen"
+echo "App: http://localhost"
+echo "API: http://localhost/api/health"

@@ -21,7 +21,12 @@ const updateTeamSchema = z.object({
   discordWebhookUrl: z.string().optional().nullable(),
   defaultReminderIntervals: z.array(z.number()).optional(),
   autoEmailEvents: z.boolean().optional(),
-  notificationChannel: z.enum(["NONE", "EMAIL", "WHATSAPP"]).optional(),
+  emailNotificationsEnabled: z.boolean().optional(),
+  whatsappNotificationsEnabled: z.boolean().optional(),
+  whatsappGroupJid: z.string().optional().nullable(),
+  announcementNotificationMode: z.enum(["TEXT", "IMAGE", "BOTH"]).optional(),
+  matchResultNotificationMode: z.enum(["TEXT", "IMAGE", "BOTH"]).optional(),
+  pollResultNotificationMode: z.enum(["TEXT", "IMAGE", "BOTH"]).optional(),
   enabledFeatures: z.array(z.string()).optional(),
 });
 
@@ -37,6 +42,8 @@ const updateMemberSchema = z.object({
   status: z.enum(["ACTIVE", "SUBSTITUTE", "BENCH", "INACTIVE"]).optional(),
   ign: z.string().optional().nullable(),
   realName: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  emailNotifications: z.boolean().optional(),
 });
 
 // Get the team
@@ -102,6 +109,8 @@ teamRouter.get("/members", authenticate, teamContext, async (req, res, next) => 
             isAdmin: true,
             r6Username: true,
             email: true,
+            phone: true,
+            emailNotifications: true,
           },
         },
       },
@@ -122,13 +131,28 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
 
     const updated = await prisma.teamMember.update({
       where: { id: membership.id },
-      data: req.body,
+      data: {
+        ...(req.body.role !== undefined && { role: req.body.role }),
+        ...(req.body.status !== undefined && { status: req.body.status }),
+        ...(req.body.ign !== undefined && { ign: req.body.ign }),
+        ...(req.body.realName !== undefined && { realName: req.body.realName }),
+      },
       include: {
         user: {
-          select: { id: true, numericId: true, username: true, displayName: true, avatarUrl: true },
+          select: { id: true, numericId: true, username: true, displayName: true, avatarUrl: true, email: true, phone: true, emailNotifications: true },
         },
       },
     });
+
+    if (req.body.phone !== undefined || req.body.emailNotifications !== undefined) {
+      await prisma.user.update({
+        where: { id: String(req.params.uid) },
+        data: {
+          ...(req.body.phone !== undefined && { phone: req.body.phone }),
+          ...(req.body.emailNotifications !== undefined && { emailNotifications: req.body.emailNotifications }),
+        },
+      });
+    }
 
     await logAudit(req.user!.id, "UPDATE", "team_member", membership.id, { userId: String(req.params.uid), role: req.body.role }, req.teamId);
 

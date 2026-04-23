@@ -83,8 +83,13 @@ enum ThreatLevel {
   CRITICAL
 }
 
-enum NotificationChannel {
-  NONE
+enum NotificationContentMode {
+  TEXT
+  IMAGE
+  BOTH
+}
+
+enum AttendanceLinkChannel {
   EMAIL
   WHATSAPP
 }
@@ -163,7 +168,12 @@ model Team {
 
   defaultReminderIntervals Int[]    @default([60, 1440])
   autoEmailEvents          Boolean  @default(false)
-  notificationChannel      NotificationChannel @default(NONE)
+  emailNotificationsEnabled Boolean @default(true)
+  whatsappNotificationsEnabled Boolean @default(false)
+  whatsappGroupJid         String?
+  announcementNotificationMode NotificationContentMode @default(TEXT)
+  matchResultNotificationMode  NotificationContentMode @default(TEXT)
+  pollResultNotificationMode   NotificationContentMode @default(TEXT)
   enabledFeatures          String[] @default(["training", "strats", "matches", "lineup", "scouting", "replays", "announcements", "polls", "wiki", "notes", "reminders", "availability"])
 
   createdAt DateTime @default(now())
@@ -649,6 +659,8 @@ model Announcement {
   id        String    @id @default(cuid())
   title     String
   content   String
+  imageUrl  String?
+  imageFileName String?
   pinned    Boolean   @default(false)
   expiresAt DateTime?
 
@@ -684,6 +696,7 @@ model Poll {
   description   String?
   deadline      DateTime?
   allowMultiple Boolean   @default(false)
+  resultsSentAt DateTime?
 
   teamId      String
   team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -762,6 +775,7 @@ model AttendanceToken {
   userId    String
   eventType String
   eventId   String
+  channel   AttendanceLinkChannel
   response  String?
   reason    String?
   respondedAt DateTime?
@@ -770,7 +784,7 @@ model AttendanceToken {
   user User @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
 
-  @@unique([userId, eventType, eventId])
+  @@unique([userId, eventType, eventId, channel])
   @@map("attendance_tokens")
 }
 

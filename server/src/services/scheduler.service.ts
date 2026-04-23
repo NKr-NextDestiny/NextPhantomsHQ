@@ -1,13 +1,27 @@
 import cron from "node-cron";
 import { prisma } from "../config/prisma.js";
 import * as channelNotify from "./channel-notification.service.js";
-import { config } from "../config/index.js";
 import { logger } from "../config/logger.js";
 
 export function startScheduler() {
   cron.schedule("* * * * *", async () => {
     try {
       const now = new Date();
+
+      const expiredPolls = await prisma.poll.findMany({
+        where: {
+          deadline: { lte: now },
+          resultsSentAt: null,
+        },
+        select: { id: true, teamId: true },
+      });
+
+      await Promise.all(
+        expiredPolls.map((poll) =>
+          channelNotify.notifyPollResults(poll.teamId, poll.id).catch((e) => logger.error(e, "Failed to send poll results")),
+        ),
+      );
+
       const reminders = await prisma.eventReminder.findMany({
         where: { scheduledAt: { lte: now }, sentAt: null },
       });
@@ -48,39 +62,73 @@ export function startScheduler() {
           }
 
           if (teamId) {
-            const channel = await channelNotify.getChannel(teamId);
-            if (channel !== "NONE") {
-              const members = await prisma.teamMember.findMany({
-                where: { teamId },
-                include: { user: { select: { id: true, email: true, phone: true, emailNotifications: true } } },
-              });
+            const members = await prisma.teamMember.findMany({
+              where: { teamId },
+              include: { user: { select: { id: true, email: true, phone: true, emailNotifications: true } } },
+            });
 
-              const team = trainings.find(t => t.teamId === teamId)?.team
-                || matches.find(m => m.teamId === teamId)?.team;
+            const linkExpiry = new Date(now.getTime() + 5 * 60 * 1000);
 
-              const promises: Promise<void>[] = [];
+            const promises = members.map(async (member) => {
+              let emailToken: string | undefined;
+              let whatsappToken: string | undefined;
 
-              for (const member of members) {
-                if (!member.user.emailNotifications) continue;
-
-                let token: string | undefined;
-                if (channel === "EMAIL" && team?.autoEmailEvents) {
-                  const at = await prisma.attendanceToken.upsert({
-                    where: { userId_eventType_eventId: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId } },
-                    update: {},
-                    create: { userId: member.user.id, eventType: reminder.eventType, eventId: reminder.eventId, expiresAt: date },
-                  });
-                  token = at.token;
-                }
-
-                promises.push(
-                  channelNotify.sendAttendanceReminder(channel, member.user, reminder.eventType, title, date.toLocaleString("de-DE"), token, config.appUrl)
-                    .catch(e => logger.error(e, "Failed to send reminder"))
-                );
+              if (member.user.email) {
+                const emailAttendance = await prisma.attendanceToken.upsert({
+                  where: {
+                    userId_eventType_eventId_channel: {
+                      userId: member.user.id,
+                      eventType: reminder.eventType,
+                      eventId: reminder.eventId,
+                      channel: "EMAIL",
+                    },
+                  },
+                  update: { expiresAt: linkExpiry },
+                  create: {
+                    userId: member.user.id,
+                    eventType: reminder.eventType,
+                    eventId: reminder.eventId,
+                    channel: "EMAIL",
+                    expiresAt: linkExpiry,
+                  },
+                });
+                emailToken = emailAttendance.token;
               }
 
-              await Promise.all(promises);
-            }
+              if (member.user.phone) {
+                const whatsappAttendance = await prisma.attendanceToken.upsert({
+                  where: {
+                    userId_eventType_eventId_channel: {
+                      userId: member.user.id,
+                      eventType: reminder.eventType,
+                      eventId: reminder.eventId,
+                      channel: "WHATSAPP",
+                    },
+                  },
+                  update: { expiresAt: linkExpiry },
+                  create: {
+                    userId: member.user.id,
+                    eventType: reminder.eventType,
+                    eventId: reminder.eventId,
+                    channel: "WHATSAPP",
+                    expiresAt: linkExpiry,
+                  },
+                });
+                whatsappToken = whatsappAttendance.token;
+              }
+
+              return channelNotify.sendPrivateAttendanceReminder(
+                teamId,
+                member.user,
+                reminder.eventType,
+                title,
+                date.toLocaleString("de-DE"),
+                emailToken,
+                whatsappToken,
+              ).catch((e) => logger.error(e, "Failed to send reminder"));
+            });
+
+            await Promise.all(promises);
           }
 
           await prisma.eventReminder.update({ where: { id: reminder.id }, data: { sentAt: now } });

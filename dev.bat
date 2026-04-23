@@ -2,192 +2,48 @@
 setlocal enabledelayedexpansion
 chcp 65001 >nul
 cd /d "%~dp0"
-title Next Phantoms HQ - Dev Setup
-color 0A
+title Next Phantoms HQ - Docker Dev
 
 echo ============================================
-echo   Next Phantoms HQ - Development Setup
-echo ============================================
-echo.
-
-:: Check Node.js
-where node >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Node.js nicht gefunden! Bitte installiere Node.js 20+
-    echo https://nodejs.org/
-    pause
-    exit /b 1
-)
-
-for /f "tokens=1 delims=v" %%a in ('node -v') do set NODE_VER=%%a
-echo [OK] Node.js gefunden: %NODE_VER%
-
-:: Check pnpm
-where pnpm >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [INFO] pnpm nicht gefunden, installiere...
-    npm install -g pnpm@latest
-    if %ERRORLEVEL% neq 0 (
-        echo [ERROR] pnpm Installation fehlgeschlagen!
-        pause
-        exit /b 1
-    )
-)
-echo [OK] pnpm gefunden
-
-:: Check Docker
-where docker >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [WARN] Docker nicht gefunden - PostgreSQL muss manuell laufen!
-    set DOCKER_AVAILABLE=0
-) else (
-    echo [OK] Docker gefunden
-    set DOCKER_AVAILABLE=1
-)
-
-echo.
-echo ============================================
-echo   1. Environment Setup
+echo   Next Phantoms HQ - Docker Dev
 echo ============================================
 echo.
 
-:: Create .env if not exists
+where docker >nul 2>&1 || (
+  echo [ERROR] Docker Desktop / docker CLI nicht gefunden.
+  pause
+  exit /b 1
+)
+
+docker info >nul 2>&1 || (
+  echo [ERROR] Docker scheint nicht zu laufen. Bitte Docker Desktop starten.
+  pause
+  exit /b 1
+)
+
 if not exist .env (
-    if exist .env.example (
-        copy .env.example .env >nul
-        echo [OK] .env erstellt aus .env.example
-        echo [WICHTIG] Bitte .env bearbeiten und Discord Credentials eintragen!
-    ) else (
-        echo [ERROR] .env.example nicht gefunden!
-        pause
-        exit /b 1
-    )
-) else (
-    echo [OK] .env existiert bereits
-)
-
-echo.
-echo ============================================
-echo   2. Dependencies installieren
-echo ============================================
-echo.
-
-call pnpm install
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] pnpm install fehlgeschlagen!
+  if exist .env.example (
+    copy .env.example .env >nul
+    echo [OK] .env aus .env.example erstellt
+  ) else (
+    echo [ERROR] .env.example fehlt
     pause
     exit /b 1
+  )
 )
-echo [OK] Dependencies installiert
 
-echo.
-echo ============================================
-echo   3. Shared Package bauen
-echo ============================================
-echo.
-
-call pnpm --filter shared build
+echo [INFO] Baue und starte Docker-Stack...
+docker compose up -d --build
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Shared build fehlgeschlagen!
-    pause
-    exit /b 1
-)
-echo [OK] Shared package gebaut
-
-echo.
-echo ============================================
-echo   4. PostgreSQL starten
-echo ============================================
-echo.
-
-if %DOCKER_AVAILABLE%==1 (
-    echo Starte PostgreSQL via Docker...
-    docker compose up -d postgres
-    if %ERRORLEVEL% neq 0 (
-        echo [ERROR] PostgreSQL konnte nicht gestartet werden!
-        pause
-        exit /b 1
-    )
-    :: Wait for PostgreSQL to be ready
-    echo Warte auf PostgreSQL...
-    timeout /t 5 /nobreak >nul
-    echo [OK] PostgreSQL läuft
-) else (
-    echo [WARN] Docker nicht verfügbar - stelle sicher dass PostgreSQL auf Port 5432 läuft!
-    echo   DB_USER=phantoms  DB_PASSWORD=changeme  DB_NAME=next_phantoms_hq
-    pause
+  echo [ERROR] docker compose up fehlgeschlagen
+  pause
+  exit /b 1
 )
 
 echo.
-echo ============================================
-echo   5. Prisma Setup
-echo ============================================
+echo [OK] Stack läuft
+echo   App: http://localhost
+echo   API: http://localhost:4000/api/health
 echo.
-
-:: Prisma CLI liest DATABASE_URL aus server/.env (mit @localhost für lokales Dev).
-:: In Docker wird sie durch die Umgebungsvariable aus docker-compose.yml überschrieben.
-:: Falls server/.env nicht existiert, aus Root-.env ableiten:
-if not exist server\.env (
-    for /f "tokens=1,* delims==" %%a in ('findstr /b "DATABASE_URL=" .env') do set "DB_URL=%%b"
-    set "DB_URL=!DB_URL:@postgres:=@localhost:!"
-    echo DATABASE_URL=!DB_URL!> server\.env
-    echo [OK] server\.env erstellt mit localhost-URL
-)
-
-cd server
-call pnpm prisma generate
-if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Prisma generate fehlgeschlagen!
-    cd ..
-    pause
-    exit /b 1
-)
-echo [OK] Prisma Client generiert
-
-call pnpm prisma migrate dev --name init
-if %ERRORLEVEL% neq 0 (
-    echo [WARN] Migration fehlgeschlagen - prüfe DATABASE_URL in server\.env
-    cd ..
-    pause
-    exit /b 1
-)
-echo [OK] Datenbank migriert
-cd ..
-
-echo.
-echo ============================================
-echo   6. File Encryption Key generieren
-echo ============================================
-echo.
-
-:: Check if FILE_ENCRYPTION_KEY is set in .env
-findstr /c:"FILE_ENCRYPTION_KEY=" .env | findstr /v /c:"FILE_ENCRYPTION_KEY=$" | findstr /v /c:"FILE_ENCRYPTION_KEY= " >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo Generiere Encryption Key...
-    for /f %%i in ('node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"') do set ENCKEY=%%i
-    echo [INFO] Encryption Key: !ENCKEY!
-    echo [INFO] Bitte in .env unter FILE_ENCRYPTION_KEY eintragen!
-)
-
-echo.
-echo ============================================
-echo   7. Uploads-Verzeichnis erstellen
-echo ============================================
-echo.
-
-if not exist server\uploads mkdir server\uploads
-echo [OK] Upload-Verzeichnis bereit
-
-echo.
-echo ============================================
-echo   SETUP ABGESCHLOSSEN!
-echo ============================================
-echo.
-echo.
-echo Starte Next Phantoms HQ...
-echo   Client: http://localhost:3000
-echo   Server: http://localhost:4000
-echo.
-:: Browser nach kurzer Verzögerung öffnen
-start "" cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:3000"
-call pnpm dev
+echo [INFO] Live-Logs folgen. Mit CTRL+C beenden.
+docker compose logs -f

@@ -9,6 +9,8 @@ import { AppError } from "../middleware/errorHandler.js";
 import { parsePagination } from "../middleware/pagination.js";
 import { safeEmit } from "../config/socket.js";
 import * as channelNotify from "../services/channel-notification.service.js";
+import { upload } from "../middleware/upload.js";
+import { encryptUploadedFile } from "../services/file-encryption.service.js";
 
 export const announcementRouter = Router();
 
@@ -17,9 +19,19 @@ const createSchema = z.object({
   content: z.string().min(1),
   pinned: z.boolean().optional().default(false),
   expiresAt: z.string().transform(s => new Date(s)).optional().nullable(),
+  removeImage: z.boolean().optional().default(false),
 });
 
 const updateSchema = createSchema.partial();
+
+function parseAnnouncementBody(body: Record<string, unknown>) {
+  return {
+    ...body,
+    pinned: body.pinned === undefined ? undefined : body.pinned === true || body.pinned === "true",
+    removeImage: body.removeImage === true || body.removeImage === "true",
+    expiresAt: typeof body.expiresAt === "string" && !body.expiresAt.trim() ? null : body.expiresAt,
+  };
+}
 
 // List announcements
 announcementRouter.get("/", authenticate, teamContext, requireFeature("announcements"), async (req, res, next) => {
@@ -80,11 +92,26 @@ announcementRouter.get("/:id", authenticate, teamContext, requireFeature("announ
 });
 
 // Create announcement
-announcementRouter.post("/", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), validate(createSchema), async (req, res, next) => {
+announcementRouter.post("/", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), upload.single("image"), async (req, res, next) => {
   try {
+    const data = createSchema.parse(parseAnnouncementBody(req.body as Record<string, unknown>));
+    let imageUrl: string | null = null;
+    let imageFileName: string | null = null;
+
+    if (req.file) {
+      imageUrl = `/uploads/general/${req.file.filename}`;
+      imageFileName = req.file.originalname;
+      encryptUploadedFile(req.file);
+    }
+
     const announcement = await prisma.announcement.create({
       data: {
-        ...req.body,
+        title: data.title,
+        content: data.content,
+        pinned: data.pinned,
+        expiresAt: data.expiresAt,
+        imageUrl,
+        imageFileName,
         createdById: req.user!.id,
         teamId: req.teamId!,
       },
@@ -95,21 +122,39 @@ announcementRouter.post("/", authenticate, teamContext, requireFeature("announce
 
     safeEmit(`team:${req.teamId}`, "announcement:created", announcement);
 
-    channelNotify.notifyAnnouncement(req.teamId!, announcement.title, req.user!.displayName).catch(console.error);
+    channelNotify.notifyAnnouncement(req.teamId!, announcement.id).catch(console.error);
 
     res.status(201).json({ success: true, data: announcement });
   } catch (error) { next(error); }
 });
 
 // Update announcement
-announcementRouter.put("/:id", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), validate(updateSchema), async (req, res, next) => {
+announcementRouter.put("/:id", authenticate, teamContext, requireFeature("announcements"), requireTeamRole("COACH"), upload.single("image"), async (req, res, next) => {
   try {
     const existing = await prisma.announcement.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Announcement not found");
 
+    const data = updateSchema.parse(parseAnnouncementBody(req.body as Record<string, unknown>));
+    const updateData: Record<string, unknown> = {
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.content !== undefined && { content: data.content }),
+      ...(data.pinned !== undefined && { pinned: data.pinned }),
+      ...(data.expiresAt !== undefined && { expiresAt: data.expiresAt }),
+    };
+
+    if (data.removeImage) {
+      updateData.imageUrl = null;
+      updateData.imageFileName = null;
+    }
+    if (req.file) {
+      updateData.imageUrl = `/uploads/general/${req.file.filename}`;
+      updateData.imageFileName = req.file.originalname;
+      encryptUploadedFile(req.file);
+    }
+
     const announcement = await prisma.announcement.update({
       where: { id: String(req.params.id) },
-      data: req.body,
+      data: updateData,
       include: { createdBy: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
 

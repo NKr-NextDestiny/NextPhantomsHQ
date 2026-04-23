@@ -1,33 +1,146 @@
 # Next Phantoms HQ
 
-Team-Management-Plattform für Next Phantoms (Next Destiny eSports).
-Training, Scrims, Matches, Strategien, Lineups, Scouting, Replays, MOSS, Polls, Wiki, Notizen, Erinnerungen, Verfügbarkeit — alles mit Discord-Login und AES-256-GCM Verschlüsselung.
+Next Phantoms HQ is a single-team management platform for Next Phantoms / Next Destiny eSports.
 
----
+It includes:
+- trainings, matches, strats, lineup, scouting
+- replay and MOSS handling with AES-256-GCM encryption at rest
+- Discord-only authentication
+- email notifications
+- WhatsApp notifications through Evolution API
+- WhatsApp output modes for announcements, match results and poll results: `TEXT`, `IMAGE`, `BOTH`
+- admin-managed group and private delivery rules
 
-## Produktiv-Installation auf Debian 13 (ohne SSL)
+## Stack
 
-Komplette Anleitung von einem frischen Debian 13 Server bis zur laufenden App.
+- `client/`: Next.js 16, React 19, Tailwind CSS 4
+- `server/`: Express 5, Prisma 7, Socket.io
+- `shared/`: shared types/constants
+- DB: PostgreSQL 16+
+- Auth: Discord OAuth 2.0 + JWT cookies
+- WhatsApp: Evolution API v2
 
-### 1. System vorbereiten
+## What Changed
 
-```bash
-# Als root oder mit sudo
-apt update && apt upgrade -y
+This project now uses Evolution API as the WhatsApp provider.
 
-# Grundlegende Pakete
-apt install -y curl git wget gnupg2 ca-certificates lsb-release
+WhatsApp delivery now runs through Evolution API and supports:
+- plain text messages
+- generated result cards for match and poll results
+- image or image+text sending for announcements
+
+The notification model is now:
+- group messages for announcements, match results and poll results
+- private reminders for training and match attendance
+- email links are read-only after the first submitted answer
+- private WhatsApp links can be changed for 5 minutes
+- every outgoing email and WhatsApp message contains an automated-message notice
+
+Only admins can change notification settings. Email can be enabled globally and additionally per player. WhatsApp is enabled globally and uses a group JID for public delivery, while private attendance reminders use the stored player phone number.
+
+## Docker-First Operation
+
+The project is now intended to run primarily through Docker Compose.
+
+Windows development:
+
+```bat
+dev.bat
 ```
 
-### 2. Docker & Docker Compose installieren
+Debian install/update:
 
 ```bash
-# Docker GPG Key
+./update.sh install
+```
+
+Regular update afterwards:
+
+```bash
+./update.sh
+```
+
+## Local Development
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Useful commands:
+
+```bash
+pnpm build
+pnpm test
+
+cd server
+pnpm prisma generate
+pnpm prisma migrate dev
+```
+
+## Required Environment Variables
+
+Copy the example file first:
+
+```bash
+cp .env.example .env
+```
+
+Minimum required values:
+
+```ini
+DATABASE_URL=postgresql://phantoms:password@postgres:5432/next_phantoms_hq
+JWT_SECRET=generate-a-long-random-secret
+
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_CALLBACK_URL=http://YOUR-APP/api/auth/discord/callback
+REQUIRED_GUILD_ID=
+
+APP_URL=http://YOUR-APP
+API_URL=http://YOUR-APP
+NEXT_PUBLIC_API_URL=http://YOUR-APP
+
+FILE_ENCRYPTION_KEY=64-char-hex-string
+```
+
+Optional but important:
+
+```ini
+ALLOWED_ROLE_IDS=
+ADMIN_ROLE_IDS=
+ADMIN_USER_IDS=
+
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=noreply@nextphantoms.de
+
+DISCORD_WEBHOOK_URL=
+
+EVOLUTION_API_URL=http://EVOLUTION-VM:8080
+EVOLUTION_API_KEY=your-evolution-api-key
+EVOLUTION_INSTANCE=nextphantoms
+EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+```
+
+## Production Install for Next Phantoms HQ on Debian 13
+
+### 1. Prepare the server
+
+```bash
+apt update && apt upgrade -y
+apt install -y curl git ca-certificates gnupg2 lsb-release
+```
+
+### 2. Install Docker + Compose plugin
+
+```bash
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
 
-# Docker Repository
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
@@ -35,252 +148,340 @@ echo \
 
 apt update
 apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-# Docker ohne sudo (optional, für deinen User)
-usermod -aG docker $USER
-# Danach neu einloggen oder: newgrp docker
-
-# Prüfen
-docker --version
-docker compose version
 ```
 
-### 3. Projekt klonen
+### 3. Clone the project
 
 ```bash
-# Zielverzeichnis (z.B. /opt oder /home/deinuser)
 cd /opt
 git clone https://github.com/NKr-NextDestiny/NextPhantomsHQ.git
 cd NextPhantomsHQ
 ```
 
-### 4. Environment konfigurieren
+### 4. Configure `.env`
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Folgende Werte MÜSSEN angepasst werden:
+Set at least:
+- database credentials
+- `JWT_SECRET`
+- Discord OAuth values
+- `REQUIRED_GUILD_ID`
+- `APP_URL`, `API_URL`, `NEXT_PUBLIC_API_URL`
+- `FILE_ENCRYPTION_KEY`
+
+If you want WhatsApp notifications, also set:
+- `EVOLUTION_API_URL`
+- `EVOLUTION_API_KEY`
+- `EVOLUTION_INSTANCE`
+- optional: `EVOLUTION_ATTENDANCE_INSTANCE` for a separate private-message instance
+
+### 5. Start the app
+
+```bash
+docker compose up -d --build
+```
+
+### 6. Check status
+
+```bash
+docker compose ps
+docker compose logs -f
+curl http://localhost/api/health
+```
+
+The stack starts:
+- `postgres`
+- `server`
+- `client`
+- `nginx`
+
+### 7. First login
+
+1. Open `http://YOUR-APP`
+2. Sign in with Discord
+3. Access is controlled by:
+   - `REQUIRED_GUILD_ID`
+   - `ALLOWED_ROLE_IDS`
+   - `ADMIN_ROLE_IDS`
+   - `ADMIN_USER_IDS`
+
+### 8. Admin notification setup
+
+Open `Settings -> Notifications` and configure:
+
+1. global email on/off
+2. global WhatsApp on/off
+3. WhatsApp group JID
+4. output mode for announcements
+5. output mode for match results
+6. output mode for poll results
+
+In `Settings -> Members`, admins can additionally:
+
+1. enable or disable email per player
+2. maintain the player phone number used for private WhatsApp reminders
+
+## Evolution API on a Separate Debian 13 VM
+
+This is the recommended setup for WhatsApp delivery.
+
+Evolution API v2 currently expects its own Redis and persistent database configuration. The official docs show Docker-based deployment with an API key and separate Postgres/Redis requirements, so this guide uses that layout.
+
+### 1. Prepare the VM
+
+```bash
+apt update && apt upgrade -y
+apt install -y curl git ca-certificates gnupg2 lsb-release ufw
+```
+
+Install Docker exactly like on the app server.
+
+### 2. Create a working directory
+
+```bash
+mkdir -p /opt/evolution-api
+cd /opt/evolution-api
+```
+
+### 3. Create `.env`
+
+```bash
+nano .env
+```
+
+Example:
 
 ```ini
-# Sichere Passwörter setzen!
-DB_PASSWORD=ein-langes-sicheres-passwort-hier
-DATABASE_URL=postgresql://phantoms:ein-langes-sicheres-passwort-hier@postgres:5432/next_phantoms_hq
+SERVER_TYPE=http
+SERVER_PORT=8080
+SERVER_URL=http://YOUR-EVOLUTION-VM:8080
 
-# JWT Secret generieren (mindestens 64 Zeichen)
-# Generieren: openssl rand -base64 48
-JWT_SECRET=hier-langen-zufälligen-string-eintragen
+AUTHENTICATION_API_KEY=replace-with-a-random-secret
 
-# Discord OAuth (https://discord.com/developers/applications)
-DISCORD_CLIENT_ID=deine-client-id
-DISCORD_CLIENT_SECRET=dein-client-secret
-DISCORD_CALLBACK_URL=http://DEINE-SERVER-IP/api/auth/discord/callback
+DATABASE_ENABLED=true
+DATABASE_PROVIDER=postgresql
+DATABASE_CONNECTION_URI=postgresql://evolution:evolutionpass@postgres:5432/evolution
+DATABASE_CONNECTION_CLIENT_NAME=nextphantoms
 
-# Discord Server ID (Rechtsklick auf Server -> "Server-ID kopieren")
-REQUIRED_GUILD_ID=deine-guild-id
+DATABASE_SAVE_DATA_INSTANCE=true
+DATABASE_SAVE_DATA_NEW_MESSAGE=true
+DATABASE_SAVE_MESSAGE_UPDATE=true
+DATABASE_SAVE_DATA_CONTACTS=true
+DATABASE_SAVE_DATA_CHATS=true
+DATABASE_SAVE_DATA_LABELS=true
+DATABASE_SAVE_DATA_HISTORIC=true
 
-# Optional: Rollen-IDs für Login-Berechtigung
-ALLOWED_ROLE_IDS=
-# Optional: Rollen-IDs die Admin-Zugang bekommen
-ADMIN_ROLE_IDS=
-# Optional: Discord User-IDs die immer Admin sind
-ADMIN_USER_IDS=
+CACHE_REDIS_ENABLED=true
+CACHE_REDIS_URI=redis://redis:6379/6
+CACHE_REDIS_PREFIX_KEY=evolution
+CACHE_REDIS_SAVE_INSTANCES=false
+CACHE_LOCAL_ENABLED=false
 
-# URLs auf deine Server-IP/Domain anpassen
-APP_URL=http://DEINE-SERVER-IP
-API_URL=http://DEINE-SERVER-IP
-NEXT_PUBLIC_API_URL=http://DEINE-SERVER-IP
-
-# File Encryption Key generieren (PFLICHT)
-# Generieren: openssl rand -hex 32
-FILE_ENCRYPTION_KEY=hier-64-zeichen-hex-string
-
-# SMTP (optional, für E-Mail-Benachrichtigungen)
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=noreply@deinedomain.de
-
-# Discord Webhook (optional, für Benachrichtigungen im Channel)
-DISCORD_WEBHOOK_URL=
+WEBSOCKET_ENABLED=false
+TELEMETRY=false
 ```
 
-### 5. Discord App einrichten
+### 4. Create `docker-compose.yml`
 
-1. Gehe zu https://discord.com/developers/applications
-2. "New Application" -> Name vergeben
-3. Unter **OAuth2**:
-   - Notiere **Client ID** und **Client Secret**
-   - Unter "Redirects" diese URL eintragen:
-     ```
-     http://DEINE-SERVER-IP/api/auth/discord/callback
-     ```
-4. Trage Client ID und Secret in die `.env` ein
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolutionpass
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_postgres:/var/lib/postgresql/data
 
-### 6. Uploads-Verzeichnis erstellen
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - evolution_redis:/data
 
-```bash
-mkdir -p uploads/general uploads/replays
-chmod -R 777 uploads
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  evolution_postgres:
+  evolution_redis:
+  evolution_instances:
 ```
 
-### 7. App bauen und starten
+### 5. Start Evolution API
 
 ```bash
-docker compose up -d --build
+docker compose up -d
+docker compose logs -f evolution-api
 ```
 
-Das startet:
-- **postgres** — PostgreSQL 16 Datenbank
-- **server** — Express.js API (Port 4000 intern)
-- **client** — Next.js Frontend (Port 3000 intern)
-- **nginx** — Reverse Proxy (Port 80 extern)
+### 6. Firewall
 
-Der Server führt beim Start automatisch `prisma migrate deploy` aus.
+If the app server talks to Evolution directly, only open port `8080` from the app server IP if possible.
 
-Erster Build dauert einige Minuten. Fortschritt prüfen:
+Example with UFW:
 
 ```bash
-docker compose logs -f
-```
-
-### 8. Prüfen ob alles läuft
-
-```bash
-# Alle Container müssen "Up" sein
-docker compose ps
-
-# Health Check
-curl http://localhost/api/health
-# Erwartet: {"success":true,"data":{"status":"ok",...}}
-
-# Frontend
-curl -I http://localhost
-# Erwartet: HTTP/1.1 200 OK
-```
-
-App ist jetzt erreichbar unter `http://DEINE-SERVER-IP`.
-
-### 9. Erster Login
-
-1. Öffne `http://DEINE-SERVER-IP` im Browser
-2. Klicke "Mit Discord anmelden"
-3. Admin-Zugriff wird über `ADMIN_USER_IDS` und `ADMIN_ROLE_IDS` in der `.env` gesteuert
-4. Weitere User können sich einloggen wenn sie im konfigurierten Discord-Server sind
-
----
-
-## Discord IDs finden
-
-Discord Entwicklermodus muss aktiviert sein:
-**Einstellungen -> App-Einstellungen -> Erweitert -> Entwicklermodus AN**
-
-| Was | Wo | .env Variable |
-|---|---|---|
-| Server ID | Rechtsklick auf Server-Name -> "Server-ID kopieren" | `REQUIRED_GUILD_ID` |
-| Rollen ID | Server-Einstellungen -> Rollen -> Rechtsklick -> "Rollen-ID kopieren" | `ALLOWED_ROLE_IDS`, `ADMIN_ROLE_IDS` |
-| User ID | Rechtsklick auf User -> "Benutzer-ID kopieren" | `ADMIN_USER_IDS` |
-
-Mehrere IDs mit Komma trennen: `ADMIN_USER_IDS=123456789,987654321`
-
----
-
-## Nützliche Befehle
-
-```bash
-# Logs anzeigen
-docker compose logs -f
-docker compose logs -f server    # nur Server
-docker compose logs -f client    # nur Client
-docker compose logs -f postgres  # nur DB
-
-# Neustart
-docker compose restart
-
-# Stoppen
-docker compose down
-
-# Komplett neu bauen (nach Code-Updates)
-docker compose down
-docker compose up -d --build
-
-# Datenbank-Shell
-docker compose exec postgres psql -U phantoms -d next_phantoms_hq
-
-# Prisma Studio (DB GUI, nur für Debugging)
-docker compose exec server npx prisma studio
-
-# Container Status
-docker compose ps
-
-# Speicherplatz prüfen
-docker system df
-```
-
-## Updates einspielen
-
-```bash
-cd /opt/NextPhantomsHQ
-git pull
-docker compose down
-docker compose up -d --build
-```
-
-Der Server führt Datenbankmigrationen automatisch beim Start aus.
-
-## Backup
-
-```bash
-# Datenbank-Dump erstellen
-docker compose exec postgres pg_dump -U phantoms next_phantoms_hq > backup_$(date +%Y%m%d).sql
-
-# Uploads sichern
-tar czf uploads_backup_$(date +%Y%m%d).tar.gz uploads/
-
-# Backup wiederherstellen
-cat backup_20260408.sql | docker compose exec -T postgres psql -U phantoms next_phantoms_hq
-```
-
-## Firewall (UFW)
-
-```bash
-apt install -y ufw
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow ssh
-ufw allow 80/tcp    # HTTP
+ufw allow from APP_SERVER_IP to any port 8080 proto tcp
 ufw enable
 ```
 
-## Troubleshooting
+### 7. Create the WhatsApp instance
 
-**Container startet nicht:**
+Evolution API exposes instance creation through `POST /instance/create`.
+
+Example:
+
 ```bash
-docker compose logs server
-# Meistens: DATABASE_URL falsch oder Postgres noch nicht bereit
-# Lösung: docker compose restart server
+curl --request POST \
+  --url http://YOUR-EVOLUTION-VM:8080/instance/create \
+  --header 'Content-Type: application/json' \
+  --header 'apikey: YOUR_API_KEY' \
+  --data '{
+    "instanceName": "nextphantoms",
+    "integration": "WHATSAPP-BAILEYS",
+    "qrcode": true,
+    "rejectCall": false,
+    "groupsIgnore": true,
+    "alwaysOnline": false,
+    "readMessages": false,
+    "readStatus": false,
+    "syncFullHistory": false
+  }'
 ```
 
-**Discord Login leitet nicht weiter:**
-- Prüfen: DISCORD_CALLBACK_URL in .env UND in Discord Developer Portal müssen identisch sein
-- Format: `http://DEINE-SERVER-IP/api/auth/discord/callback`
+Use the same instance name in the app:
 
-**"Not in server" Fehler beim Login:**
-- REQUIRED_GUILD_ID prüfen — ist die richtige Server-ID?
-- Ist der User wirklich Mitglied des Discord-Servers?
-
-**Datei-Upload schlägt fehl:**
-- `uploads/` Verzeichnis existiert? Rechte korrekt?
-- `docker compose exec server ls -la /app/server/uploads/`
-
-**Port 80 schon belegt:**
-```bash
-# Wer nutzt Port 80?
-ss -tlnp | grep :80
-# Anderen Dienst stoppen oder in docker-compose.yml Port ändern
+```ini
+EVOLUTION_INSTANCE=nextphantoms
 ```
 
----
-_Last reviewed: 2026-04-11_
+Then connect the WhatsApp account by scanning the QR code in Evolution Manager or via the instance connect flow.
+
+Optional: create a second instance for private attendance reminders and store it as:
+
+```ini
+EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+```
+
+### 8. Connect the app to Evolution
+
+In the Next Phantoms HQ `.env`:
+
+```ini
+EVOLUTION_API_URL=http://YOUR-EVOLUTION-VM:8080
+EVOLUTION_API_KEY=YOUR_API_KEY
+EVOLUTION_INSTANCE=nextphantoms
+EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+```
+
+Restart the app stack afterwards:
+
+```bash
+cd /opt/NextPhantomsHQ
+docker compose down
+docker compose up -d --build
+```
+
+## In-App Notification Settings
+
+After Evolution is connected:
+
+1. Go to `Settings -> Notifications`
+2. Enable or disable email globally
+3. Enable or disable WhatsApp globally
+4. Set the WhatsApp group JID
+5. Choose output mode for:
+   - announcements
+   - match results
+   - poll results
+
+Modes:
+- `TEXT`: plain text only
+- `IMAGE`: card/image only
+- `BOTH`: image with accompanying text
+
+Member-specific controls are managed in `Settings -> Members`.
+
+## Attendance Link Behavior
+
+- Email reminder links:
+  - one submission only
+  - if the player already voted, the page only shows the existing response
+  - no change is possible through the email link
+- Private WhatsApp reminder links:
+  - can be updated while the 5-minute token window is valid
+  - players can include a reason, for example why they cannot attend
+
+## Replay Parsing Notes
+
+Rainbow Six replay parsing is best-effort and works against real `.rec` files.
+
+The parser now:
+- extracts player names from replay headers more reliably
+- scans all zstd-compressed frames instead of only the last one
+- resolves partial in-frame names against known round players
+
+It still depends on Ubisoft replay internals, so future game updates can require parser adjustments.
+
+## Database Normalization Notes
+
+The notification-related data is separated by responsibility:
+
+- team-wide switches and group delivery settings live on `Team`
+- per-user email preference and phone number live on `User`
+- membership-specific role/status lives on `TeamMember`
+- actual attendance decisions live on `TrainingVote` and `MatchVote`
+- short-lived reminder-link state lives on `AttendanceToken`
+
+That keeps the schema close to normal relational design and avoids duplicating vote state inside configuration records.
+
+## Deploying DB Migrations
+
+If you deploy manually outside the app container, run:
+
+```bash
+cd /opt/NextPhantomsHQ/server
+pnpm prisma migrate deploy
+pnpm prisma generate
+```
+
+The Docker setup already runs `prisma migrate deploy` during startup.
+
+## Useful Commands
+
+```bash
+docker compose logs -f
+docker compose logs -f server
+docker compose logs -f client
+docker compose logs -f postgres
+
+docker compose ps
+docker compose restart
+docker compose down
+docker compose up -d --build
+```
+
+## Last Reviewed
+
+Last reviewed: 2026-04-23

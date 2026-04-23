@@ -8,7 +8,7 @@ import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Input, Textarea } from "@/components/ui/Input";
+import { Input, Select, Textarea } from "@/components/ui/Input";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/provider";
 
@@ -20,7 +20,12 @@ interface TeamSettings {
   logoUrl?: string;
   discordWebhookUrl?: string;
   defaultTimezone?: string;
-  notificationChannel?: string;
+  emailNotificationsEnabled?: boolean;
+  whatsappNotificationsEnabled?: boolean;
+  whatsappGroupJid?: string | null;
+  announcementNotificationMode?: "TEXT" | "IMAGE" | "BOTH";
+  matchResultNotificationMode?: "TEXT" | "IMAGE" | "BOTH";
+  pollResultNotificationMode?: "TEXT" | "IMAGE" | "BOTH";
 }
 
 interface NotificationConfig {
@@ -49,6 +54,8 @@ interface MemberData {
     isAdmin: boolean;
     r6Username?: string;
     email?: string;
+    phone?: string;
+    emailNotifications?: boolean;
   };
 }
 
@@ -119,14 +126,24 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
-  const [notificationChannel, setNotificationChannel] = useState("NONE");
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
+  const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false);
+  const [whatsappGroupJid, setWhatsappGroupJid] = useState("");
+  const [announcementNotificationMode, setAnnouncementNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const [matchResultNotificationMode, setMatchResultNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const [pollResultNotificationMode, setPollResultNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const [gameConfig, setGameConfig] = useState<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
   const [newMap, setNewMap] = useState("");
   const [newCharacter, setNewCharacter] = useState("");
   const [newRole, setNewRole] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
   const initialTeamForm = useRef({ name: "", tag: "", description: "", discordWebhookUrl: "" });
-  const initialChannel = useRef("NONE");
+  const initialAnnouncementMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const initialMatchResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const initialPollResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
+  const initialEmailEnabled = useRef(true);
+  const initialWhatsappEnabled = useRef(false);
+  const initialWhatsappGroupJid = useRef("");
 
   // Nur Admins dürfen hier rein
   useEffect(() => {
@@ -149,9 +166,21 @@ export default function SettingsPage() {
         const form = { name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" };
         setTeamForm(form);
         initialTeamForm.current = form;
-        const ch = ts.notificationChannel || "NONE";
-        setNotificationChannel(ch);
-        initialChannel.current = ch;
+        setEmailNotificationsEnabled(ts.emailNotificationsEnabled ?? true);
+        setWhatsappNotificationsEnabled(ts.whatsappNotificationsEnabled ?? false);
+        setWhatsappGroupJid(ts.whatsappGroupJid || "");
+        initialEmailEnabled.current = ts.emailNotificationsEnabled ?? true;
+        initialWhatsappEnabled.current = ts.whatsappNotificationsEnabled ?? false;
+        initialWhatsappGroupJid.current = ts.whatsappGroupJid || "";
+        const announcementMode = ts.announcementNotificationMode || "TEXT";
+        const matchMode = ts.matchResultNotificationMode || "TEXT";
+        const pollMode = ts.pollResultNotificationMode || "TEXT";
+        setAnnouncementNotificationMode(announcementMode);
+        setMatchResultNotificationMode(matchMode);
+        setPollResultNotificationMode(pollMode);
+        initialAnnouncementMode.current = announcementMode;
+        initialMatchResultMode.current = matchMode;
+        initialPollResultMode.current = pollMode;
       }
       if (membersRes.status === "fulfilled" && membersRes.value.data) {
         setMembers(membersRes.value.data);
@@ -174,7 +203,12 @@ export default function SettingsPage() {
   const hasUnsavedChanges = () => {
     const tf = initialTeamForm.current;
     const teamDirty = teamForm.name !== tf.name || teamForm.tag !== tf.tag || teamForm.description !== tf.description || teamForm.discordWebhookUrl !== tf.discordWebhookUrl;
-    const channelDirty = notificationChannel !== initialChannel.current;
+    const channelDirty = emailNotificationsEnabled !== initialEmailEnabled.current
+      || whatsappNotificationsEnabled !== initialWhatsappEnabled.current
+      || whatsappGroupJid !== initialWhatsappGroupJid.current
+      || announcementNotificationMode !== initialAnnouncementMode.current
+      || matchResultNotificationMode !== initialMatchResultMode.current
+      || pollResultNotificationMode !== initialPollResultMode.current;
     return teamDirty || channelDirty;
   };
 
@@ -398,16 +432,15 @@ export default function SettingsPage() {
           </p>
           <div className="space-y-3">
             {([
-              { value: "NONE", label: t("notifications.off"), desc: t("notifications.offDesc"), available: true },
-              { value: "EMAIL", label: t("notifications.email"), desc: t("notifications.emailDesc"), available: notifyConfig.email },
-              { value: "WHATSAPP", label: t("notifications.whatsapp"), desc: t("notifications.whatsappDesc"), available: notifyConfig.whatsapp },
+              { value: "EMAIL", label: t("notifications.email"), desc: t("notifications.emailDesc"), available: notifyConfig.email, enabled: emailNotificationsEnabled, setEnabled: setEmailNotificationsEnabled },
+              { value: "WHATSAPP", label: t("notifications.whatsapp"), desc: t("notifications.whatsappDesc"), available: notifyConfig.whatsapp, enabled: whatsappNotificationsEnabled, setEnabled: setWhatsappNotificationsEnabled },
             ] as const).map((opt) => (
               <button
                 key={opt.value}
                 disabled={!opt.available}
-                onClick={() => setNotificationChannel(opt.value)}
+                onClick={() => opt.available && opt.setEnabled(!opt.enabled)}
                 className={`w-full rounded-lg border p-4 text-left transition-all ${
-                  notificationChannel === opt.value
+                  opt.enabled
                     ? "border-[var(--primary)] bg-[var(--primary)]/10"
                     : opt.available
                       ? "border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)]/50"
@@ -419,21 +452,65 @@ export default function SettingsPage() {
                     <p className="font-medium text-[var(--foreground)]">{opt.label}</p>
                     <p className="text-xs text-[var(--muted-foreground)]">{opt.desc}</p>
                   </div>
-                  {!opt.available && (
+                  {!opt.available ? (
                     <Badge variant="outline">{tc("notConfigured")}</Badge>
-                  )}
-                  {notificationChannel === opt.value && opt.available && (
-                    <div className="h-3 w-3 rounded-full bg-[var(--primary)]" />
+                  ) : (
+                    <div className={`h-3 w-3 rounded-full ${opt.enabled ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`} />
                   )}
                 </div>
               </button>
             ))}
           </div>
+          <Input
+            label="WhatsApp Gruppen-JID"
+            value={whatsappGroupJid}
+            onChange={(e) => setWhatsappGroupJid(e.target.value)}
+            placeholder="1234567890-123456789@g.us"
+          />
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <Select
+              label="Ankündigungen per WhatsApp"
+              value={announcementNotificationMode}
+              onChange={(e) => setAnnouncementNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
+              options={[
+                { value: "TEXT", label: "Nur Text" },
+                { value: "IMAGE", label: "Nur Bild" },
+                { value: "BOTH", label: "Bild + Text" },
+              ]}
+            />
+            <Select
+              label="Match-Ergebnisse per WhatsApp"
+              value={matchResultNotificationMode}
+              onChange={(e) => setMatchResultNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
+              options={[
+                { value: "TEXT", label: "Nur Text" },
+                { value: "IMAGE", label: "Nur Bild" },
+                { value: "BOTH", label: "Bild + Text" },
+              ]}
+            />
+            <Select
+              label="Poll-Ergebnisse per WhatsApp"
+              value={pollResultNotificationMode}
+              onChange={(e) => setPollResultNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
+              options={[
+                { value: "TEXT", label: "Nur Text" },
+                { value: "IMAGE", label: "Nur Bild" },
+                { value: "BOTH", label: "Bild + Text" },
+              ]}
+            />
+          </div>
           <div className="mt-4">
             <Button onClick={async () => {
               setSaving(true);
               try {
-                await api.put("/api/team", { notificationChannel });
+                await api.put("/api/team", {
+                  emailNotificationsEnabled,
+                  whatsappNotificationsEnabled,
+                  whatsappGroupJid: whatsappGroupJid || null,
+                  announcementNotificationMode,
+                  matchResultNotificationMode,
+                  pollResultNotificationMode,
+                });
                 success(tc("saved"));
               } catch { error(tc("saveError")); }
               finally { setSaving(false); }
@@ -474,7 +551,7 @@ export default function SettingsPage() {
                     value={m.role}
                     onChange={async (e) => {
                       try {
-                        await api.put(`/api/team/members/${m.user.id}`, { role: e.target.value, status: m.status });
+                        await api.put(`/api/team/members/${m.user.id}`, { role: e.target.value, status: m.status, phone: m.user.phone, emailNotifications: m.user.emailNotifications });
                         success(tc("saved"));
                         load();
                       } catch { error(tc("saveError")); }
@@ -489,7 +566,7 @@ export default function SettingsPage() {
                     value={m.status}
                     onChange={async (e) => {
                       try {
-                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: e.target.value });
+                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: e.target.value, phone: m.user.phone, emailNotifications: m.user.emailNotifications });
                         success(tc("saved"));
                         load();
                       } catch { error(tc("saveError")); }
@@ -500,6 +577,33 @@ export default function SettingsPage() {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
+                  <input
+                    value={m.user.phone || ""}
+                    onChange={(e) => setMembers((prev) => prev.map((member) => member.id === m.id ? { ...member, user: { ...member.user, phone: e.target.value } } : member))}
+                    onBlur={async () => {
+                      try {
+                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, phone: m.user.phone || null, emailNotifications: m.user.emailNotifications });
+                        success(tc("saved"));
+                        load();
+                      } catch { error(tc("saveError")); }
+                    }}
+                    placeholder="+491234567890"
+                    className="w-36 rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(m.user.emailNotifications)}
+                      onChange={async (e) => {
+                        try {
+                          await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, phone: m.user.phone || null, emailNotifications: e.target.checked });
+                          success(tc("saved"));
+                          load();
+                        } catch { error(tc("saveError")); }
+                      }}
+                    />
+                    E-Mail
+                  </label>
                   {m.user.id !== user?.id && (
                     <button onClick={() => removeMember(m.user.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
                       <Trash2 className="h-4 w-4" />

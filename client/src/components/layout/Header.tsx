@@ -30,7 +30,7 @@ interface NotificationsResponse {
 
 function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ displayName: "", email: "", phone: "" });
+  const [form, setForm] = useState({ displayName: "" });
   const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { success, error } = useToast();
@@ -40,11 +40,11 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const { locale, setLocale } = useI18n();
   const { supported, permission, enabled, requestPermission, enable, disable } = useBrowserNotifications();
 
-  const initialForm = useRef({ displayName: "", email: "", phone: "" });
+  const initialForm = useRef({ displayName: "" });
 
   useEffect(() => {
     if (user && open) {
-      const f = { displayName: user.displayName || "", email: user.email || "", phone: user.phone || "" };
+      const f = { displayName: user.displayName || "" };
       setForm(f);
       initialForm.current = f;
     }
@@ -52,7 +52,7 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
 
   const hasUnsaved = () => {
     const i = initialForm.current;
-    return form.displayName !== i.displayName || form.email !== i.email || form.phone !== i.phone;
+    return form.displayName !== i.displayName;
   };
 
   const tryClose = () => {
@@ -73,7 +73,7 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const saveProfile = async () => {
     setSaving(true);
     try {
-      await api.put("/api/users/me", { ...form, phone: form.phone || null });
+      await api.put("/api/users/me", { ...form });
       success(tc("saved"));
     } catch {
       error(tc("saveError"));
@@ -116,15 +116,8 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
               <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">{tp("personal.displayName")}</label>
               <input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
             </div>
-            {/* Email */}
-            <div>
-              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">{tp("personal.email")}</label>
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
-            </div>
-            {/* Phone */}
-            <div>
-              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">{tp("personal.phone")}</label>
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+491234567890" className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
+              Kontakt- und Benachrichtigungseinstellungen werden vom Admin verwaltet.
             </div>
 
             {/* Save button */}

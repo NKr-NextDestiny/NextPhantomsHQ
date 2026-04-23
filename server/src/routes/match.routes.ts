@@ -179,6 +179,9 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
     await logAudit(req.user!.id, "CREATE", "match", match.id, { opponent: match.opponent, type: match.type }, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:created", full);
     sendWebhookNotification(buildMatchEmbed({ opponent: match.opponent, map: match.map, result: match.result, scoreUs: match.scoreUs, scoreThem: match.scoreThem, competition: match.competition, type: match.type })).catch(console.error);
+    if (match.scoreUs !== null && match.scoreThem !== null && match.result) {
+      channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
+    }
 
     res.status(201).json({ success: true, data: full });
   } catch (error) { next(error); }
@@ -226,6 +229,9 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
 
     await logAudit(req.user!.id, "UPDATE", "match", match.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:updated", full);
+    if (match.scoreUs !== null && match.scoreThem !== null && match.result) {
+      channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
+    }
 
     res.json({ success: true, data: full });
   } catch (error) { next(error); }
@@ -298,6 +304,7 @@ matchRouter.post("/:id/result", authenticate, teamContext, requireFeature("match
 
     await logAudit(req.user!.id, "UPDATE", "match_result", match.id, undefined, req.teamId);
     safeEmit(`team:${req.teamId}`, "match:result", match);
+    channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
 
     res.json({ success: true, data: match });
   } catch (error) { next(error); }

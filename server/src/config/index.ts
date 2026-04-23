@@ -36,9 +36,10 @@ export const config = {
   smtpPass: process.env.SMTP_PASS || "",
   smtpFrom: process.env.SMTP_FROM || "noreply@nextphantoms.de",
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || "",
-  wahaApiUrl: process.env.WAHA_API_URL || "",
-  wahaApiKey: process.env.WAHA_API_KEY || "",
-  wahaSession: process.env.WAHA_SESSION || "default",
+  evolutionApiUrl: process.env.EVOLUTION_API_URL || "",
+  evolutionApiKey: process.env.EVOLUTION_API_KEY || "",
+  evolutionInstance: process.env.EVOLUTION_INSTANCE || "",
+  evolutionAttendanceInstance: process.env.EVOLUTION_ATTENDANCE_INSTANCE || process.env.EVOLUTION_INSTANCE || "",
 };
 
 const requiredVars = [

@@ -77,7 +77,8 @@ class ApiClient {
   async put<T>(endpoint: string, body?: unknown) {
     return this.request<T>(endpoint, {
       method: "PUT",
-      body: body ? JSON.stringify(body) : undefined,
+      body:
+        body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });
   }
 

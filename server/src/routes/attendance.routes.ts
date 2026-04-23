@@ -36,6 +36,9 @@ attendanceRouter.get("/:token", async (req, res, next) => {
         eventDate,
         alreadyResponded: !!at.respondedAt,
         currentResponse: at.response,
+        currentReason: at.reason,
+        channel: at.channel,
+        canUpdate: at.channel === "WHATSAPP" && at.expiresAt >= new Date(),
       },
     });
   } catch (error) { next(error); }
@@ -53,6 +56,9 @@ attendanceRouter.post("/:token", async (req, res, next) => {
     const at = await prisma.attendanceToken.findUnique({ where: { token: String(req.params.token) } });
     if (!at) throw new AppError(404, "Token not found");
     if (at.expiresAt < new Date()) throw new AppError(410, "Token has expired");
+    if (at.channel === "EMAIL" && at.respondedAt) {
+      throw new AppError(409, "You have already responded via this email link");
+    }
 
     // Update the token
     await prisma.attendanceToken.update({

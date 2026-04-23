@@ -376,11 +376,11 @@
       <p class="feature-desc">
         Externe Benachrichtigungen über konfigurierbare Kanäle.
         <ul>
-          <li><strong>Kanal-Auswahl</strong> — In den Einstellungen wählbar: E-Mail (SMTP), WhatsApp (WAHA) oder Aus</li>
+          <li><strong>Kanal-Auswahl</strong> — In den Einstellungen wählbar: E-Mail (SMTP), WhatsApp (Evolution API) oder Aus</li>
           <li><strong>E-Mail</strong> — SMTP-basiert. HTML-Templates für Event-Erstellung, Änderungen, Löschungen, Ankündigungen, Erinnerungen und Poll-Ergebnisse</li>
-          <li><strong>WhatsApp</strong> — Über WAHA (WhatsApp HTTP API). Alle Benachrichtigungstypen werden auch per WhatsApp unterstützt</li>
+          <li><strong>WhatsApp</strong> — Über Evolution API. Alle Benachrichtigungstypen werden auch per WhatsApp unterstützt</li>
           <li><strong>Erinnerungen</strong> — Automatische Erinnerungen vor Events mit konfigurierbaren Intervallen (z.B. 60 Min und 24h vorher)</li>
-          <li><strong>Ausgegraut</strong> — Wenn SMTP- oder WAHA-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option in den Einstellungen ausgegraut</li>
+          <li><strong>Ausgegraut</strong> — Wenn SMTP- oder Evolution-API-Umgebungsvariablen nicht gesetzt sind, ist die jeweilige Option in den Einstellungen ausgegraut</li>
         </ul>
       </p>
     </div>
@@ -453,7 +453,7 @@
         Zentrale Konfiguration der Plattform. Nur für Benutzer mit Admin-Rechten sichtbar und zugänglich.
         <ul>
           <li><strong>Team-Profil</strong> — Team-Name, Tag, Logo und Beschreibung verwalten. Discord-Webhook-URL konfigurieren</li>
-          <li><strong>Benachrichtigungs-Kanal</strong> — Team-weiten Benachrichtigungskanal wählen: E-Mail (SMTP), WhatsApp (WAHA) oder Aus. Nicht konfigurierte Kanäle werden ausgegraut angezeigt</li>
+          <li><strong>Benachrichtigungs-Kanal</strong> — Team-weiten Benachrichtigungskanal wählen: E-Mail (SMTP), WhatsApp (Evolution API) oder Aus. Nicht konfigurierte Kanäle werden ausgegraut angezeigt</li>
           <li><strong>Browser-Benachrichtigungen</strong> — Einstellung für Desktop-Notifications (gilt pro Benutzer, hier als Admin-Übersicht)</li>
           <li><strong>Mitglieder-Verwaltung</strong> — Alle Team-Mitglieder mit Rollen und Status. Mitglieder entfernen möglich</li>
         </ul>
@@ -569,7 +569,7 @@
           <li><strong>Backend</strong> — Express.js 5, TypeScript (strict mode), Prisma 7 ORM, Socket.io</li>
           <li><strong>Datenbank</strong> — PostgreSQL 16+</li>
           <li><strong>Auth</strong> — Discord OAuth 2.0 + JWT (httpOnly Cookies)</li>
-          <li><strong>Benachrichtigungen</strong> — Nodemailer (SMTP), WAHA (WhatsApp), Discord Webhooks, Browser Notification API</li>
+          <li><strong>Benachrichtigungen</strong> — Nodemailer (SMTP), Evolution API (WhatsApp), Discord Webhooks, Browser Notification API</li>
           <li><strong>Deployment</strong> — Docker Compose, Nginx, pnpm Workspaces (Monorepo)</li>
           <li><strong>Shared Types</strong> — TypeScript-Typen und Konstanten im <code>shared/</code> Paket, von Client und Server genutzt</li>
         </ul>
@@ -580,3 +580,5 @@
   </div>
 </body>
 </html>
+
+

@@ -125,8 +125,63 @@ function readPrintableString(buf: Buffer, offset: number, maxLen = 64): string {
   return s.length >= 2 ? s : "";
 }
 
+function readPlayerName(buf: Buffer, offset: number, maxLen = 48): string {
+  let end = offset;
+  while (end < buf.length && end - offset < maxLen) {
+    const ch = String.fromCharCode(buf[end]);
+    if (!/[A-Za-z0-9_.-]/.test(ch)) break;
+    end++;
+  }
+  return buf.slice(offset, end).toString("ascii").trim();
+}
+
+function sanitizePlayerName(value: string): string {
+  const match = value.match(/[A-Za-z0-9_.-]{2,32}/);
+  return (match?.[0] ?? "").replace(/\.{2,}$/g, "");
+}
+
+function resolveKnownPlayer(candidate: string, knownPlayers: string[]): string {
+  if (!candidate) return "";
+
+  const cleaned = candidate.toLowerCase().replace(/\.{2,}$/g, "");
+  const exact = knownPlayers.find((player) => player.toLowerCase() === cleaned);
+  if (exact) return exact;
+
+  const ranked = knownPlayers
+    .map((player) => {
+      const lower = player.toLowerCase();
+      let score = 0;
+      if (lower.includes(cleaned) || cleaned.includes(lower)) score = Math.min(lower.length, cleaned.length);
+      if (lower.endsWith(cleaned) || cleaned.endsWith(lower)) score += 8;
+      if (lower.startsWith(cleaned) || cleaned.startsWith(lower)) score += 4;
+      return { player, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || b.player.length - a.player.length);
+
+  if (ranked[0]) return ranked[0].player;
+  return cleaned.length >= 4 ? candidate : "";
+}
+
 /** Scan a decompressed frame for kill events. */
-function extractKillsFromFrame(frame: Buffer): ParsedKill[] {
+function resolvePlayerNameFromRegion(frame: Buffer, position: number, knownPlayers: string[]): string {
+  const searchStart = Math.max(0, position - 96);
+  const searchEnd = Math.min(frame.length, position + 220);
+  const region = frame.slice(searchStart, searchEnd);
+
+  let best: { name: string; distance: number } | null = null;
+  for (const player of knownPlayers) {
+    const idx = region.indexOf(player);
+    if (idx === -1) continue;
+    const absolute = searchStart + idx;
+    const distance = Math.abs(absolute - position);
+    if (!best || distance < best.distance) best = { name: player, distance };
+  }
+
+  return best?.name ?? "";
+}
+
+function extractKillsFromFrame(frame: Buffer, knownPlayers: string[]): ParsedKill[] {
   const raw: { killer: string; victim: string; headshot: boolean }[] = [];
 
   const killerMarkers = [
@@ -138,9 +193,10 @@ function extractKillsFromFrame(frame: Buffer): ParsedKill[] {
     let killer = "";
     for (const delta of [5, 6, 8, 9, 10]) {
       if (kpos + 4 + delta >= frame.length) continue;
-      const s = readPrintableString(frame, kpos + 4 + delta);
-      if (s.length >= 2 && s.length <= 48) { killer = s; break; }
+      const s = sanitizePlayerName(readPlayerName(frame, kpos + 4 + delta));
+      if (s.length >= 2 && s.length <= 48) { killer = resolveKnownPlayer(s, knownPlayers); break; }
     }
+    if (!killer) killer = resolvePlayerNameFromRegion(frame, kpos, knownPlayers);
     if (!killer) continue;
 
     const searchStart = Math.max(0, kpos - 120);
@@ -155,10 +211,16 @@ function extractKillsFromFrame(frame: Buffer): ParsedKill[] {
     for (const vp of victimPositions) {
       for (const delta of [5, 6, 8, 9, 10]) {
         if (searchStart + vp + 4 + delta >= frame.length) continue;
-        const s = readPrintableString(frame, searchStart + vp + 4 + delta);
-        if (s.length >= 2 && s.length <= 48 && s !== killer) { victim = s; break; }
+        const s = sanitizePlayerName(readPlayerName(frame, searchStart + vp + 4 + delta));
+        if (s.length >= 2 && s.length <= 48 && s !== killer) { victim = resolveKnownPlayer(s, knownPlayers); break; }
       }
       if (victim) break;
+    }
+    if (!victim) {
+      for (const vp of victimPositions) {
+        victim = resolvePlayerNameFromRegion(frame, searchStart + vp, knownPlayers.filter((name) => name !== killer));
+        if (victim) break;
+      }
     }
     if (!victim) continue;
 
@@ -189,20 +251,36 @@ function parseHeaderPlayers(header: Buffer): { name: string; team: string; opera
   const players: { name: string; team: string; operator: string; profileId: string }[] = [];
   const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
   const headerStr = header.toString("latin1");
-  let match: RegExpExecArray | null;
-  while ((match = uuidRe.exec(headerStr)) !== null) {
-    const profileId = match[0];
-    const lookback = Math.max(0, match.index - 80);
-    const chunk = headerStr.slice(lookback, match.index);
-    const nameMatch = chunk.match(/([A-Za-z0-9_.\-]{2,32})(?:\x00|$)/g);
-    if (nameMatch && nameMatch.length > 0) {
-      const name = nameMatch[nameMatch.length - 1].replace(/\x00/g, "").trim();
-      if (name.length >= 2) {
-        players.push({ name, team: "0", operator: "", profileId });
-      }
+
+  let searchPos = 0;
+  while (searchPos < header.length) {
+    const nameKeyPos = header.indexOf("playername", searchPos, "ascii");
+    if (nameKeyPos === -1) break;
+
+    const lookback = Math.max(0, nameKeyPos - 96);
+    const prefix = headerStr.slice(lookback, nameKeyPos);
+    const uuidMatches = prefix.match(uuidRe);
+    const profileId = uuidMatches?.[uuidMatches.length - 1] ?? "";
+
+    let cursor = nameKeyPos + "playername".length;
+    while (cursor < header.length && !/[A-Za-z0-9_.-]/.test(String.fromCharCode(header[cursor]))) cursor++;
+    const name = sanitizePlayerName(readPlayerName(header, cursor));
+
+    const teamKeyPos = header.indexOf("team", cursor, "ascii");
+    let team = "0";
+    if (teamKeyPos !== -1 && teamKeyPos < cursor + 80) {
+      let teamCursor = teamKeyPos + "team".length;
+      while (teamCursor < header.length && !/[01]/.test(String.fromCharCode(header[teamCursor]))) teamCursor++;
+      if (teamCursor < header.length) team = String.fromCharCode(header[teamCursor]);
     }
+
+    if (name.length >= 2) {
+      players.push({ name: resolveKnownPlayer(name, players.map((player) => player.name)) || name, team, operator: "", profileId });
+    }
+
+    searchPos = cursor + Math.max(1, name.length);
   }
-  return players;
+  return players.filter((player, index, list) => list.findIndex((entry) => entry.name === player.name) === index);
 }
 
 /** Parse a single .rec file buffer. Returns best-effort parsed round data. */
@@ -242,10 +320,15 @@ export function parseRecBuffer(data: Buffer, fallbackRoundNumber = 0): ParsedRou
       } catch { /* skip */ }
     }
 
-    if (decompressedFrames.length > 0) {
-      const lastFrame = decompressedFrames[decompressedFrames.length - 1];
-      result.kills = extractKillsFromFrame(lastFrame);
-    }
+    const knownPlayers = result.players.map((player) => player.name);
+    result.kills = decompressedFrames.flatMap((frame) => extractKillsFromFrame(frame, knownPlayers));
+    const killSeen = new Set<string>();
+    result.kills = result.kills.filter((kill) => {
+      const key = `${kill.killer}::${kill.victim}`;
+      if (killSeen.has(key)) return false;
+      killSeen.add(key);
+      return true;
+    });
 
     result.events = result.kills.map((k, i) => ({
       type: "kill" as const,
@@ -359,7 +442,7 @@ export async function parseReplayInBackground(replayId: string, teamId: string, 
           data: {
             attackTeam:     parsed.teams["0"].name,
             defenseTeam:    parsed.teams["1"].name,
-            roundEndReason: parsed.roundEndReason,
+            endReason:      parsed.roundEndReason,
             roundDuration:  parsed.roundDuration || null,
             events:         parsed.events as any,
           },

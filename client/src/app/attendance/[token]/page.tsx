@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { CheckCircle, XCircle, HelpCircle, Calendar, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -12,42 +12,23 @@ interface EventInfo {
   date: string;
   duration?: number;
   description?: string;
+  canUpdate?: boolean;
+  currentReason?: string | null;
 }
 
 type Status = "loading" | "ready" | "submitting" | "success" | "error" | "already_voted";
 
 export default function AttendancePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const token = params.token as string;
+  const requestedVote = searchParams.get("vote");
   const [event, setEvent] = useState<EventInfo | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [votedAs, setVotedAs] = useState("");
-
-  useEffect(() => {
-    async function loadEvent() {
-      try {
-        const res = await fetch(`${API_URL}/api/attendance/${token}`);
-        const data = await res.json();
-        if (!res.ok) {
-          setErrorMsg(data.error || "Ungültiger oder abgelaufener Link.");
-          setStatus("error");
-          return;
-        }
-        setEvent({ title: data.data.eventTitle, type: data.data.eventType, date: data.data.eventDate });
-        if (data.data?.alreadyResponded) {
-          setVotedAs(data.data.currentResponse);
-          setStatus("already_voted");
-        } else {
-          setStatus("ready");
-        }
-      } catch {
-        setErrorMsg("Fehler beim Laden.");
-        setStatus("error");
-      }
-    }
-    loadEvent();
-  }, [token]);
+  const [reason, setReason] = useState("");
+  const autoSubmittedRef = useRef(false);
 
   const handleVote = async (vote: string) => {
     setStatus("submitting");
@@ -55,7 +36,7 @@ export default function AttendancePage() {
       const res = await fetch(`${API_URL}/api/attendance/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vote }),
+        body: JSON.stringify({ vote, reason: reason || null }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -71,10 +52,56 @@ export default function AttendancePage() {
     }
   };
 
-  const voteLabel = (v: string) => {
-    const upper = v.toUpperCase();
-    if (upper === "AVAILABLE") return "Verfügbar";
-    if (upper === "UNAVAILABLE") return "Nicht verfügbar";
+  useEffect(() => {
+    async function loadEvent() {
+      try {
+        const res = await fetch(`${API_URL}/api/attendance/${token}`);
+        const data = await res.json();
+        if (!res.ok) {
+          setErrorMsg(data.error || "Ungueltiger oder abgelaufener Link.");
+          setStatus("error");
+          return;
+        }
+
+        const alreadyResponded = Boolean(data.data?.alreadyResponded);
+        const canUpdate = Boolean(data.data?.canUpdate);
+        const normalizedVote = requestedVote?.toUpperCase();
+        const canAutoSubmit =
+          normalizedVote === "AVAILABLE" || normalizedVote === "UNAVAILABLE" || normalizedVote === "MAYBE";
+
+        setEvent({
+          title: data.data.eventTitle,
+          type: data.data.eventType,
+          date: data.data.eventDate,
+          canUpdate,
+          currentReason: data.data.currentReason,
+        });
+
+        if (alreadyResponded) {
+          setVotedAs(data.data.currentResponse);
+          setReason(data.data.currentReason || "");
+        }
+
+        if (canAutoSubmit && !autoSubmittedRef.current && (!alreadyResponded || canUpdate)) {
+          autoSubmittedRef.current = true;
+          await handleVote(normalizedVote);
+          return;
+        }
+
+        setStatus(alreadyResponded ? (canUpdate ? "ready" : "already_voted") : "ready");
+      } catch {
+        setErrorMsg("Fehler beim Laden.");
+        setStatus("error");
+      }
+    }
+
+    void loadEvent();
+  }, [token, requestedVote]);
+
+  const voteLabel = (vote: string) => {
+    const upper = vote.toUpperCase();
+    if (upper === "AVAILABLE") return "Verfuegbar";
+    if (upper === "UNAVAILABLE") return "Nicht verfuegbar";
     return "Vielleicht";
   };
 
@@ -107,12 +134,21 @@ export default function AttendancePage() {
                 {formatDate(event.date)}
                 {event.duration && <span>({event.duration} Min)</span>}
               </div>
-              {event.description && (
-                <p className="mt-2 text-sm text-[var(--muted-foreground)]">{event.description}</p>
-              )}
+              {event.description && <p className="mt-2 text-sm text-[var(--muted-foreground)]">{event.description}</p>}
             </div>
 
             <p className="mb-4 text-center text-sm text-[var(--muted-foreground)]">Bist du dabei?</p>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Optionaler Grund oder Kommentar..."
+              className="mb-4 min-h-[88px] w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:outline-none"
+            />
+            {votedAs && event.canUpdate && (
+              <p className="mb-4 text-center text-xs text-[var(--muted-foreground)]">
+                Bereits abgestimmt als <strong className="text-[var(--foreground)]">{voteLabel(votedAs)}</strong>. Du kannst deine Antwort bis zum Ablauf dieses WhatsApp-Links aktualisieren.
+              </p>
+            )}
 
             <div className="space-y-3">
               <button
@@ -120,7 +156,7 @@ export default function AttendancePage() {
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-500/20 py-3 font-semibold text-green-400 transition-all hover:bg-green-500/30 disabled:opacity-50"
               >
-                <CheckCircle className="h-5 w-5" /> Verfügbar
+                <CheckCircle className="h-5 w-5" /> Verfuegbar
               </button>
               <button
                 onClick={() => handleVote("MAYBE")}
@@ -134,7 +170,7 @@ export default function AttendancePage() {
                 disabled={status === "submitting"}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-500/20 py-3 font-semibold text-red-400 transition-all hover:bg-red-500/30 disabled:opacity-50"
               >
-                <XCircle className="h-5 w-5" /> Nicht verfügbar
+                <XCircle className="h-5 w-5" /> Nicht verfuegbar
               </button>
             </div>
           </>
@@ -149,6 +185,11 @@ export default function AttendancePage() {
             <p className="text-sm text-[var(--muted-foreground)]">
               Deine Antwort: <strong className="text-[var(--foreground)]">{voteLabel(votedAs)}</strong>
             </p>
+            {reason && (
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                Kommentar: <strong className="text-[var(--foreground)]">{reason}</strong>
+              </p>
+            )}
             {event && (
               <div className="mt-4 rounded-lg bg-[var(--secondary)] p-3 text-sm text-[var(--muted-foreground)]">
                 {event.title} - {formatDate(event.date)}
