@@ -1,4 +1,4 @@
-# CLAUDE.md — Next Phantoms HQ
+# AGENTS.md — Next Phantoms HQ
 
 ## Project Overview
 
