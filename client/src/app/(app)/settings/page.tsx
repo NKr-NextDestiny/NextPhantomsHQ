@@ -755,7 +755,7 @@ export default function SettingsPage() {
 
           {qrCodeData && (
             <div className="mt-4 rounded-lg bg-white p-4">
-              <img src={`data:image/png;base64,${qrCodeData}`} alt="Evolution QR" className="mx-auto max-h-72 w-auto" />
+              <img src={qrCodeData} alt="Evolution QR" className="mx-auto max-h-72 w-auto" />
             </div>
           )}
 

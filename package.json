@@ -1,6 +1,6 @@
 {
   "name": "next-phantoms-hq",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "private": true,
   "description": "Next Phantoms HQ - Team Management Platform",
   "scripts": {
@@ -13,10 +13,26 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "prisma", "esbuild", "@swc/core", "sharp", "@parcel/watcher", "unrs-resolver"]
+    "overrides": {
+      "@hono/node-server": "^1.19.13",
+      "postcss": "^8.5.10"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "@swc/core",
+      "sharp",
+      "@parcel/watcher",
+      "unrs-resolver"
+    ]
   },
-  "engines": { "node": ">=20.0.0", "pnpm": ">=9.0.0" }
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
 }

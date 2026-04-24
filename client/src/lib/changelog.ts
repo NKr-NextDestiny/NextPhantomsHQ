@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.1",
+    date: "2026-04-25",
+    tags: ["fix", "improvement"],
+    title: "QR-Code-Fix und Dependency-Haertung",
+    changes: [
+      "QR-Code-Anzeige in den Evolution-Adminwerkzeugen repariert: das Frontend verwendet jetzt die erzeugte Data-URL korrekt statt sie doppelt zu kodieren",
+      "Workspace-Dependencies auf aktuelle sichere Patch-Staende angehoben, darunter Next.js, React, Prisma, Tailwind, TypeScript, Vitest und Nodemailer",
+      "Transitive Sicherheits-Overrides fuer PostCSS und @hono/node-server hinterlegt, damit die bekannten Advisories nicht ueber indirekte Abhaengigkeiten wieder hereinkommen",
+    ],
+  },
+  {
     version: "2.4.0",
     date: "2026-04-23",
     tags: ["feature", "improvement", "breaking"],
