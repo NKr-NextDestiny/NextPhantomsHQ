@@ -1,4 +1,4 @@
-import { prisma } from "../config/prisma.js";
+﻿import { prisma } from "../config/prisma.js";
 import { logger } from "../config/logger.js";
 import * as evolutionService from "./evolution.service.js";
 
@@ -16,7 +16,7 @@ export const BOT_COMMANDS: BotCommandDefinition[] = [
   { command: "!termine", description: "Zeigt die nächsten anstehenden Termine." },
   { command: "!umfragen", description: "Zeigt aktuell offene Umfragen mit Deadline." },
   { command: "!ankündigungen / !ankuendigungen", description: "Zeigt die neuesten aktiven Ankündigungen." },
-  { command: "!status", description: "Zeigt eine kompakte Zusammenfassung aus naechstem Termin und offenen Umfragen." },
+  { command: "!status", description: "Zeigt eine kompakte Zusammenfassung aus nächstem Termin und offenen Umfragen." },
 ];
 
 async function getTeam(teamId?: string) {
@@ -72,8 +72,8 @@ async function getUpcomingEvents(teamId: string, limit = 5) {
 }
 
 export async function formatCommandHelpMessage() {
-  const lines = BOT_COMMANDS.map((entry) => `${entry.command} - ${entry.description}`);
-  return `Next Phantoms HQ Bot-Befehle\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  const lines = BOT_COMMANDS.map((entry) => `• ${entry.command}\n  ${entry.description}`);
+  return `🤖 *Next Phantoms HQ Bot-Befehle*\n\n${lines.join("\n\n")}\n\n📌 Alle Antworten kommen direkt aus dem HQ.\n\n${AUTOMATED_NOTICE}`;
 }
 
 export async function postCommandHelpToGroup(teamId?: string, customMessage?: string) {
@@ -93,7 +93,7 @@ async function formatNextEvent(teamId: string) {
   }
 
   const detail = nextEvent.subtitle ? `\n${nextEvent.subtitle}` : "";
-  return `Naechster Termin\n${nextEvent.kind}: ${nextEvent.title}\n${formatDate(nextEvent.date)}${detail}\n\n${AUTOMATED_NOTICE}`;
+  return `📅 Nächster Termin\n${nextEvent.kind}: ${nextEvent.title}\n${formatDate(nextEvent.date)}${detail}\n\n${AUTOMATED_NOTICE}`;
 }
 
 async function formatUpcomingEvents(teamId: string) {
@@ -103,7 +103,7 @@ async function formatUpcomingEvents(teamId: string) {
   }
 
   const lines = events.map((event, index) => `${index + 1}. ${event.kind}: ${event.title}\n   ${formatDate(event.date)}`);
-  return `Kommende Termine\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  return `📆 Kommende Termine\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
 }
 
 async function formatActivePolls(teamId: string) {
@@ -125,7 +125,7 @@ async function formatActivePolls(teamId: string) {
     const desc = poll.description ? `\n   ${poll.description}` : "";
     return `${index + 1}. ${poll.question}${deadline}${desc}`;
   });
-  return `Offene Umfragen\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  return `📊 Offene Umfragen\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
 }
 
 async function formatAnnouncements(teamId: string) {
@@ -139,14 +139,14 @@ async function formatAnnouncements(teamId: string) {
   });
 
   if (announcements.length === 0) {
-    return `Aktuell gibt es keine aktiven Ankuendigungen.\n\n${AUTOMATED_NOTICE}`;
+    return `Aktuell gibt es keine aktiven Ankündigungen.\n\n${AUTOMATED_NOTICE}`;
   }
 
   const lines = announcements.map((announcement, index) => {
     const pin = announcement.pinned ? " [PIN]" : "";
     return `${index + 1}. ${announcement.title}${pin}\n   ${announcement.content}`;
   });
-  return `Aktuelle Ankuendigungen\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  return `📣 Aktuelle Ankündigungen\n\n${lines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
 }
 
 async function formatStatus(teamId: string) {
@@ -160,7 +160,7 @@ async function formatStatus(teamId: string) {
     }),
   ]);
 
-  return `${nextMessage.replace(`\n\n${AUTOMATED_NOTICE}`, "")}\nOffene Umfragen: ${polls}\n\n${AUTOMATED_NOTICE}`;
+  return `📌 Status\n${nextMessage.replace(`\n\n${AUTOMATED_NOTICE}`, "")}\nOffene Umfragen: ${polls}\n\n${AUTOMATED_NOTICE}`;
 }
 
 function extractCommand(text: string) {
@@ -169,14 +169,14 @@ function extractCommand(text: string) {
     .trim()
     .split(/\s+/)[0]
     ?.toLowerCase()
-    .replace(/�/g, "ae")
-    .replace(/�/g, "oe")
-    .replace(/�/g, "ue")
-    .replace(/�/g, "ss")
     .replace(/ä/g, "ae")
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss") || "";
+    .replace(/ß/g, "ss")
+    .replace(/Ã¤/g, "ae")
+    .replace(/Ã¶/g, "oe")
+    .replace(/Ã¼/g, "ue")
+    .replace(/ÃŸ/g, "ss") || "";
 }
 
 export async function handleIncomingGroupCommand(instanceName: string, remoteJid: string, text: string) {
@@ -218,4 +218,3 @@ export async function handleIncomingGroupCommand(instanceName: string, remoteJid
     logger.error(error, `[Evolution] Failed to answer command ${text}`);
   }
 }
-

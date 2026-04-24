@@ -114,11 +114,11 @@ function formatVotes(votes: VoteRecord[], totalMembers?: number) {
   if (outstanding !== null) lines.push(`Ausstehend: ${outstanding}`);
 
   if (unavailableReasons.length > 0) {
-    lines.push("Absagegruende:");
+    lines.push("Absagegründe:");
     lines.push(...unavailableReasons);
   }
   if (maybeReasons.length > 0) {
-    lines.push("Vielleicht-Gruende:");
+    lines.push("Vielleicht-Gründe:");
     lines.push(...maybeReasons);
   }
 
@@ -159,11 +159,11 @@ export async function buildGroupDescription(teamId: string) {
   if (above.length > 0) parts.push(above.join("\n\n"));
 
   if (current) {
-    parts.push(`Naechster Termin\n${current.kind}: ${current.title}\n${formatDate(current.date)}`);
-    if (current.notes) parts.push(`Info\n${current.notes}`);
-    parts.push(`Status\n${formatVotes(current.votes, memberCount)}`);
+    parts.push(`📅 Nächster Termin\n${current.kind}: ${current.title}\n${formatDate(current.date)}`);
+    if (current.notes) parts.push(`📝 Info\n${current.notes}`);
+    parts.push(`📌 Status\n${formatVotes(current.votes, memberCount)}`);
   } else {
-    parts.push("Naechster Termin\nAktuell ist kein kommender Termin eingetragen.");
+    parts.push("📅 Nächster Termin\nAktuell ist kein kommender Termin eingetragen.");
   }
 
   if (polls.length > 0) {
@@ -171,17 +171,17 @@ export async function buildGroupDescription(teamId: string) {
       const totalVotes = poll.options.reduce((sum, option) => sum + option._count.votes, 0);
       return `- ${poll.question} (${totalVotes} Stimmen${poll.deadline ? `, bis ${formatDate(poll.deadline)}` : ""})`;
     });
-    parts.push(`Offene Umfragen\n${pollLines.join("\n")}`);
+    parts.push(`📊 Offene Umfragen\n${pollLines.join("\n")}`);
   }
 
   if (upcoming.length > 0) {
     const lines = upcoming.map((event) => `- ${event.kind}: ${event.title} | ${formatDate(event.date)}`);
-    parts.push(`Danach\n${lines.join("\n")}`);
+    parts.push(`⏭️ Danach\n${lines.join("\n")}`);
   }
 
   if (below.length > 0) parts.push(below.join("\n\n"));
 
-  parts.push("Automatisch gepflegt von Next Phantoms HQ");
+  parts.push("🤖 Automatisch gepflegt von Next Phantoms HQ");
   return clipDescription(parts.join("\n\n").trim());
 }
 

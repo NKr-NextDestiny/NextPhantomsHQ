@@ -28,6 +28,18 @@ function resolve(obj: unknown, path: string): string | undefined {
   return typeof cur === "string" ? cur : undefined;
 }
 
+function repairMojibake(value: string): string {
+  if (!/[Ãâð]/.test(value)) return value;
+
+  try {
+    const bytes = Uint8Array.from(Array.from(value), (char) => char.charCodeAt(0));
+    const repaired = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    return repaired.includes("\uFFFD") ? value : repaired;
+  } catch {
+    return value;
+  }
+}
+
 /** Interpolate {placeholders} in a string. */
 function interpolate(template: string, values?: Record<string, string | number>): string {
   if (!values) return template;
@@ -47,7 +59,7 @@ export function createT(locale: Locale, namespace?: string) {
   return function t(key: string, values?: Record<string, string | number>): string {
     const fullKey = namespace ? `${namespace}.${key}` : key;
     const result = resolve(msgs, fullKey) ?? resolve(fallback, fullKey) ?? fullKey;
-    return interpolate(result, values);
+    return interpolate(repairMojibake(result), values);
   };
 }
 

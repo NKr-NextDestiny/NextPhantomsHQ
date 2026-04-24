@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Download, RefreshCw, Send, Bot, MessageSquare } from "lucide-react";
+import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Download, RefreshCw, Send, Bot, MessageSquare, Pencil, Maximize2, TestTube2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useT } from "@/i18n/provider";
+import { Modal } from "@/components/ui/Modal";
 
 interface TeamSettings {
   id: string;
@@ -69,6 +70,10 @@ interface CommandInfo {
   command: string;
   description: string;
 }
+
+type CooldownAction = "postCommands" | "addBlock" | "updateBlock" | "deleteBlock" | "updateGroupDescription";
+
+const WHATSAPP_COOLDOWN_MS = 15000;
 
 function BrowserNotificationSettings() {
   const t = useT("settings");
@@ -137,6 +142,13 @@ export default function SettingsPage() {
   const [commandHelpMessage, setCommandHelpMessage] = useState("");
   const [botCommands, setBotCommands] = useState<CommandInfo[]>([]);
   const [loadingWhatsAppOps, setLoadingWhatsAppOps] = useState(false);
+  const [cooldowns, setCooldowns] = useState<Partial<Record<CooldownAction, number>>>({});
+  const [cooldownTick, setCooldownTick] = useState(() => Date.now());
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editingBlockContent, setEditingBlockContent] = useState("");
+  const [editingBlockPosition, setEditingBlockPosition] = useState<"ABOVE" | "BELOW">("BELOW");
+  const [editingBlockSortOrder, setEditingBlockSortOrder] = useState("0");
+  const [showCommandEditor, setShowCommandEditor] = useState(false);
   const [gameConfig, setGameConfig] = useState<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
   const [newMap, setNewMap] = useState("");
   const [newCharacter, setNewCharacter] = useState("");
@@ -150,7 +162,7 @@ export default function SettingsPage() {
   const initialWhatsappEnabled = useRef(false);
   const initialWhatsappGroupJid = useRef("");
 
-  // Nur Admins dürfen hier rein
+  // Nur Admins dÃ¼rfen hier rein
   useEffect(() => {
     if (!loading && user && !user.isAdmin) {
       router.push("/dashboard");
@@ -231,6 +243,52 @@ export default function SettingsPage() {
     }
   }, [tab, loadWhatsAppAdmin]);
 
+  useEffect(() => {
+    const hasActiveCooldown = Object.values(cooldowns).some((until) => typeof until === "number" && until > Date.now());
+    if (!hasActiveCooldown) return;
+
+    const interval = window.setInterval(() => {
+      setCooldownTick(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [cooldowns]);
+
+  const startCooldown = (action: CooldownAction) => {
+    const until = Date.now() + WHATSAPP_COOLDOWN_MS;
+    setCooldowns((prev) => ({ ...prev, [action]: until }));
+    window.setTimeout(() => {
+      setCooldowns((prev) => {
+        if ((prev[action] ?? 0) > Date.now()) return prev;
+        const next = { ...prev };
+        delete next[action];
+        return next;
+      });
+    }, WHATSAPP_COOLDOWN_MS + 250);
+  };
+
+  const getCooldownSeconds = (action: CooldownAction) => {
+    const until = cooldowns[action];
+    if (!until || until <= cooldownTick) return 0;
+    return Math.ceil((until - cooldownTick) / 1000);
+  };
+
+  const isCooldownActive = (action: CooldownAction) => getCooldownSeconds(action) > 0;
+
+  const beginEditingBlock = (block: DescriptionBlock) => {
+    setEditingBlockId(block.id);
+    setEditingBlockContent(block.content);
+    setEditingBlockPosition(block.position);
+    setEditingBlockSortOrder(String(block.sortOrder));
+  };
+
+  const cancelEditingBlock = () => {
+    setEditingBlockId(null);
+    setEditingBlockContent("");
+    setEditingBlockPosition("BELOW");
+    setEditingBlockSortOrder("0");
+  };
+
   const hasUnsavedChanges = () => {
     const tf = initialTeamForm.current;
     const teamDirty = teamForm.name !== tf.name || teamForm.tag !== tf.tag || teamForm.description !== tf.description || teamForm.discordWebhookUrl !== tf.discordWebhookUrl;
@@ -298,17 +356,20 @@ export default function SettingsPage() {
   };
 
   const postCommands = async () => {
+    if (isCooldownActive("postCommands")) return;
     try {
       await api.post("/api/team/whatsapp/commands/post", { message: commandHelpMessage });
       success("Befehlsliste wurde in die Gruppe gesendet.");
+      startCooldown("postCommands");
     } catch {
       error("Befehlsliste konnte nicht gesendet werden.");
     }
   };
 
   const addDescriptionBlock = async () => {
+    if (isCooldownActive("addBlock")) return;
     if (!newBlockContent.trim()) {
-      error("Bitte Text fuer den Block eingeben.");
+      error("Bitte Text fÃ¼r den Block eingeben.");
       return;
     }
     try {
@@ -320,6 +381,7 @@ export default function SettingsPage() {
       setNewBlockContent("");
       setNewBlockSortOrder("0");
       success("Block gespeichert.");
+      startCooldown("addBlock");
       await loadWhatsAppAdmin();
     } catch {
       error("Block konnte nicht gespeichert werden.");
@@ -327,22 +389,82 @@ export default function SettingsPage() {
   };
 
   const deleteDescriptionBlock = async (id: string) => {
+    if (isCooldownActive("deleteBlock")) return;
     try {
       await api.delete(`/api/team/whatsapp/description/blocks/${id}`);
-      success("Block geloescht.");
+      success("Block gelÃ¶scht.");
+      startCooldown("deleteBlock");
+      if (editingBlockId === id) {
+        cancelEditingBlock();
+      }
       await loadWhatsAppAdmin();
     } catch {
-      error("Block konnte nicht geloescht werden.");
+      error("Block konnte nicht gelÃ¶scht werden.");
     }
   };
 
   const updateGroupDescriptionNow = async () => {
+    if (isCooldownActive("updateGroupDescription")) return;
     try {
       await api.post("/api/team/whatsapp/description/update");
       success("Gruppenbeschreibung aktualisiert.");
+      startCooldown("updateGroupDescription");
       await loadWhatsAppAdmin();
     } catch {
       error("Gruppenbeschreibung konnte nicht aktualisiert werden.");
+    }
+  };
+
+  const updateDescriptionBlock = async (id: string) => {
+    if (isCooldownActive("updateBlock")) return;
+    if (!editingBlockContent.trim()) {
+      error("Bitte Text fÃ¼r den Block eingeben.");
+      return;
+    }
+
+    try {
+      await api.put(`/api/team/whatsapp/description/blocks/${id}`, {
+        content: editingBlockContent.trim(),
+        position: editingBlockPosition,
+        sortOrder: Number.parseInt(editingBlockSortOrder || "0", 10) || 0,
+      });
+      success("Block aktualisiert.");
+      startCooldown("updateBlock");
+      cancelEditingBlock();
+      await loadWhatsAppAdmin();
+    } catch {
+      error("Block konnte nicht aktualisiert werden.");
+    }
+  };
+
+  const sendNotificationDemo = async (kind: "announcement" | "matchResult" | "pollResult") => {
+    try {
+      await api.post(`/api/team/whatsapp/demo/${kind}`);
+      success("Demo erfolgreich an die WhatsApp-Gruppe gesendet.");
+    } catch {
+      error("Demo konnte nicht gesendet werden.");
+    }
+  };
+
+  const saveCurrentTab = async () => {
+    if (tab === "team") {
+      await saveTeam();
+      return;
+    }
+    if (tab === "game") {
+      setSavingConfig(true);
+      try {
+        await api.put("/api/team/config", gameConfig);
+        success(tc("saved"));
+      } catch {
+        error(tc("saveError"));
+      } finally {
+        setSavingConfig(false);
+      }
+      return;
+    }
+    if (tab === "notifications") {
+      await saveNotificationSettings();
     }
   };
 
@@ -367,7 +489,7 @@ export default function SettingsPage() {
       <div className="flex gap-1 rounded-lg bg-[var(--secondary)] p-1">
         {[
           { id: "team" as const, label: t("tabs.team"), icon: Settings },
-          { id: "game" as const, label: "Game Config", icon: Gamepad2 },
+          { id: "game" as const, label: "Spielkonfiguration", icon: Gamepad2 },
           { id: "notifications" as const, label: t("tabs.notifications"), icon: Bell },
           { id: "members" as const, label: t("tabs.members"), icon: Shield },
         ].map((tb) => (
@@ -435,7 +557,7 @@ export default function SettingsPage() {
             {[
               { label: "Match-Statistiken", endpoint: "/api/export/matches" },
               { label: "Training-Teilnahme", endpoint: "/api/export/training-attendance" },
-              { label: "Verfügbarkeit", endpoint: "/api/export/availability" },
+              { label: "VerfÃ¼gbarkeit", endpoint: "/api/export/availability" },
             ].map((exp) => (
               <div key={exp.endpoint} className="flex flex-col gap-2 rounded-lg bg-[var(--secondary)] p-3">
                 <span className="text-sm font-medium text-[var(--foreground)]">{exp.label}</span>
@@ -452,7 +574,7 @@ export default function SettingsPage() {
       {/* Game Config */}
       {tab === "game" && (
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Game Config</h2>
+          <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">Spielkonfiguration</h2>
           <div className="space-y-6">
             {/* Maps */}
             <div>
@@ -466,7 +588,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newMap} onChange={(e) => setNewMap(e.target.value)} placeholder="Neue Map..." onKeyDown={(e) => { if (e.key === "Enter" && newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newMap} onChange={(e) => setNewMap(e.target.value)} placeholder="Neue Map hinzufÃ¼gen..." onKeyDown={(e) => { if (e.key === "Enter" && newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
@@ -483,13 +605,13 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newCharacter} onChange={(e) => setNewCharacter(e.target.value)} placeholder={`${gameConfig.characterLabel || "Character"} hinzufügen...`} onKeyDown={(e) => { if (e.key === "Enter" && newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newCharacter} onChange={(e) => setNewCharacter(e.target.value)} placeholder={`${gameConfig.characterLabel || "Character"} hinzufÃ¼gen...`} onKeyDown={(e) => { if (e.key === "Enter" && newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
 
             {/* Character Label */}
-            <Input label="Character Label" value={gameConfig.characterLabel} onChange={(e) => setGameConfig({ ...gameConfig, characterLabel: e.target.value })} placeholder="z.B. Operator, Agent, Hero..." />
+            <Input label="Bezeichnung fÃ¼r Charaktere" value={gameConfig.characterLabel} onChange={(e) => setGameConfig({ ...gameConfig, characterLabel: e.target.value })} placeholder="z. B. Operator, Agent, Held..." />
 
             {/* Player Roles */}
             <div>
@@ -503,7 +625,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Rolle hinzufügen..." onKeyDown={(e) => { if (e.key === "Enter" && newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Rolle hinzufÃ¼gen..." onKeyDown={(e) => { if (e.key === "Enter" && newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
@@ -562,14 +684,14 @@ export default function SettingsPage() {
             ))}
           </div>
           <Input
-            label="WhatsApp Gruppen-JID"
+            label="WhatsApp-Gruppen-JID"
             value={whatsappGroupJid}
             onChange={(e) => setWhatsappGroupJid(e.target.value)}
             placeholder="1234567890-123456789@g.us"
           />
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select
-              label="Ankündigungen per WhatsApp"
+              label="AnkÃ¼ndigungen per WhatsApp"
               value={announcementNotificationMode}
               onChange={(e) => setAnnouncementNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
               options={[
@@ -589,7 +711,7 @@ export default function SettingsPage() {
               ]}
             />
             <Select
-              label="Poll-Ergebnisse per WhatsApp"
+              label="Umfrage-Ergebnisse per WhatsApp"
               value={pollResultNotificationMode}
               onChange={(e) => setPollResultNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
               options={[
@@ -598,6 +720,17 @@ export default function SettingsPage() {
                 { value: "BOTH", label: "Bild + Text" },
               ]}
             />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => sendNotificationDemo("announcement")}>
+              <TestTube2 className="h-4 w-4" /> AnkÃ¼ndigung-Demo
+            </Button>
+            <Button variant="outline" onClick={() => sendNotificationDemo("matchResult")}>
+              <TestTube2 className="h-4 w-4" /> Match-Demo
+            </Button>
+            <Button variant="outline" onClick={() => sendNotificationDemo("pollResult")}>
+              <TestTube2 className="h-4 w-4" /> Umfrage-Demo
+            </Button>
           </div>
           <div className="mt-4">
             <Button onClick={saveNotificationSettings} isLoading={saving}>
@@ -614,7 +747,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="rounded-lg bg-[var(--secondary)] p-4 text-sm text-[var(--muted-foreground)]">
-            <p>Lege im Evolution Manager die Instanzen an, verbinde WhatsApp per QR-Code, suche dort die passende Gruppen-ID heraus und hinterlege anschliessend hier nur die Gruppen-JID fuer die Team-Nachrichten.</p>
+            <p>Lege im Evolution Manager die Instanzen an, verbinde WhatsApp per QR-Code, suche dort die passende Gruppen-ID heraus und hinterlege anschlieÃŸend hier nur die Gruppen-JID fÃ¼r die Team-Nachrichten.</p>
             <p className="mt-3">Den Webhook richtest du ebenfalls im Manager ein. Als Ziel verwendest du die App-URL mit dem Pfad <span className="font-mono text-[var(--foreground)]">/evolution/webhook</span>.</p>
           </div>
         </Card>
@@ -634,11 +767,22 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-          <Textarea label="Nachricht fuer den angepinnten Befehlspost" value={commandHelpMessage} onChange={(e) => setCommandHelpMessage(e.target.value)} />
-          <div className="mt-4">
-            <Button variant="outline" onClick={postCommands}>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-medium text-[var(--foreground)]">Nachricht für den angepinnten Befehlspost</label>
+              <Button variant="outline" size="sm" onClick={() => setShowCommandEditor(true)}>
+                <Maximize2 className="h-4 w-4" /> Vollbild
+              </Button>
+            </div>
+            <Textarea value={commandHelpMessage} onChange={(e) => setCommandHelpMessage(e.target.value)} />
+          </div>
+          <div className="mt-4 space-y-2">
+            <Button variant="outline" onClick={postCommands} disabled={isCooldownActive("postCommands")}>
               <Send className="h-4 w-4" /> Befehlsliste in Gruppe senden
             </Button>
+            {isCooldownActive("postCommands") && (
+              <p className="text-xs text-[var(--muted-foreground)]">Cooldown aktiv: erneut in {getCooldownSeconds("postCommands")}s moeglich.</p>
+            )}
           </div>
         </Card>
         <Card>
@@ -646,7 +790,7 @@ export default function SettingsPage() {
             <MessageSquare className="h-5 w-5 text-[var(--primary)]" />
             <div>
               <h2 className="text-lg font-semibold text-[var(--foreground)]">Gruppenbeschreibung</h2>
-              <p className="text-sm text-[var(--muted-foreground)]">Naechster Termin, offene Umfragen, Folgetermine und deine Zusatzbloecke.</p>
+              <p className="text-sm text-[var(--muted-foreground)]">NÃ¤chster Termin, offene Umfragen, Folgetermine und deine ZusatzblÃ¶cke.</p>
             </div>
           </div>
 
@@ -665,28 +809,64 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" onClick={addDescriptionBlock}>
+            <Button variant="outline" onClick={addDescriptionBlock} disabled={isCooldownActive("addBlock")}>
               <Plus className="h-4 w-4" /> Block speichern
             </Button>
-            <Button variant="outline" onClick={updateGroupDescriptionNow}>
+            <Button variant="outline" onClick={updateGroupDescriptionNow} disabled={isCooldownActive("updateGroupDescription")}>
               <RefreshCw className="h-4 w-4" /> Jetzt in WhatsApp aktualisieren
             </Button>
           </div>
+          {isCooldownActive("updateGroupDescription") && (
+            <p className="mt-2 text-xs text-[var(--muted-foreground)]">Cooldown aktiv: erneut in {getCooldownSeconds("updateGroupDescription")}s moeglich.</p>
+          )}
 
           <div className="mt-6 space-y-2">
             {descriptionBlocks.map((block) => (
-              <div key={block.id} className="flex items-start justify-between gap-3 rounded-lg bg-[var(--secondary)] p-3">
-                <div>
-                  <p className="text-xs uppercase text-[var(--muted-foreground)]">{block.position} | Sort {block.sortOrder}</p>
-                  <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{block.content}</p>
-                </div>
-                <button onClick={() => deleteDescriptionBlock(block.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+              <div key={block.id} className="rounded-lg bg-[var(--secondary)] p-3">
+                {editingBlockId === block.id ? (
+                  <div className="space-y-3">
+                    <Textarea label="Zusatzblock bearbeiten" value={editingBlockContent} onChange={(e) => setEditingBlockContent(e.target.value)} />
+                    <div className="grid gap-3 md:grid-cols-[140px_120px]">
+                      <Select
+                        label="Position"
+                        value={editingBlockPosition}
+                        onChange={(e) => setEditingBlockPosition(e.target.value as "ABOVE" | "BELOW")}
+                        options={[
+                          { value: "ABOVE", label: "Oberhalb" },
+                          { value: "BELOW", label: "Unterhalb" },
+                        ]}
+                      />
+                      <Input label="Sortierung" value={editingBlockSortOrder} onChange={(e) => setEditingBlockSortOrder(e.target.value)} />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" onClick={() => updateDescriptionBlock(block.id)} disabled={isCooldownActive("updateBlock")}>
+                        <Save className="h-4 w-4" /> Ã„nderungen speichern
+                      </Button>
+                      <Button variant="ghost" onClick={cancelEditingBlock}>
+                        <X className="h-4 w-4" /> Abbrechen
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase text-[var(--muted-foreground)]">{block.position} | Sort {block.sortOrder}</p>
+                      <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">{block.content}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => beginEditingBlock(block)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]" aria-label="Block bearbeiten">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => deleteDescriptionBlock(block.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]" aria-label="Block lÃ¶schen">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {descriptionBlocks.length === 0 && (
-              <p className="text-sm text-[var(--muted-foreground)]">Noch keine Zusatzbloecke vorhanden.</p>
+              <p className="text-sm text-[var(--muted-foreground)]">Noch keine ZusatzblÃ¶cke vorhanden.</p>
             )}
           </div>
 
@@ -794,6 +974,27 @@ export default function SettingsPage() {
           )}
         </Card>
       )}
+
+      {tab !== "members" && (
+        <div className="fixed bottom-6 right-6 z-20">
+          <Button onClick={saveCurrentTab} isLoading={saving || savingConfig} className="shadow-xl">
+            <Save className="h-4 w-4" /> Speichern
+          </Button>
+        </div>
+      )}
+
+      <Modal open={showCommandEditor} onClose={() => setShowCommandEditor(false)} title="Befehlspost im Vollbild bearbeiten" size="xl">
+        <div className="space-y-4">
+          <Textarea value={commandHelpMessage} onChange={(e) => setCommandHelpMessage(e.target.value)} className="min-h-[60vh]" />
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setShowCommandEditor(false)}>Schließen</Button>
+            <Button onClick={() => setShowCommandEditor(false)}>
+              <Save className="h-4 w-4" /> Übernehmen
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

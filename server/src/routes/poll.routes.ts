@@ -9,20 +9,52 @@ import { AppError } from "../middleware/errorHandler.js";
 import { parsePagination } from "../middleware/pagination.js";
 import { safeEmit } from "../config/socket.js";
 import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
+import { logAudit } from "../services/audit.service.js";
+import * as channelNotify from "../services/channel-notification.service.js";
 
 export const pollRouter = Router();
 
 const createSchema = z.object({
-  question: z.string().min(1).max(500),
+  question: z.string().min(1).max(500).optional(),
+  title: z.string().min(1).max(500).optional(),
   description: z.string().optional().nullable(),
   deadline: z.string().transform(s => new Date(s)).optional().nullable(),
+  expiresAt: z.string().transform(s => new Date(s)).optional().nullable(),
   allowMultiple: z.boolean().optional().default(false),
-  options: z.array(z.object({ text: z.string().min(1), order: z.number().int().optional().default(0) })).min(2),
+  options: z.array(z.union([
+    z.string().min(1),
+    z.object({ text: z.string().min(1), order: z.number().int().optional().default(0) }),
+  ])).min(2),
+}).refine((value) => Boolean(value.question || value.title), {
+  message: "question or title is required",
+  path: ["question"],
 });
 
 const voteSchema = z.object({
   optionId: z.string().min(1),
 });
+
+function formatPoll(poll: any, userId: string) {
+  const options = poll.options.map((option: any) => ({
+    id: option.id,
+    text: option.text,
+    votes: option.votes?.length ?? option._count?.votes ?? 0,
+    votedByUser: (option.votes || []).some((vote: any) => vote.userId === userId),
+  }));
+
+  return {
+    id: poll.id,
+    title: poll.question,
+    description: poll.description || undefined,
+    options,
+    totalVotes: options.reduce((sum: number, option: { votes: number }) => sum + option.votes, 0),
+    allowMultiple: poll.allowMultiple,
+    expiresAt: poll.deadline?.toISOString(),
+    isExpired: Boolean(poll.deadline && new Date() > poll.deadline),
+    createdBy: poll.createdBy,
+    createdAt: poll.createdAt.toISOString(),
+  };
+}
 
 // List polls
 pollRouter.get("/", authenticate, teamContext, requireFeature("polls"), async (req, res, next) => {
@@ -41,7 +73,7 @@ pollRouter.get("/", authenticate, teamContext, requireFeature("polls"), async (r
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ success: true, data: polls });
+    res.json({ success: true, data: polls.map((poll) => formatPoll(poll, req.user!.id)) });
   } catch (error) { next(error); }
 });
 
@@ -61,24 +93,27 @@ pollRouter.get("/:id", authenticate, teamContext, requireFeature("polls"), async
       },
     });
     if (!poll || poll.teamId !== req.teamId) throw new AppError(404, "Poll not found");
-    res.json({ success: true, data: poll });
+    res.json({ success: true, data: formatPoll(poll, req.user!.id) });
   } catch (error) { next(error); }
 });
 
 // Create poll
 pollRouter.post("/", authenticate, teamContext, requireFeature("polls"), requireTeamRole("PLAYER"), validate(createSchema), async (req, res, next) => {
   try {
-    const { options, ...data } = req.body;
+    const { options, question, title, deadline, expiresAt, ...data } = req.body;
+    const normalizedQuestion = question || title;
 
     const poll = await prisma.poll.create({
       data: {
+        question: normalizedQuestion,
+        deadline: deadline ?? expiresAt ?? null,
         ...data,
         createdById: req.user!.id,
         teamId: req.teamId!,
         options: {
-          create: options.map((o: any, i: number) => ({
-            text: o.text,
-            order: o.order ?? i,
+          create: options.map((option: any, i: number) => ({
+            text: typeof option === "string" ? option : option.text,
+            order: typeof option === "string" ? i : option.order ?? i,
           })),
         },
       },
@@ -92,9 +127,11 @@ pollRouter.post("/", authenticate, teamContext, requireFeature("polls"), require
     });
 
     safeEmit(`team:${req.teamId}`, "poll:created", poll);
+    await logAudit(req.user!.id, "CREATE", "poll", poll.id, { question: poll.question }, req.teamId);
+    channelNotify.notifyPollCreated(req.teamId!, poll.id).catch(console.error);
     scheduleGroupDescriptionUpdate(req.teamId!);
 
-    res.status(201).json({ success: true, data: poll });
+    res.status(201).json({ success: true, data: formatPoll(poll, req.user!.id) });
   } catch (error) { next(error); }
 });
 
@@ -189,6 +226,7 @@ pollRouter.delete("/:id", authenticate, teamContext, requireFeature("polls"), re
     await prisma.poll.delete({ where: { id: String(req.params.id) } });
 
     safeEmit(`team:${req.teamId}`, "poll:deleted", { id: String(req.params.id) });
+    await logAudit(req.user!.id, "DELETE", "poll", poll.id, { question: poll.question }, req.teamId);
     scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, message: "Poll deleted" });

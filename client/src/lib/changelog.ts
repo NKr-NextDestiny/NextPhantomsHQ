@@ -8,6 +8,26 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.5",
+    date: "2026-04-25",
+    tags: ["fix", "improvement"],
+    title: "Aktivitätslog, WhatsApp-Demos und stabilere Gruppen-Automation",
+    changes: [
+      "Zusatzblöcke für die WhatsApp-Gruppenbeschreibung lassen sich jetzt direkt in den Einstellungen bearbeiten statt nur löschen",
+      "WhatsApp-Aktionen wie Befehlsliste posten oder Gruppenbeschreibung aktualisieren haben jetzt Cooldowns mit sichtbarem Countdown, damit nichts zugespammt wird",
+      "Admin-Oberfläche für WhatsApp und Spielkonfiguration weiter enthardcoded und sprachlich bereinigt",
+      "Bot-Befehle, Gruppenbeschreibung und Standard-WhatsApp-Nachrichten nutzen jetzt wieder korrekte Umlaute und passendere Emojis",
+      "Übersetzungen werden clientseitig robuster gegen alte Zeichenkodierungsfehler bereinigt, damit kaputte Texte nicht mehr als Mojibake auftauchen",
+      "Dashboard zeigt bei Aktivitäten jetzt nur noch die neuesten Einträge und verlinkt in ein eigenes Aktivitätslog mit Team-/Admin-Sicht",
+      "Aktivitätslog-Einträge werden serverseitig in Klartext aufbereitet, damit keine internen Schlüssel wie dashboard.entities.whatsapp_command_post mehr auftauchen",
+      "Umfragen speichern jetzt wieder korrekt; Poll-Frontend und Poll-API sprechen wieder dasselbe Datenformat",
+      "Reminder speichern wieder korrekt und neue Reminder/Umfragen werden nun ebenfalls in die WhatsApp-Gruppe gespiegelt",
+      "WhatsApp-Settings können jetzt Demo-Nachrichten für Ankündigungen, Match-Ergebnisse und Umfrage-Ergebnisse direkt in die Gruppe schicken",
+      "Evolution-Webhook ist robuster und akzeptiert jetzt sowohl Root-Webhooks als auch /messages-upsert für Bot-Befehle",
+      "Angepinnter WhatsApp-Befehlspost ist besser formatiert und lässt sich im Vollbild bearbeiten; Speichern schwebt jetzt unten rechts",
+    ],
+  },
+  {
     version: "2.4.3",
     date: "2026-04-25",
     tags: ["fix", "improvement"],

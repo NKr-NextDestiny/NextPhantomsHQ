@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
 import { useT } from "@/i18n/provider";
+import Link from "next/link";
 
 interface Stats {
   upcomingTrainings: number;
@@ -27,7 +28,8 @@ interface UpcomingEvent {
 interface Activity {
   id: string;
   type: string;
-  description: string;
+  entity: string;
+  message: string;
   createdAt: string;
   user?: { displayName: string };
 }
@@ -76,12 +78,6 @@ export default function DashboardPage() {
     }
     load();
   }, []);
-
-  function formatActivity(action: string, entity: string): string {
-    const e = t(`entities.${entity.toLowerCase()}`) || entity;
-    const a = t(`actions.${action}`) || action;
-    return `${e} ${a}`;
-  }
 
   const statCards = [
     { label: t("trainings"), value: stats.upcomingTrainings, icon: Dumbbell, color: "text-green-400" },
@@ -159,22 +155,24 @@ export default function DashboardPage() {
 
         {/* Activity */}
         <Card>
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[var(--primary)]" />
             <h2 className="text-lg font-semibold text-[var(--foreground)]">{t("recentActivity")}</h2>
+            </div>
+            <Link href={`/activity?scope=${user?.isAdmin ? "team" : "team"}`} className="text-sm font-medium text-[var(--primary)] hover:underline">
+              Alles anzeigen
+            </Link>
           </div>
           {activity.length === 0 ? (
             <p className="text-sm text-[var(--muted-foreground)]">{t("noActivity")}</p>
           ) : (
             <div className="space-y-3">
               {activity.map((a) => {
-                const parts = a.description.split(" ");
-                const entity = parts[1] || "";
-                const readable = formatActivity(a.type, entity);
                 return (
                   <div key={a.id} className="rounded-lg bg-[var(--secondary)] p-3">
                     <p className="text-sm text-[var(--foreground)]">
-                      {a.user?.displayName ? t("activityPrefix", { name: a.user.displayName }) : ""}{readable}
+                      {a.user?.displayName ? `${a.user.displayName} · ` : ""}{a.message}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       {formatDate(a.createdAt)}

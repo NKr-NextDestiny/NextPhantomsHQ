@@ -8,6 +8,8 @@ import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
 import { BOT_COMMANDS, formatCommandHelpMessage, postCommandHelpToGroup } from "../services/bot-commands.service.js";
 import { buildGroupDescription, scheduleGroupDescriptionUpdate, updateGroupDescription } from "../services/group-description.service.js";
+import * as evolutionService from "../services/evolution.service.js";
+import { createAnnouncementImage, createMatchResultImage, createPollResultImage } from "../services/notification-image.service.js";
 
 export const teamWhatsAppRouter = Router();
 
@@ -41,6 +43,10 @@ const postCommandsSchema = z.object({
   message: z.string().optional().nullable(),
 });
 
+const demoSchema = z.object({
+  kind: z.enum(["announcement", "matchResult", "pollResult"]),
+});
+
 teamWhatsAppRouter.use(authenticate, teamContext, requireAdmin);
 
 teamWhatsAppRouter.get("/commands", async (_req, res) => {
@@ -53,6 +59,57 @@ teamWhatsAppRouter.post("/commands/post", validate(postCommandsSchema), async (r
     await postCommandHelpToGroup(req.teamId!, req.body.message || undefined);
     await logAudit(req.user!.id, "CREATE", "whatsapp_command_post", req.teamId!, undefined, req.teamId);
     res.json({ success: true, message: "Command list posted" });
+  } catch (error) { next(error); }
+});
+
+teamWhatsAppRouter.post("/demo/:kind", async (req, res, next) => {
+  try {
+    const { kind } = demoSchema.parse({ kind: String(req.params.kind) });
+    const team = await prisma.team.findUnique({
+      where: { id: req.teamId! },
+      select: {
+        whatsappGroupJid: true,
+        announcementNotificationMode: true,
+        matchResultNotificationMode: true,
+        pollResultNotificationMode: true,
+      },
+    });
+
+    if (!team?.whatsappGroupJid) {
+      throw new AppError(400, "No WhatsApp group configured");
+    }
+
+    if (kind === "announcement") {
+      const media = await createAnnouncementImage({
+        title: "Scrim-Update für heute Abend",
+        content: "Server steht, Lobby kommt 15 Minuten vorher. Bitte kurz auf den Ready-Check reagieren.",
+        createdBy: req.user!.displayName,
+      });
+      const text = `📣 Demo-Ankündigung\nHeute siehst du genau, wie eine echte Ankündigung in der Gruppe ankommt.\n\nDies ist eine automatisierte Nachricht von Next Phantoms HQ.`;
+      await evolutionService.sendWhatsAppNotification(team.whatsappGroupJid, text, (team.announcementNotificationMode as any) || "TEXT", media);
+    }
+
+    if (kind === "matchResult") {
+      const media = await createMatchResultImage({
+        opponent: "Demo Squad",
+        scoreUs: 7,
+        scoreThem: 4,
+        map: "Clubhouse",
+        competition: "Scrim",
+        result: "WIN",
+      });
+      const text = `🏆 Demo-Match-Ergebnis\nNext Phantoms 7:4 Demo Squad\nWIN\nClubhouse\nScrim\n\nDies ist eine automatisierte Nachricht von Next Phantoms HQ.`;
+      await evolutionService.sendWhatsAppNotification(team.whatsappGroupJid, text, (team.matchResultNotificationMode as any) || "TEXT", media);
+    }
+
+    if (kind === "pollResult") {
+      const lines = ["Chalet: 6 Stimmen (50%)", "Clubhouse: 4 Stimmen (33%)", "Bank: 2 Stimmen (17%)"];
+      const media = await createPollResultImage({ question: "Welche Map wollt ihr heute spielen?", lines });
+      const text = `📊 Demo-Umfrage-Ergebnis\nWelche Map wollt ihr heute spielen?\n\n${lines.join("\n")}\n\nDies ist eine automatisierte Nachricht von Next Phantoms HQ.`;
+      await evolutionService.sendWhatsAppNotification(team.whatsappGroupJid, text, (team.pollResultNotificationMode as any) || "TEXT", media);
+    }
+
+    res.json({ success: true });
   } catch (error) { next(error); }
 });
 

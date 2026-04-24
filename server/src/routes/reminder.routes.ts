@@ -7,15 +7,15 @@ import { requireFeature } from "../middleware/features.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { parsePagination } from "../middleware/pagination.js";
+import { logAudit } from "../services/audit.service.js";
+import * as channelNotify from "../services/channel-notification.service.js";
 
 export const reminderRouter = Router();
 
 const reminderSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(200),
-    content: z.string().max(5000).optional(),
-    deadline: z.string().datetime().optional(),
-  }),
+  title: z.string().min(1).max(200),
+  content: z.string().max(5000).optional(),
+  deadline: z.string().datetime().optional(),
 });
 
 // List reminders
@@ -44,6 +44,8 @@ reminderRouter.post("/", authenticate, teamContext, requireFeature("reminders"),
       },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
+    await logAudit(req.user!.id, "CREATE", "reminder", reminder.id, { title: reminder.title }, req.teamId);
+    channelNotify.notifyReminderCreated(req.teamId!, reminder.title, reminder.content).catch(console.error);
     res.status(201).json({ success: true, data: reminder });
   } catch (error) { next(error); }
 });
@@ -59,6 +61,8 @@ reminderRouter.put("/:id", authenticate, teamContext, requireFeature("reminders"
       data: { title, content: content || null, deadline: deadline ? new Date(deadline) : null },
       include: { createdBy: { select: { id: true, displayName: true } } },
     });
+    await logAudit(req.user!.id, "UPDATE", "reminder", reminder.id, { title: reminder.title }, req.teamId);
+    channelNotify.notifyReminderUpdated(req.teamId!, reminder.title, reminder.content).catch(console.error);
     res.json({ success: true, data: reminder });
   } catch (error) { next(error); }
 });
@@ -83,6 +87,8 @@ reminderRouter.delete("/:id", authenticate, teamContext, requireFeature("reminde
     const existing = await prisma.reminder.findUnique({ where: { id: String(req.params.id) } });
     if (!existing || existing.teamId !== req.teamId) throw new AppError(404, "Reminder not found");
     await prisma.reminder.delete({ where: { id: String(req.params.id) } });
+    await logAudit(req.user!.id, "DELETE", "reminder", existing.id, { title: existing.title }, req.teamId);
+    channelNotify.notifyReminderDeleted(req.teamId!, existing.title).catch(console.error);
     res.json({ success: true, message: "Reminder deleted" });
   } catch (error) { next(error); }
 });

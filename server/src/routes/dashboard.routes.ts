@@ -6,6 +6,7 @@ import { authenticate } from "../middleware/auth.js";
 import { teamContext } from "../middleware/team.js";
 import { requireAdmin } from "../middleware/auth.js";
 import { config } from "../config/index.js";
+import { canSeeAuditEntity, formatAuditMessage } from "../services/activity-log.service.js";
 
 export const dashboardRouter = Router();
 
@@ -62,23 +63,69 @@ dashboardRouter.get("/upcoming", async (req, res, next) => {
 dashboardRouter.get("/activity", async (req, res, next) => {
   try {
     const teamId = req.teamId!;
+    const isAdmin = Boolean(req.user?.isAdmin);
 
     const logs = await prisma.auditLog.findMany({
       where: { teamId },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 20,
       include: { user: { select: { displayName: true } } },
     });
 
-    const activity = logs.map(l => ({
+    const activity = logs
+      .filter((log) => canSeeAuditEntity(log.entity, isAdmin))
+      .slice(0, 3)
+      .map((l) => ({
       id: l.id,
       type: l.action,
-      description: `${l.action} ${l.entity}`,
+      entity: l.entity,
+      message: formatAuditMessage({ action: l.action, entity: l.entity, details: l.details as Record<string, unknown> | null }),
       createdAt: l.createdAt.toISOString(),
       user: l.user ? { displayName: l.user.displayName } : undefined,
     }));
 
     res.json({ success: true, data: activity });
+  } catch (error) { next(error); }
+});
+
+dashboardRouter.get("/activity-log", async (req, res, next) => {
+  try {
+    const teamId = req.teamId!;
+    const isAdmin = Boolean(req.user?.isAdmin);
+    const scope = isAdmin && req.query.scope === "admin" ? "admin" : "team";
+    const take = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10) || 50, 1), 200);
+    const skip = Math.max(parseInt(String(req.query.offset || "0"), 10) || 0, 0);
+
+    const where = scope === "admin" ? {} : { teamId };
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take,
+        skip,
+        include: { user: { select: { displayName: true } } },
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    const filtered = logs.filter((log) => scope === "admin" || canSeeAuditEntity(log.entity, isAdmin));
+
+    res.json({
+      success: true,
+      data: {
+        logs: filtered.map((log) => ({
+          id: log.id,
+          action: log.action,
+          entity: log.entity,
+          message: formatAuditMessage({ action: log.action, entity: log.entity, details: log.details as Record<string, unknown> | null }),
+          createdAt: log.createdAt.toISOString(),
+          user: log.user ? { displayName: log.user.displayName } : undefined,
+        })),
+        total,
+        scope,
+      },
+    });
   } catch (error) { next(error); }
 });
 
