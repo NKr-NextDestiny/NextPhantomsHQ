@@ -391,45 +391,47 @@ ufw allow from APP_SERVER_IP to any port 8080 proto tcp
 ufw enable
 ```
 
-### 8. Create the WhatsApp instance
+### 8. Open the Evolution Manager
 
-Evolution API exposes instance creation through `POST /instance/create`.
+After the API is running, open:
 
-Example:
+- `http://YOUR-EVOLUTION-VM:8080/manager`
 
-```bash
-curl --request POST \
-  --url http://YOUR-EVOLUTION-VM:8080/instance/create \
-  --header 'Content-Type: application/json' \
-  --header 'apikey: YOUR_API_KEY' \
-  --data '{
-    "instanceName": "nextphantoms",
-    "integration": "WHATSAPP-BAILEYS",
-    "qrcode": true,
-    "rejectCall": false,
-    "groupsIgnore": false,
-    "alwaysOnline": false,
-    "readMessages": false,
-    "readStatus": false,
-    "syncFullHistory": false
-  }'
-```
+If the root URL only shows the API status JSON, that is normal. The web UI is under `/manager`, not `/`.
 
-Use the same instance name in the app:
+### 9. Log in to the Manager
+
+The Manager asks for the global API key.
+
+Use the value from:
+
+- `AUTHENTICATION_API_KEY`
+
+from the Evolution API `.env` on the VM.
+
+This is the key for the Manager login and for the app integration.
+
+### 10. Create the WhatsApp instance in the Manager
+
+Create your WhatsApp instance directly in the Evolution Manager UI.
+
+Recommended:
+
+- main instance for group messages, for example `nextphantoms`
+- optional second instance for private attendance reminders, for example `nextphantoms-private`
+
+Then connect WhatsApp by scanning the QR code shown in the Manager.
+
+Use the same instance names in the app:
 
 ```ini
 EVOLUTION_INSTANCE=nextphantoms
-```
-
-Then connect the WhatsApp account by scanning the QR code in Evolution Manager or via the instance connect flow.
-
-Optional: create a second instance for private attendance reminders and store it as:
-
-```ini
 EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
 ```
 
-### 9. Connect the app to Evolution
+No manual API requests are required for the normal setup.
+
+### 11. Connect the app to Evolution
 
 In the Next Phantoms HQ `.env`:
 
