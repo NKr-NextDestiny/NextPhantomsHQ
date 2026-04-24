@@ -10,12 +10,12 @@ export interface BotCommandDefinition {
 }
 
 export const BOT_COMMANDS: BotCommandDefinition[] = [
-  { command: "!hilfe", description: "Zeigt diese Befehlsuebersicht an." },
-  { command: "!befehle", description: "Zeigt diese Befehlsuebersicht an." },
-  { command: "!naechstes", description: "Zeigt das naechste Training oder Match mit Details." },
-  { command: "!termine", description: "Zeigt die naechsten anstehenden Termine." },
+  { command: "!hilfe", description: "Zeigt diese Befehlsübersicht an." },
+  { command: "!befehle", description: "Zeigt diese Befehlsübersicht an." },
+  { command: "!nächstes / !naechstes", description: "Zeigt das nächste Training oder Match mit Details." },
+  { command: "!termine", description: "Zeigt die nächsten anstehenden Termine." },
   { command: "!umfragen", description: "Zeigt aktuell offene Umfragen mit Deadline." },
-  { command: "!ankuendigungen", description: "Zeigt die neuesten aktiven Ankuendigungen." },
+  { command: "!ankündigungen / !ankuendigungen", description: "Zeigt die neuesten aktiven Ankündigungen." },
   { command: "!status", description: "Zeigt eine kompakte Zusammenfassung aus naechstem Termin und offenen Umfragen." },
 ];
 
@@ -165,9 +165,14 @@ async function formatStatus(teamId: string) {
 
 function extractCommand(text: string) {
   return text
+    .normalize("NFC")
     .trim()
     .split(/\s+/)[0]
     ?.toLowerCase()
+    .replace(/�/g, "ae")
+    .replace(/�/g, "oe")
+    .replace(/�/g, "ue")
+    .replace(/�/g, "ss")
     .replace(/ä/g, "ae")
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
@@ -213,3 +218,4 @@ export async function handleIncomingGroupCommand(instanceName: string, remoteJid
     logger.error(error, `[Evolution] Failed to answer command ${text}`);
   }
 }
+

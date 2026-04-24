@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.3",
+    date: "2026-04-25",
+    tags: ["fix", "improvement"],
+    title: "Browser-Benachrichtigungen folgen jetzt dem Browser selbst",
+    changes: [
+      "Browser-Benachrichtigungen fragen jetzt beim ersten App-Start direkt ueber den nativen Browser-Prompt an, statt ueber einen zusaetzlichen In-App-Schalter simuliert zu werden",
+      "Kuenstliche Notification-Toggles aus Header und Einstellungen entfernt; danach gilt nur noch die echte Browser-Berechtigung",
+      "WhatsApp-Befehlsliste in den Settings zeigt jetzt auch die Varianten mit Umlauten wie !nächstes und !ankündigungen",
+      "README bei der Evolution-Einrichtung um eine klarere Anleitung zur WhatsApp-Gruppen-ID ergaenzt, inklusive Hinweis auf das @g.us-Format",
+    ],
+  },
+  {
     version: "2.4.2",
     date: "2026-04-25",
     tags: ["improvement", "breaking"],

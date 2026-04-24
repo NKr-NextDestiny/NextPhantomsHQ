@@ -460,13 +460,23 @@ The app only needs incoming message events for the WhatsApp command handling and
 
 Use the Evolution Manager to list your groups and copy the correct WhatsApp group JID.
 
+In most Manager versions, this sits under the connected instance in a section such as `Groups`, `Chats` or `Find Groups`.
+You are looking for the group identifier, not the display name.
+
 It looks similar to:
 
 ```text
 1234567890-123456789@g.us
 ```
 
-You will enter this value later in Next Phantoms HQ.
+You will enter this exact value later in Next Phantoms HQ.
+
+Important:
+
+- not the group title
+- not your phone number
+- not the instance name
+- the full JID ending in `@g.us`
 
 ### 13. Connect the app to Evolution
 

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Bell, LogOut, Check, Globe, Save, Monitor, Search, Dumbbell, Trophy, FileText, Users as UsersIcon, BookOpen } from "lucide-react";
+import { Bell, LogOut, Check, Globe, Save, Search, Dumbbell, Trophy, FileText, Users as UsersIcon, BookOpen } from "lucide-react";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import { useT, useI18n } from "@/i18n/provider";
 import { locales, localeNames, type Locale } from "@/i18n";
-import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 
 interface Notification {
   id: string;
@@ -38,7 +37,6 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const tp = useT("settings");
   const tc = useT("common");
   const { locale, setLocale } = useI18n();
-  const { supported, permission, enabled, requestPermission, enable, disable } = useBrowserNotifications();
 
   const initialForm = useRef({ displayName: "" });
 
@@ -146,30 +144,6 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
                 ))}
               </div>
             </div>
-
-            {/* Browser notifications toggle */}
-            {supported && permission !== "denied" && (
-              <div className="border-t border-[var(--border)] pt-3">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)] mb-2">
-                  <Monitor className="h-3.5 w-3.5" /> {tp("notifications.browser")}
-                </label>
-                {permission === "granted" ? (
-                  <button
-                    onClick={() => enabled ? disable() : enable()}
-                    className="flex w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--secondary)] p-2.5 text-left text-sm transition-all hover:border-[var(--primary)]/50"
-                  >
-                    <div className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${enabled ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}>
-                      <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-                    </div>
-                    <span className="text-xs text-[var(--foreground)]">{enabled ? tp("notifications.browserEnabled") : tp("notifications.browserDisabled")}</span>
-                  </button>
-                ) : (
-                  <button onClick={requestPermission} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-xs font-medium text-[var(--foreground)] hover:border-[var(--primary)]/50">
-                    <Bell className="h-3.5 w-3.5" /> {tp("notifications.browserAllow")}
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Logout */}

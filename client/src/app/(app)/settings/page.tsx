@@ -4,7 +4,6 @@ import { Settings, Shield, Save, Trash2, Bell, Monitor, Gamepad2, Plus, X, Downl
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/lib/auth-store";
-import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -73,7 +72,8 @@ interface CommandInfo {
 
 function BrowserNotificationSettings() {
   const t = useT("settings");
-  const { supported, permission, enabled, requestPermission, enable, disable } = useBrowserNotifications();
+  const supported = typeof window !== "undefined" && "Notification" in window;
+  const permission = supported ? Notification.permission : "default";
 
   if (!supported) return null;
 
@@ -89,25 +89,9 @@ function BrowserNotificationSettings() {
       {permission === "denied" ? (
         <p className="text-sm text-[var(--destructive)]">{t("notifications.browserDenied")}</p>
       ) : permission === "granted" ? (
-        <button
-          onClick={() => enabled ? disable() : enable()}
-          className={`flex items-center gap-3 w-full rounded-lg border p-4 text-left transition-all ${
-            enabled
-              ? "border-[var(--primary)] bg-[var(--primary)]/10"
-              : "border-[var(--border)] bg-[var(--secondary)] hover:border-[var(--primary)]/50"
-          }`}
-        >
-          <div className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`}>
-            <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
-          </div>
-          <span className="text-sm font-medium text-[var(--foreground)]">
-            {enabled ? t("notifications.browserEnabled") : t("notifications.browserDisabled")}
-          </span>
-        </button>
+        <p className="text-sm text-[var(--foreground)]">{t("notifications.browserEnabled")}</p>
       ) : (
-        <Button onClick={requestPermission}>
-          <Bell className="h-4 w-4" /> {t("notifications.browserAllow")}
-        </Button>
+        <p className="text-sm text-[var(--muted-foreground)]">{t("notifications.browserAllow")}</p>
       )}
     </Card>
   );
