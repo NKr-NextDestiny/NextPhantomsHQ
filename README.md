@@ -260,6 +260,8 @@ This is the recommended setup for WhatsApp delivery.
 
 Evolution API v2 currently expects its own Redis and persistent database configuration. The official docs show Docker-based deployment with an API key and separate Postgres/Redis requirements, so this guide uses that layout.
 
+Important: do not rely on `latest` here. In practice, `latest` and the old `atendai/...` image path can leave you on outdated builds such as `v2.2.3`, which is exactly where QR / pairing problems are frequently reported. Pin a concrete version and use the current image namespace instead.
+
 ### 1. Prepare the VM
 
 ```bash
@@ -351,7 +353,7 @@ services:
       - evolution_redis:/data
 
   evolution-api:
-    image: atendai/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution_api
     restart: unless-stopped
     env_file:
@@ -369,6 +371,8 @@ volumes:
   evolution_redis:
   evolution_instances:
 ```
+
+If a newer stable Evolution API release exists when you set this up, replace `v2.3.7` with that exact version tag. Avoid `:latest`.
 
 ### 6. Start Evolution API
 
