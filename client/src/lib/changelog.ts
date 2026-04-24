@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.2",
+    date: "2026-04-25",
+    tags: ["improvement", "breaking"],
+    title: "Evolution Manager als einzige Setup-Oberflaeche",
+    changes: [
+      "In-App-Werkzeuge fuer Instanz-Erstellung, QR-/Pairing-Code, Gruppenabruf und Webhook-Setup entfernt, damit Evolution-Setup nur noch an einer Stelle stattfindet",
+      "WhatsApp-Einstellungen im Projekt auf die wirklich benoetigten App-Daten reduziert: globale Schalter, Gruppen-JID und Versandmodi",
+      "Server-Routen und Hilfsskripte fuer Evolution-Manager-Aufgaben entfernt, die jetzt ausschliesslich ueber den Evolution Manager erledigt werden",
+      "README neu geordnet: erst Evolution API und Manager aufsetzen, dann Webhook im Manager setzen, danach erst Next Phantoms HQ verbinden",
+    ],
+  },
+  {
     version: "2.4.1",
     date: "2026-04-25",
     tags: ["fix", "improvement"],

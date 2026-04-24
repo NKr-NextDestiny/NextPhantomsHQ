@@ -32,19 +32,3 @@ evolutionWebhookRouter.post("/messages-upsert", async (req, res) => {
 
   res.json({ success: true });
 });
-
-evolutionWebhookRouter.post("/qrcode-updated", async (_req, res) => {
-  res.json({ success: true });
-});
-
-evolutionWebhookRouter.post("/connection-update", async (_req, res) => {
-  res.json({ success: true });
-});
-
-evolutionWebhookRouter.post("/groups-upsert", async (_req, res) => {
-  res.json({ success: true });
-});
-
-evolutionWebhookRouter.post("/groups-update", async (_req, res) => {
-  res.json({ success: true });
-});

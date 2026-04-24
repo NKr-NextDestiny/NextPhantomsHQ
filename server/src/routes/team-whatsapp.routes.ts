@@ -4,10 +4,8 @@ import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { teamContext } from "../middleware/team.js";
 import { validate } from "../middleware/validate.js";
 import { prisma } from "../config/prisma.js";
-import { config } from "../config/index.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { logAudit } from "../services/audit.service.js";
-import * as evolutionService from "../services/evolution.service.js";
 import { BOT_COMMANDS, formatCommandHelpMessage, postCommandHelpToGroup } from "../services/bot-commands.service.js";
 import { buildGroupDescription, scheduleGroupDescriptionUpdate, updateGroupDescription } from "../services/group-description.service.js";
 
@@ -39,100 +37,11 @@ const blockSchema = z.object({
   sortOrder: z.number().int().min(0).default(0),
 });
 
-const instanceCreateSchema = z.object({
-  instanceName: z.string().min(1),
-  number: z.string().optional().nullable(),
-  groupsIgnore: z.boolean().optional().default(false),
-});
-
-const connectSchema = z.object({
-  instanceName: z.string().min(1),
-  number: z.string().optional().nullable(),
-});
-
-const webhookSchema = z.object({
-  instanceName: z.string().min(1),
-});
-
 const postCommandsSchema = z.object({
   message: z.string().optional().nullable(),
 });
 
 teamWhatsAppRouter.use(authenticate, teamContext, requireAdmin);
-
-teamWhatsAppRouter.get("/status", async (req, res, next) => {
-  try {
-    const [team, instances] = await Promise.all([
-      prisma.team.findUnique({ where: { id: req.teamId! } }),
-      evolutionService.fetchInstances(),
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        configured: evolutionService.isEvolutionConfigured(),
-        apiUrl: config.evolutionApiUrl,
-        instance: config.evolutionInstance,
-        attendanceInstance: config.evolutionAttendanceInstance,
-        groupJid: team?.whatsappGroupJid ?? null,
-        instances,
-      },
-    });
-  } catch (error) { next(error); }
-});
-
-teamWhatsAppRouter.get("/groups", async (req, res, next) => {
-  try {
-    const instanceName = typeof req.query.instance === "string" ? req.query.instance : config.evolutionInstance;
-    const groups = await evolutionService.fetchAllGroups(instanceName);
-    res.json({ success: true, data: groups });
-  } catch (error) { next(error); }
-});
-
-teamWhatsAppRouter.post("/instances", validate(instanceCreateSchema), async (req, res, next) => {
-  try {
-    const webhookUrl = `${config.apiUrl.replace(/\/$/, "")}/evolution/webhook`;
-    const data = await evolutionService.createInstance(req.body.instanceName, {
-      qrcode: true,
-      number: req.body.number || undefined,
-      groupsIgnore: req.body.groupsIgnore,
-      webhookUrl,
-      events: ["MESSAGES_UPSERT", "QRCODE_UPDATED", "CONNECTION_UPDATE", "GROUPS_UPSERT", "GROUPS_UPDATE"],
-    });
-
-    await logAudit(req.user!.id, "CREATE", "evolution_instance", req.body.instanceName, { webhookUrl }, req.teamId);
-    res.status(201).json({ success: true, data });
-  } catch (error) { next(error); }
-});
-
-teamWhatsAppRouter.post("/connect", validate(connectSchema), async (req, res, next) => {
-  try {
-    const data = await evolutionService.connectInstance(req.body.instanceName, req.body.number || undefined);
-    res.json({ success: true, data });
-  } catch (error) { next(error); }
-});
-
-teamWhatsAppRouter.get("/webhook/:instanceName", async (req, res, next) => {
-  try {
-    const data = await evolutionService.findWebhook(String(req.params.instanceName));
-    res.json({ success: true, data });
-  } catch (error) { next(error); }
-});
-
-teamWhatsAppRouter.post("/webhook", validate(webhookSchema), async (req, res, next) => {
-  try {
-    const webhookUrl = `${config.apiUrl.replace(/\/$/, "")}/evolution/webhook`;
-    const data = await evolutionService.setWebhook(req.body.instanceName, webhookUrl, [
-      "MESSAGES_UPSERT",
-      "QRCODE_UPDATED",
-      "CONNECTION_UPDATE",
-      "GROUPS_UPSERT",
-      "GROUPS_UPDATE",
-    ]);
-    await logAudit(req.user!.id, "UPDATE", "evolution_webhook", req.body.instanceName, { webhookUrl }, req.teamId);
-    res.json({ success: true, data });
-  } catch (error) { next(error); }
-});
 
 teamWhatsAppRouter.get("/commands", async (_req, res) => {
   const helpMessage = await formatCommandHelpMessage();

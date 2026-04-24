@@ -244,15 +244,14 @@ In `Settings -> Members`, admins can additionally:
 
 ### 9. Admin WhatsApp setup
 
-In `Settings -> Notifications`, admins can also:
+In `Settings -> Notifications`, admins can:
 
-1. create an Evolution instance
-2. fetch the pairing QR code / pairing code
-3. set the Evolution webhook automatically
-4. fetch all WhatsApp groups and their IDs
-5. post the bot command help text to the group
-6. manage custom text blocks for the WhatsApp group description
-7. preview and manually push the current group description
+1. enable or disable WhatsApp globally
+2. enter the WhatsApp group JID used for public team messages
+3. choose whether announcements, match results and poll results are sent as `TEXT`, `IMAGE` or `BOTH`
+4. post the bot command help text to the group
+5. manage custom text blocks for the WhatsApp group description
+6. preview and manually push the current group description
 
 ## Evolution API on a Separate Debian 13 VM
 
@@ -260,7 +259,7 @@ This is the recommended setup for WhatsApp delivery.
 
 Evolution API v2 currently expects its own Redis and persistent database configuration. The official docs show Docker-based deployment with an API key and separate Postgres/Redis requirements, so this guide uses that layout.
 
-Important: do not rely on `latest` here. In practice, `latest` and the old `atendai/...` image path can leave you on outdated builds such as `v2.2.3`, which is exactly where QR / pairing problems are frequently reported. Pin a concrete version and use the current image namespace instead.
+Important: the old `atendai/...` image path should not be used anymore. For `evoapicloud/evolution-api`, `latest` can work, but a pinned version is still the safer and more reproducible choice for production.
 
 ### 1. Prepare the VM
 
@@ -372,7 +371,7 @@ volumes:
   evolution_instances:
 ```
 
-If a newer stable Evolution API release exists when you set this up, replace `v2.3.7` with that exact version tag. Avoid `:latest`.
+If a newer stable Evolution API release exists when you set this up, replace `v2.3.7` with that exact version tag. If you prefer, `evoapicloud/evolution-api:latest` can also be used, but a pinned version is recommended so your deployment stays reproducible.
 
 ### 6. Start Evolution API
 
@@ -415,7 +414,7 @@ from the Evolution API `.env` on the VM.
 
 This is the key for the Manager login and for the app integration.
 
-### 10. Create the WhatsApp instance in the Manager
+### 10. Create the WhatsApp instances in the Manager
 
 Create your WhatsApp instance directly in the Evolution Manager UI.
 
@@ -424,7 +423,15 @@ Recommended:
 - main instance for group messages, for example `nextphantoms`
 - optional second instance for private attendance reminders, for example `nextphantoms-private`
 
-Then connect WhatsApp by scanning the QR code shown in the Manager.
+For each instance:
+
+1. choose `Baileys` as the channel
+2. keep the generated token or let the Manager create one
+3. enter the WhatsApp number in international format without `+`, for example `491701234567`
+4. save the instance
+5. connect WhatsApp by scanning the QR code shown in the Manager
+
+Do not do any of these steps in Next Phantoms HQ. Instance creation, QR pairing and group lookup are handled in the Manager.
 
 Use the same instance names in the app:
 
@@ -433,9 +440,35 @@ EVOLUTION_INSTANCE=nextphantoms
 EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
 ```
 
-No manual API requests are required for the normal setup.
+These values are the exact instance names from the Evolution Manager, not phone numbers and not group IDs.
+If you only want to run a single instance, you can leave `EVOLUTION_ATTENDANCE_INSTANCE` empty and the app will fall back to `EVOLUTION_INSTANCE` for private reminder messages.
 
-### 11. Connect the app to Evolution
+### 11. Set the webhook in the Manager
+
+Still inside the Evolution Manager, configure the webhook for the main instance and the optional private instance.
+
+Use:
+
+- URL: `https://YOUR-APP/evolution/webhook`
+- by events: enabled
+- base64: enabled
+- event: `MESSAGES_UPSERT`
+
+The app only needs incoming message events for the WhatsApp command handling and attendance reply flow.
+
+### 12. Find the correct WhatsApp group ID in the Manager
+
+Use the Evolution Manager to list your groups and copy the correct WhatsApp group JID.
+
+It looks similar to:
+
+```text
+1234567890-123456789@g.us
+```
+
+You will enter this value later in Next Phantoms HQ.
+
+### 13. Connect the app to Evolution
 
 In the Next Phantoms HQ `.env`:
 
@@ -454,6 +487,18 @@ docker compose down
 docker compose up -d --build
 ```
 
+### 14. Finish the WhatsApp setup inside Next Phantoms HQ
+
+After the app is connected to Evolution:
+
+1. open `Settings -> Notifications`
+2. enable WhatsApp globally if desired
+3. paste the WhatsApp group JID copied from the Manager
+4. choose the output mode for announcements, match results and poll results
+5. save the settings
+
+In `Settings -> Members`, admins can then maintain player phone numbers and per-player email opt-in for the private reminder flow.
+
 ## In-App Notification Settings
 
 After Evolution is connected:
@@ -461,7 +506,7 @@ After Evolution is connected:
 1. Go to `Settings -> Notifications`
 2. Enable or disable email globally
 3. Enable or disable WhatsApp globally
-4. Set the WhatsApp group JID
+4. Set the WhatsApp group JID copied from the Evolution Manager
 5. Choose output mode for:
    - announcements
    - match results
