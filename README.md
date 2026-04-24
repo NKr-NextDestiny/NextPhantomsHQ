@@ -267,16 +267,32 @@ apt update && apt upgrade -y
 apt install -y curl git ca-certificates gnupg2 lsb-release ufw
 ```
 
-Install Docker exactly like on the app server.
+### 2. Install Docker + Compose plugin on the Evolution VM
 
-### 2. Create a working directory
+```bash
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+docker --version
+docker compose version
+```
+
+### 3. Create a working directory
 
 ```bash
 mkdir -p /opt/evolution-api
 cd /opt/evolution-api
 ```
 
-### 3. Create `.env`
+### 4. Create `.env`
 
 ```bash
 nano .env
@@ -314,7 +330,7 @@ WEBSOCKET_ENABLED=false
 TELEMETRY=false
 ```
 
-### 4. Create `docker-compose.yml`
+### 5. Create `docker-compose.yml`
 
 ```yaml
 services:
@@ -354,14 +370,14 @@ volumes:
   evolution_instances:
 ```
 
-### 5. Start Evolution API
+### 6. Start Evolution API
 
 ```bash
 docker compose up -d
 docker compose logs -f evolution-api
 ```
 
-### 6. Firewall
+### 7. Firewall
 
 If the app server talks to Evolution directly, only open port `8080` from the app server IP if possible.
 
@@ -375,7 +391,7 @@ ufw allow from APP_SERVER_IP to any port 8080 proto tcp
 ufw enable
 ```
 
-### 7. Create the WhatsApp instance
+### 8. Create the WhatsApp instance
 
 Evolution API exposes instance creation through `POST /instance/create`.
 
@@ -413,7 +429,7 @@ Optional: create a second instance for private attendance reminders and store it
 EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
 ```
 
-### 8. Connect the app to Evolution
+### 9. Connect the app to Evolution
 
 In the Next Phantoms HQ `.env`:
 
