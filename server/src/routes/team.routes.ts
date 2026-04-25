@@ -66,6 +66,17 @@ teamRouter.put("/", authenticate, teamContext, requireAdmin, validate(updateTeam
       data: req.body,
     });
 
+    if (req.body.emailNotificationsEnabled === false) {
+      const memberIds = await prisma.teamMember.findMany({
+        where: { teamId: req.teamId! },
+        select: { userId: true },
+      });
+      await prisma.user.updateMany({
+        where: { id: { in: memberIds.map((member) => member.userId) } },
+        data: { emailNotifications: false },
+      });
+    }
+
     await logAudit(req.user!.id, "UPDATE", "team", team.id, undefined, req.teamId);
     res.json({ success: true, data: team });
   } catch (error) { next(error); }

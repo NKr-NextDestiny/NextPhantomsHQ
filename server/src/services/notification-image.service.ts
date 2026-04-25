@@ -8,6 +8,7 @@ export interface GeneratedNotificationImage {
 
 const WIDTH = 1200;
 const HEIGHT = 675;
+const FONT_STACK = "Arial, 'DejaVu Sans', 'Noto Sans', sans-serif";
 
 function escapeHtml(value: string): string {
   return value
@@ -67,12 +68,12 @@ function svgTemplate(options: {
     <rect width="100%" height="100%" fill="url(#bg)" />
     <rect x="56" y="56" width="1088" height="563" rx="18" fill="#0d1117" stroke="#293241" stroke-width="2" />
     <rect x="56" y="56" width="1088" height="16" rx="8" fill="url(#accent)" />
-    <text x="88" y="126" fill="#ffb26b" font-size="28" font-family="Segoe UI, Arial, sans-serif" font-weight="700">${escapeHtml(options.badge)}</text>
-    ${titleLines.map((line, index) => `<text x="88" y="${208 + index * 72}" fill="#f5f7fb" font-size="62" font-family="Segoe UI, Arial, sans-serif" font-weight="800">${escapeHtml(line)}</text>`).join("")}
-    ${subtitle ? `<text x="88" y="430" fill="#c3ccda" font-size="30" font-family="Segoe UI, Arial, sans-serif" font-weight="500">${subtitle}</text>` : ""}
-    ${bodyLines.map((line, index) => `<text x="88" y="${492 + index * 40}" fill="#d9e0eb" font-size="28" font-family="Segoe UI, Arial, sans-serif">${escapeHtml(line)}</text>`).join("")}
-    ${footer ? `<text x="88" y="590" fill="#7f8a9b" font-size="24" font-family="Segoe UI, Arial, sans-serif">${footer}</text>` : ""}
-    <text x="1058" y="590" text-anchor="end" fill="#7f8a9b" font-size="24" font-family="Segoe UI, Arial, sans-serif">Next Phantoms HQ</text>
+    <text x="88" y="126" fill="#ffb26b" font-size="28" font-family="${FONT_STACK}" font-weight="700">${escapeHtml(options.badge)}</text>
+    ${titleLines.map((line, index) => `<text x="88" y="${208 + index * 72}" fill="#f5f7fb" font-size="62" font-family="${FONT_STACK}" font-weight="800">${escapeHtml(line)}</text>`).join("")}
+    ${subtitle ? `<text x="88" y="430" fill="#c3ccda" font-size="30" font-family="${FONT_STACK}" font-weight="500">${subtitle}</text>` : ""}
+    ${bodyLines.map((line, index) => `<text x="88" y="${492 + index * 40}" fill="#d9e0eb" font-size="28" font-family="${FONT_STACK}">${escapeHtml(line)}</text>`).join("")}
+    ${footer ? `<text x="88" y="590" fill="#7f8a9b" font-size="24" font-family="${FONT_STACK}">${footer}</text>` : ""}
+    <text x="1058" y="590" text-anchor="end" fill="#7f8a9b" font-size="24" font-family="${FONT_STACK}">Next Phantoms HQ</text>
   </svg>`;
 }
 

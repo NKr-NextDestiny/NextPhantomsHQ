@@ -15,9 +15,7 @@ const slotSchema = z.object({
 });
 
 const updateSchema = z.object({
-  body: z.object({
-    slots: z.array(slotSchema),
-  }),
+  slots: z.array(slotSchema),
 });
 
 // Get my availability

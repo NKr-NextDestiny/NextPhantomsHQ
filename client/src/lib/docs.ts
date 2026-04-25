@@ -318,7 +318,7 @@ Die Rollen bestimmen, was du in der App tun kannst (aufsteigend):
 - **Player** — Standard-Zugang, kann Notizen erstellen, abstimmen und Kommentare schreiben
 - **Analyst** — Kann zusätzlich Strats und Wiki-Seiten erstellen und bearbeiten
 - **Coach** — Kann Trainings, Matches, Erinnerungen und Vorlagen verwalten, Ankündigungen erstellen
-- **Captain** — Erweiterte Rechte, kann Lineups erstellen und Scouting-Infos pflegen
+- **Leader** — Erweiterte Rechte, kann Lineups erstellen und Scouting-Infos pflegen
 - **Admin** — Voller Zugriff auf alles inkl. Team-Einstellungen und Mitgliederverwaltung
 
 ## Admin-Zugang
@@ -328,7 +328,7 @@ Admin-Zugang wird ausschließlich über Discord konfiguriert — NICHT über die
 - **Erster User** — der erste User der sich einloggt wird automatisch Admin
 
 ## Team-Rollen
-Team-Rollen (Tryout bis Captain) können von Admins in den Einstellungen unter "Mitglieder" zugewiesen werden.`,
+Team-Rollen (Tryout bis Leader) können von Admins in den Einstellungen unter "Mitglieder" zugewiesen werden.`,
   },
   {
     id: "search",

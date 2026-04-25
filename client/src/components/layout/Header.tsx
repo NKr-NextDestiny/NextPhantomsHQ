@@ -29,7 +29,6 @@ interface NotificationsResponse {
 
 function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ displayName: "" });
   const [saving, setSaving] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { success, error } = useToast();
@@ -38,25 +37,7 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const tc = useT("common");
   const { locale, setLocale } = useI18n();
 
-  const initialForm = useRef({ displayName: "" });
-
-  useEffect(() => {
-    if (user && open) {
-      const f = { displayName: user.displayName || "" };
-      setForm(f);
-      initialForm.current = f;
-    }
-  }, [user, open]);
-
-  const hasUnsaved = () => {
-    const i = initialForm.current;
-    return form.displayName !== i.displayName;
-  };
-
   const tryClose = () => {
-    if (hasUnsaved()) {
-      if (!confirm(tc("unsavedWarning"))) return;
-    }
     setOpen(false);
   };
 
@@ -71,8 +52,8 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
   const saveProfile = async () => {
     setSaving(true);
     try {
-      await api.put("/api/users/me", { ...form });
       success(tc("saved"));
+      setOpen(false);
     } catch {
       error(tc("saveError"));
     } finally {
@@ -109,19 +90,9 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
           </div>
 
           <div className="max-h-[70vh] overflow-y-auto px-4 py-3 space-y-3">
-            {/* Display name */}
-            <div>
-              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">{tp("personal.displayName")}</label>
-              <input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className="w-full rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
-            </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-2 text-xs text-[var(--muted-foreground)]">
-              Kontakt- und Benachrichtigungseinstellungen werden vom Admin verwaltet.
+              Dein Anzeigename kommt direkt von Discord und kann im HQ nicht geändert werden. Kontakt- und Benachrichtigungseinstellungen werden vom Admin verwaltet.
             </div>
-
-            {/* Save button */}
-            <button onClick={saveProfile} disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--primary)]/90 disabled:opacity-50">
-              <Save className="h-3.5 w-3.5" /> {saving ? tc("saving") : tc("save")}
-            </button>
 
             {/* Language */}
             <div className="border-t border-[var(--border)] pt-3">
@@ -144,6 +115,9 @@ function ProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }
                 ))}
               </div>
             </div>
+            <button onClick={saveProfile} disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--primary)]/90 disabled:opacity-50">
+              <Save className="h-3.5 w-3.5" /> {saving ? tc("saving") : tc("save")}
+            </button>
           </div>
 
           {/* Logout */}

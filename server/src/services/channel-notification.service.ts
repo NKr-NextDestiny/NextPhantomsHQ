@@ -16,6 +16,7 @@ interface NotifyMember {
   email?: string | null;
   phone?: string | null;
   emailNotifications: boolean;
+  language?: string | null;
 }
 
 interface TeamNotificationSettings {
@@ -72,22 +73,32 @@ async function getSettings(teamId: string): Promise<TeamNotificationSettings> {
 async function getRecipients(teamId: string): Promise<NotifyMember[]> {
   const members = await prisma.teamMember.findMany({
     where: { teamId },
-    include: { user: { select: { id: true, email: true, phone: true, emailNotifications: true } } },
+    include: {
+      user: {
+        select: { id: true, email: true, phone: true, emailNotifications: true, language: true },
+      },
+    },
   });
+
   return members.map((member) => ({
     id: member.user.id,
     email: member.user.email,
     phone: member.user.phone,
     emailNotifications: member.user.emailNotifications,
+    language: member.user.language,
   }));
 }
 
-async function sendEmails(members: NotifyMember[], enabled: boolean, fn: (email: string) => Promise<void>) {
+async function sendEmails(
+  members: NotifyMember[],
+  enabled: boolean,
+  fn: (member: NotifyMember) => Promise<void>,
+) {
   if (!enabled) return;
   await Promise.all(
     members
       .filter((member) => member.emailNotifications && member.email)
-      .map((member) => fn(member.email!).catch((e) => logger.error(e, "Failed to send email notification"))),
+      .map((member) => fn(member).catch((e) => logger.error(e, "Failed to send email notification"))),
   );
 }
 
@@ -113,35 +124,55 @@ export function getAvailableChannels(): { email: boolean; whatsapp: boolean } {
   };
 }
 
-export async function notifyNewEvent(teamId: string, eventType: string, title: string, date: string, createdBy: string): Promise<void> {
+export async function notifyNewEvent(
+  teamId: string,
+  eventType: string,
+  title: string,
+  date: string,
+  createdBy: string,
+): Promise<void> {
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
-  const text = `📅 Neues ${eventType}: ${title}\n${date}\nVon ${createdBy}\n\n${AUTOMATED_NOTICE}`;
+  const link = eventType === "Training" ? "/training" : "/matches";
+  const text = `📅 Neues ${eventType}: ${title}\n${date}\nVon ${createdBy}`;
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendNewEventNotification(email, eventType, title, date, createdBy),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendNewEventNotification(member.email!, member.language, eventType, title, date, createdBy, link),
   );
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
-export async function notifyEventUpdated(teamId: string, eventType: string, title: string, date: string, updatedBy: string): Promise<void> {
+export async function notifyEventUpdated(
+  teamId: string,
+  eventType: string,
+  title: string,
+  date: string,
+  updatedBy: string,
+): Promise<void> {
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
-  const text = `🔄 ${eventType} aktualisiert: ${title}\n${date}\nGeändert von ${updatedBy}\n\n${AUTOMATED_NOTICE}`;
+  const link = eventType === "Training" ? "/training" : "/matches";
+  const text = `🔄 ${eventType} aktualisiert: ${title}\n${date}\nGeändert von ${updatedBy}`;
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendEventUpdatedNotification(email, eventType, title, date, updatedBy),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendEventUpdatedNotification(member.email!, member.language, eventType, title, date, updatedBy, link),
   );
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
-export async function notifyEventDeleted(teamId: string, eventType: string, title: string, deletedBy: string): Promise<void> {
+export async function notifyEventDeleted(
+  teamId: string,
+  eventType: string,
+  title: string,
+  deletedBy: string,
+): Promise<void> {
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
-  const text = `❌ ${eventType} abgesagt: ${title}\nVon ${deletedBy}\n\n${AUTOMATED_NOTICE}`;
+  const link = eventType === "Training" ? "/training" : "/matches";
+  const text = `❌ ${eventType} abgesagt: ${title}\nVon ${deletedBy}`;
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendEventDeletedNotification(email, eventType, title, deletedBy),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendEventDeletedNotification(member.email!, member.language, eventType, title, deletedBy, link),
   );
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
@@ -155,7 +186,7 @@ export async function notifyAnnouncement(teamId: string, announcementId: string)
   });
   if (!announcement) return;
 
-  const text = `📣 Neue Ankündigung: ${announcement.title}\nVon ${announcement.createdBy.displayName}\n\n${announcement.content}\n\n${AUTOMATED_NOTICE}`;
+  const text = `📣 Neue Ankündigung: ${announcement.title}\nVon ${announcement.createdBy.displayName}\n\n${announcement.content}`;
   const media = announcement.imageUrl
     ? await loadEncryptedImage(announcement.imageUrl, announcement.imageFileName)
     : await createAnnouncementImage({
@@ -164,8 +195,14 @@ export async function notifyAnnouncement(teamId: string, announcementId: string)
         createdBy: announcement.createdBy.displayName,
       });
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendAnnouncementNotification(email, announcement.title, announcement.createdBy.displayName),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendAnnouncementNotification(
+      member.email!,
+      member.language,
+      announcement.title,
+      announcement.createdBy.displayName,
+      "/announcements",
+    ),
   );
   await sendGroupWhatsapp(settings, text, settings.announcementNotificationMode, media);
 }
@@ -176,18 +213,31 @@ export async function notifyMatchResult(teamId: string, matchId: string): Promis
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match || match.scoreUs === null || match.scoreThem === null || !match.result) return;
 
-  const text = `🏆 Match-Ergebnis\nNext Phantoms ${match.scoreUs}:${match.scoreThem} ${match.opponent}\n${match.result}\n${match.map || "Ohne Map"}\n${match.competition || "Ohne Wettbewerb"}\n\n${AUTOMATED_NOTICE}`;
+  const text =
+    `🏆 Match-Ergebnis\n` +
+    `Next Phantoms ${match.scoreUs}:${match.scoreThem} ${match.opponent}\n` +
+    `${match.result}\n${match.map || "Ohne Map"}\n${match.competition || "Ohne Wettbewerb"}`;
   const media = await createMatchResultImage({
     opponent: match.opponent,
-    scoreUs: match.scoreUs,
-    scoreThem: match.scoreThem,
+    scoreUs: match.scoreUs!,
+    scoreThem: match.scoreThem!,
     map: match.map,
     competition: match.competition,
     result: match.result,
   });
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendMatchResultNotification(email, match.opponent, match.scoreUs!, match.scoreThem!, match.result!, match.map, match.competition),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendMatchResultNotification(
+      member.email!,
+      member.language,
+      match.opponent,
+      match.scoreUs!,
+      match.scoreThem!,
+      match.result!,
+      match.map,
+      match.competition,
+      `/matches/${match.id}`,
+    ),
   );
   await sendGroupWhatsapp(settings, text, settings.matchResultNotificationMode, media);
 }
@@ -211,11 +261,11 @@ export async function notifyPollResults(teamId: string, pollId: string): Promise
     const percent = totalVotes > 0 ? Math.round((option._count.votes / totalVotes) * 100) : 0;
     return `${option.text}: ${option._count.votes} Stimmen (${percent}%)`;
   });
-  const text = `📊 Abstimmung beendet: ${poll.question}\n\n${resultLines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  const text = `📊 Abstimmung beendet: ${poll.question}\n\n${resultLines.join("\n")}`;
   const media = await createPollResultImage({ question: poll.question, lines: resultLines });
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendPollResultNotification(email, poll.question, resultLines),
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendPollResultNotification(member.email!, member.language, poll.question, resultLines, "/polls"),
   );
   await sendGroupWhatsapp(settings, text, settings.pollResultNotificationMode, media);
 
@@ -235,13 +285,16 @@ export async function notifyPollCreated(teamId: string, pollId: string): Promise
   if (!poll) return;
 
   const optionLines = poll.options.map((option, index) => `${index + 1}. ${option.text}`);
-  const text = `📊 Neue Umfrage: ${poll.question}\nVon ${poll.createdBy.displayName}\n\n${optionLines.join("\n")}\n\n${AUTOMATED_NOTICE}`;
+  const text = `📊 Neue Umfrage: ${poll.question}\nVon ${poll.createdBy.displayName}\n\n${optionLines.join("\n")}`;
 
-  await sendEmails(members, settings.emailNotificationsEnabled, (email) =>
-    emailService.sendEmail(
-      email,
-      `[Next Phantoms HQ] Neue Umfrage: ${poll.question}`,
-      `<p><strong>${poll.createdBy.displayName}</strong> hat eine neue Umfrage erstellt.</p><p><strong>${poll.question}</strong></p><ul>${poll.options.map((option) => `<li>${option.text}</li>`).join("")}</ul><p>Öffne das HQ zum Abstimmen.</p><p><em>${AUTOMATED_NOTICE}</em></p>`,
+  await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
+    emailService.sendPollCreatedNotification(
+      member.email!,
+      member.language,
+      poll.question,
+      poll.createdBy.displayName,
+      poll.options.map((option) => option.text),
+      "/polls",
     ),
   );
   await sendGroupWhatsapp(settings, text, "TEXT");
@@ -249,19 +302,19 @@ export async function notifyPollCreated(teamId: string, pollId: string): Promise
 
 export async function notifyReminderCreated(teamId: string, title: string, content?: string | null) {
   const settings = await getSettings(teamId);
-  const text = `🔔 Neue Erinnerung: ${title}${content ? `\n\n${content}` : ""}\n\n${AUTOMATED_NOTICE}`;
+  const text = `🔔 Neue Erinnerung: ${title}${content ? `\n\n${content}` : ""}`;
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
 export async function notifyReminderUpdated(teamId: string, title: string, content?: string | null) {
   const settings = await getSettings(teamId);
-  const text = `🔄 Erinnerung aktualisiert: ${title}${content ? `\n\n${content}` : ""}\n\n${AUTOMATED_NOTICE}`;
+  const text = `🔄 Erinnerung aktualisiert: ${title}${content ? `\n\n${content}` : ""}`;
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
 export async function notifyReminderDeleted(teamId: string, title: string) {
   const settings = await getSettings(teamId);
-  const text = `❌ Erinnerung gelöscht: ${title}\n\n${AUTOMATED_NOTICE}`;
+  const text = `❌ Erinnerung gelöscht: ${title}`;
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
@@ -277,6 +330,7 @@ export async function sendPrivateAttendanceReminder(
   existingReason?: string | null,
 ): Promise<void> {
   const settings = await getSettings(teamId);
+  const attendanceLink = whatsappToken ? `${config.appUrl}/attendance/${whatsappToken}` : undefined;
   const baseText = `⏰ Automatisierte Erinnerung: ${title}\nTyp: ${eventType}\n${date}\n\nBitte gib deine Verfügbarkeit an.`;
 
   const tasks: Promise<void>[] = [];
@@ -286,14 +340,17 @@ export async function sendPrivateAttendanceReminder(
       existingResponse
         ? emailService.sendAttendanceAlreadyResponded(
             member.email,
+            member.language,
             eventType,
             title,
             date,
             existingResponse,
             existingReason,
+            attendanceLink,
           )
         : emailService.sendAttendanceReminder(
             member.email,
+            member.language,
             eventType,
             title,
             date,
@@ -303,11 +360,11 @@ export async function sendPrivateAttendanceReminder(
     );
   }
 
-  if (settings.whatsappNotificationsEnabled && member.phone && whatsappToken) {
+  if (settings.whatsappNotificationsEnabled && member.phone && whatsappToken && attendanceLink) {
     tasks.push(
       evolutionService.sendWhatsAppText(
         member.phone,
-        `${baseText}\n${config.appUrl}/attendance/${whatsappToken}\n\n${AUTOMATED_NOTICE}`,
+        `${baseText}\n${attendanceLink}\n\n${AUTOMATED_NOTICE}`,
         "private",
       ),
     );

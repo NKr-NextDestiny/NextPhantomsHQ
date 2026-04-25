@@ -4,6 +4,7 @@ import { Plus, BookOpen, Trash2, Edit3, Clock } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useT } from "@/i18n/provider";
+import { repairMojibake } from "@/i18n";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -136,7 +137,7 @@ export default function WikiPageList() {
             <Card key={page.id} hover className="cursor-pointer" onClick={() => openView(page.slug)}>
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold text-[var(--foreground)]">{page.title}</h3>
+                  <h3 className="font-semibold text-[var(--foreground)]">{repairMojibake(page.title)}</h3>
                   <p className="mt-1 text-xs text-[var(--muted-foreground)]">/{page.slug}</p>
                 </div>
                 <div className="flex gap-1">
@@ -158,10 +159,10 @@ export default function WikiPageList() {
       )}
 
       {/* View page */}
-      <Modal open={!!viewPage} onClose={() => setViewPage(null)} title={viewPage?.title || ""}>
+      <Modal open={!!viewPage} onClose={() => setViewPage(null)} title={repairMojibake(viewPage?.title || "")}>
         {viewPage && (
           <div className="space-y-4">
-            <div className="whitespace-pre-wrap text-sm text-[var(--foreground)]">{viewPage.content}</div>
+            <div className="whitespace-pre-wrap text-sm text-[var(--foreground)]">{repairMojibake(viewPage.content)}</div>
             <div className="border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
               {t("createdBy", { name: viewPage.createdBy.displayName, date: formatDate(viewPage.createdAt) })}
               {viewPage.updatedBy && <> — {t("editedBy", { name: viewPage.updatedBy.displayName })}</>}

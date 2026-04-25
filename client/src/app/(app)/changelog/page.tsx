@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { changelog } from "@/lib/changelog";
 import { useT } from "@/i18n/provider";
+import { repairMojibake } from "@/i18n";
 
 const tagColors: Record<string, "default" | "success" | "destructive" | "outline"> = {
   feature: "success",
@@ -61,7 +62,7 @@ export default function ChangelogPage() {
                         </Badge>
                       ))}
                     </div>
-                    <span className="text-sm font-medium text-[var(--foreground)]">{entry.title}</span>
+                    <span className="text-sm font-medium text-[var(--foreground)]">{repairMojibake(entry.title)}</span>
                   </div>
                 </button>
 
@@ -71,7 +72,7 @@ export default function ChangelogPage() {
                       {entry.changes.map((change, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
                           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--primary)]" />
-                          {change}
+                          {repairMojibake(change)}
                         </li>
                       ))}
                     </ul>

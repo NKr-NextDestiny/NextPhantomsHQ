@@ -28,7 +28,7 @@ function resolve(obj: unknown, path: string): string | undefined {
   return typeof cur === "string" ? cur : undefined;
 }
 
-function repairMojibake(value: string): string {
+export function repairMojibake(value: string): string {
   if (!/[Ãâð]/.test(value)) return value;
 
   try {

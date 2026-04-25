@@ -10,11 +10,9 @@ import { AppError } from "../middleware/errorHandler.js";
 export const wikiRouter = Router();
 
 const pageSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(200),
-    slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/),
-    content: z.string().min(1),
-  }),
+  title: z.string().min(1).max(200),
+  slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/),
+  content: z.string().min(1),
 });
 
 // List pages

@@ -10,12 +10,10 @@ import { AppError } from "../middleware/errorHandler.js";
 export const matchReviewRouter = Router();
 
 const reviewSchema = z.object({
-  body: z.object({
-    positives: z.string().max(5000).optional(),
-    negatives: z.string().max(5000).optional(),
-    improvements: z.string().max(5000).optional(),
-    notes: z.string().max(5000).optional(),
-  }),
+  positives: z.string().max(5000).optional(),
+  negatives: z.string().max(5000).optional(),
+  improvements: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional(),
 });
 
 // Get review for a match

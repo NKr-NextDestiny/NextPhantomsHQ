@@ -8,6 +8,21 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.6",
+    date: "2026-04-25",
+    tags: ["fix", "improvement"],
+    title: "Stabilere Formularwege, schönere E-Mails und klarerer Betrieb",
+    changes: [
+      "Weitere Speichern-/Erstellen-Fehler durch zu streng oder falsch verschachtelte API-Validierung behoben, unter anderem bei Verfügbarkeiten, Notizen, Wiki, Match-Reviews und Trainingsvorlagen",
+      "Benachrichtigungs-E-Mails komplett überarbeitet: Next-Destiny-Stil, klarere Karten, CTA-Buttons und direkte Links zum passenden Bereich im HQ",
+      "E-Mails werden jetzt in der vom jeweiligen Nutzer gewählten Sprache versendet",
+      "WhatsApp-Bilddemos rendern robuster mit einer breiteren Font-Fallback-Kette, damit nicht mehr nur leere Rechtecke auftauchen",
+      "Mitgliederverwaltung vereinfacht: Anzeigename bleibt Discord-only, Captain wird in der Oberfläche als Leader benannt und globale E-Mail-Deaktivierung zieht die Spieler-Opt-ins mit runter",
+      "Settings warnen jetzt auch beim Tab-Wechsel vor ungespeicherten Änderungen, inklusive Spielkonfiguration",
+      "README für den Evolution-Manager-Only-Flow und das neue update.sh-Menü mit Reset-Doppelbestätigung aktualisiert",
+    ],
+  },
+  {
     version: "2.4.5",
     date: "2026-04-25",
     tags: ["fix", "improvement"],

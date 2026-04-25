@@ -75,6 +75,22 @@ type CooldownAction = "postCommands" | "addBlock" | "updateBlock" | "deleteBlock
 
 const WHATSAPP_COOLDOWN_MS = 15000;
 
+const ROLE_LABELS: Record<string, string> = {
+  TRYOUT: "Tryout",
+  PLAYER: "Spieler",
+  ANALYST: "Analyst",
+  COACH: "Coach",
+  CAPTAIN: "Leader",
+  ADMIN: "Admin",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Aktiv",
+  SUBSTITUTE: "Ersatz",
+  BENCH: "Bank",
+  INACTIVE: "Inaktiv",
+};
+
 function BrowserNotificationSettings() {
   const t = useT("settings");
   const supported = typeof window !== "undefined" && "Notification" in window;
@@ -115,6 +131,9 @@ export default function SettingsPage() {
   const initialTab = validTabs.includes(searchParams.get("tab") as Tab) ? (searchParams.get("tab") as Tab) : "team";
   const [tab, setTabState] = useState<Tab>(initialTab);
   const setTab = (t: Tab) => {
+    if (t !== tab && hasUnsavedChanges() && !window.confirm("Du hast ungespeicherte Änderungen. Wirklich wechseln?")) {
+      return;
+    }
     setTabState(t);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", t);
@@ -155,6 +174,7 @@ export default function SettingsPage() {
   const [newRole, setNewRole] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
   const initialTeamForm = useRef({ name: "", tag: "", description: "", discordWebhookUrl: "" });
+  const initialGameConfig = useRef<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
   const initialAnnouncementMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const initialMatchResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const initialPollResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
@@ -162,7 +182,7 @@ export default function SettingsPage() {
   const initialWhatsappEnabled = useRef(false);
   const initialWhatsappGroupJid = useRef("");
 
-  // Nur Admins dÃ¼rfen hier rein
+  // Nur Admins dürfen hier rein
   useEffect(() => {
     if (!loading && user && !user.isAdmin) {
       router.push("/dashboard");
@@ -207,6 +227,7 @@ export default function SettingsPage() {
       }
       if (configRes.status === "fulfilled" && configRes.value.data) {
         setGameConfig(configRes.value.data);
+        initialGameConfig.current = configRes.value.data;
       }
     } catch {
       error(tc("loadError"));
@@ -298,7 +319,8 @@ export default function SettingsPage() {
       || announcementNotificationMode !== initialAnnouncementMode.current
       || matchResultNotificationMode !== initialMatchResultMode.current
       || pollResultNotificationMode !== initialPollResultMode.current;
-    return teamDirty || channelDirty;
+    const gameDirty = JSON.stringify(gameConfig) !== JSON.stringify(initialGameConfig.current);
+    return teamDirty || channelDirty || gameDirty;
   };
 
   useEffect(() => {
@@ -369,7 +391,7 @@ export default function SettingsPage() {
   const addDescriptionBlock = async () => {
     if (isCooldownActive("addBlock")) return;
     if (!newBlockContent.trim()) {
-      error("Bitte Text fÃ¼r den Block eingeben.");
+      error("Bitte Text für den Block eingeben.");
       return;
     }
     try {
@@ -392,14 +414,14 @@ export default function SettingsPage() {
     if (isCooldownActive("deleteBlock")) return;
     try {
       await api.delete(`/api/team/whatsapp/description/blocks/${id}`);
-      success("Block gelÃ¶scht.");
+      success("Block gelöscht.");
       startCooldown("deleteBlock");
       if (editingBlockId === id) {
         cancelEditingBlock();
       }
       await loadWhatsAppAdmin();
     } catch {
-      error("Block konnte nicht gelÃ¶scht werden.");
+      error("Block konnte nicht gelöscht werden.");
     }
   };
 
@@ -418,7 +440,7 @@ export default function SettingsPage() {
   const updateDescriptionBlock = async (id: string) => {
     if (isCooldownActive("updateBlock")) return;
     if (!editingBlockContent.trim()) {
-      error("Bitte Text fÃ¼r den Block eingeben.");
+      error("Bitte Text für den Block eingeben.");
       return;
     }
 
@@ -557,7 +579,7 @@ export default function SettingsPage() {
             {[
               { label: "Match-Statistiken", endpoint: "/api/export/matches" },
               { label: "Training-Teilnahme", endpoint: "/api/export/training-attendance" },
-              { label: "VerfÃ¼gbarkeit", endpoint: "/api/export/availability" },
+                { label: "Verfügbarkeit", endpoint: "/api/export/availability" },
             ].map((exp) => (
               <div key={exp.endpoint} className="flex flex-col gap-2 rounded-lg bg-[var(--secondary)] p-3">
                 <span className="text-sm font-medium text-[var(--foreground)]">{exp.label}</span>
@@ -588,7 +610,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newMap} onChange={(e) => setNewMap(e.target.value)} placeholder="Neue Map hinzufÃ¼gen..." onKeyDown={(e) => { if (e.key === "Enter" && newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newMap} onChange={(e) => setNewMap(e.target.value)} placeholder="Neue Map hinzufügen..." onKeyDown={(e) => { if (e.key === "Enter" && newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newMap.trim()) { setGameConfig({ ...gameConfig, maps: [...gameConfig.maps, newMap.trim()] }); setNewMap(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
@@ -605,13 +627,13 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newCharacter} onChange={(e) => setNewCharacter(e.target.value)} placeholder={`${gameConfig.characterLabel || "Character"} hinzufÃ¼gen...`} onKeyDown={(e) => { if (e.key === "Enter" && newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newCharacter} onChange={(e) => setNewCharacter(e.target.value)} placeholder={`${gameConfig.characterLabel || "Character"} hinzufügen...`} onKeyDown={(e) => { if (e.key === "Enter" && newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newCharacter.trim()) { setGameConfig({ ...gameConfig, characters: [...gameConfig.characters, newCharacter.trim()] }); setNewCharacter(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
 
             {/* Character Label */}
-            <Input label="Bezeichnung fÃ¼r Charaktere" value={gameConfig.characterLabel} onChange={(e) => setGameConfig({ ...gameConfig, characterLabel: e.target.value })} placeholder="z. B. Operator, Agent, Held..." />
+              <Input label="Bezeichnung für Charaktere" value={gameConfig.characterLabel} onChange={(e) => setGameConfig({ ...gameConfig, characterLabel: e.target.value })} placeholder="z. B. Operator, Agent, Held..." />
 
             {/* Player Roles */}
             <div>
@@ -625,7 +647,7 @@ export default function SettingsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Rolle hinzufÃ¼gen..." onKeyDown={(e) => { if (e.key === "Enter" && newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
+                <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Rolle hinzufügen..." onKeyDown={(e) => { if (e.key === "Enter" && newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }} className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none" />
                 <Button size="sm" variant="outline" onClick={() => { if (newRole.trim()) { setGameConfig({ ...gameConfig, playerRoles: [...gameConfig.playerRoles, newRole.trim()] }); setNewRole(""); } }}><Plus className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
@@ -691,7 +713,7 @@ export default function SettingsPage() {
           />
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select
-              label="AnkÃ¼ndigungen per WhatsApp"
+              label="Ankündigungen per WhatsApp"
               value={announcementNotificationMode}
               onChange={(e) => setAnnouncementNotificationMode(e.target.value as "TEXT" | "IMAGE" | "BOTH")}
               options={[
@@ -723,7 +745,7 @@ export default function SettingsPage() {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => sendNotificationDemo("announcement")}>
-              <TestTube2 className="h-4 w-4" /> AnkÃ¼ndigung-Demo
+              <TestTube2 className="h-4 w-4" /> Ankündigung-Demo
             </Button>
             <Button variant="outline" onClick={() => sendNotificationDemo("matchResult")}>
               <TestTube2 className="h-4 w-4" /> Match-Demo
@@ -747,7 +769,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="rounded-lg bg-[var(--secondary)] p-4 text-sm text-[var(--muted-foreground)]">
-            <p>Lege im Evolution Manager die Instanzen an, verbinde WhatsApp per QR-Code, suche dort die passende Gruppen-ID heraus und hinterlege anschlieÃŸend hier nur die Gruppen-JID fÃ¼r die Team-Nachrichten.</p>
+            <p>Lege im Evolution Manager die Instanzen an, verbinde WhatsApp per QR-Code, suche dort die passende Gruppen-ID heraus und hinterlege anschließend hier nur die Gruppen-JID für die Team-Nachrichten.</p>
             <p className="mt-3">Den Webhook richtest du ebenfalls im Manager ein. Als Ziel verwendest du die App-URL mit dem Pfad <span className="font-mono text-[var(--foreground)]">/evolution/webhook</span>.</p>
           </div>
         </Card>
@@ -790,7 +812,7 @@ export default function SettingsPage() {
             <MessageSquare className="h-5 w-5 text-[var(--primary)]" />
             <div>
               <h2 className="text-lg font-semibold text-[var(--foreground)]">Gruppenbeschreibung</h2>
-              <p className="text-sm text-[var(--muted-foreground)]">NÃ¤chster Termin, offene Umfragen, Folgetermine und deine ZusatzblÃ¶cke.</p>
+              <p className="text-sm text-[var(--muted-foreground)]">Nächster Termin, offene Umfragen, Folgetermine und deine Zusatzblöcke.</p>
             </div>
           </div>
 
@@ -840,7 +862,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" onClick={() => updateDescriptionBlock(block.id)} disabled={isCooldownActive("updateBlock")}>
-                        <Save className="h-4 w-4" /> Ã„nderungen speichern
+                        <Save className="h-4 w-4" /> Änderungen speichern
                       </Button>
                       <Button variant="ghost" onClick={cancelEditingBlock}>
                         <X className="h-4 w-4" /> Abbrechen
@@ -857,7 +879,7 @@ export default function SettingsPage() {
                       <button onClick={() => beginEditingBlock(block)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)]" aria-label="Block bearbeiten">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button onClick={() => deleteDescriptionBlock(block.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]" aria-label="Block lÃ¶schen">
+                      <button onClick={() => deleteDescriptionBlock(block.id)} className="rounded p-1.5 text-[var(--muted-foreground)] hover:text-[var(--destructive)]" aria-label="Block löschen">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -866,7 +888,7 @@ export default function SettingsPage() {
               </div>
             ))}
             {descriptionBlocks.length === 0 && (
-              <p className="text-sm text-[var(--muted-foreground)]">Noch keine ZusatzblÃ¶cke vorhanden.</p>
+              <p className="text-sm text-[var(--muted-foreground)]">Noch keine Zusatzblöcke vorhanden.</p>
             )}
           </div>
 
@@ -886,6 +908,9 @@ export default function SettingsPage() {
       {tab === "members" && (
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("members.title")} ({members.length})</h2>
+          <p className="mb-4 text-sm text-[var(--muted-foreground)]">
+            WhatsApp-Nummern werden nicht mehr manuell im HQ gepflegt. Für private WhatsApp-Nachrichten muss der Spieler mit der verbundenen Evolution-Instanz eindeutig erreichbar sein.
+          </p>
           {members.length === 0 ? (
             <p className="text-[var(--muted-foreground)]">{t("members.empty")}</p>
           ) : (
@@ -910,7 +935,7 @@ export default function SettingsPage() {
                     value={m.role}
                     onChange={async (e) => {
                       try {
-                        await api.put(`/api/team/members/${m.user.id}`, { role: e.target.value, status: m.status, phone: m.user.phone, emailNotifications: m.user.emailNotifications });
+                        await api.put(`/api/team/members/${m.user.id}`, { role: e.target.value, status: m.status, emailNotifications: m.user.emailNotifications });
                         success(tc("saved"));
                         load();
                       } catch { error(tc("saveError")); }
@@ -918,14 +943,14 @@ export default function SettingsPage() {
                     className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
                   >
                     {["TRYOUT", "PLAYER", "ANALYST", "COACH", "CAPTAIN"].map((r) => (
-                      <option key={r} value={r}>{r}</option>
+                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                     ))}
                   </select>
                   <select
                     value={m.status}
                     onChange={async (e) => {
                       try {
-                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: e.target.value, phone: m.user.phone, emailNotifications: m.user.emailNotifications });
+                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: e.target.value, emailNotifications: m.user.emailNotifications });
                         success(tc("saved"));
                         load();
                       } catch { error(tc("saveError")); }
@@ -933,29 +958,17 @@ export default function SettingsPage() {
                     className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
                   >
                     {["ACTIVE", "SUBSTITUTE", "BENCH", "INACTIVE"].map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
                     ))}
                   </select>
-                  <input
-                    value={m.user.phone || ""}
-                    onChange={(e) => setMembers((prev) => prev.map((member) => member.id === m.id ? { ...member, user: { ...member.user, phone: e.target.value } } : member))}
-                    onBlur={async () => {
-                      try {
-                        await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, phone: m.user.phone || null, emailNotifications: m.user.emailNotifications });
-                        success(tc("saved"));
-                        load();
-                      } catch { error(tc("saveError")); }
-                    }}
-                    placeholder="+491234567890"
-                    className="w-36 rounded-lg border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
-                  />
                   <label className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                     <input
                       type="checkbox"
                       checked={Boolean(m.user.emailNotifications)}
+                      disabled={!emailNotificationsEnabled}
                       onChange={async (e) => {
                         try {
-                          await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, phone: m.user.phone || null, emailNotifications: e.target.checked });
+                          await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, emailNotifications: e.target.checked });
                           success(tc("saved"));
                           load();
                         } catch { error(tc("saveError")); }

@@ -9,7 +9,6 @@ import { AppError } from "../middleware/errorHandler.js";
 export const userRouter = Router();
 
 const updateSchema = z.object({
-  displayName: z.string().min(1).max(100).optional(),
   language: z.string().min(2).max(5).optional(),
   r6Username: z.string().optional().nullable(),
 });

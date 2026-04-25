@@ -10,11 +10,9 @@ import { AppError } from "../middleware/errorHandler.js";
 export const trainingTemplateRouter = Router();
 
 const templateSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(200),
-    type: z.enum(["RANKED", "CUSTOM", "AIM_TRAINING", "VOD_REVIEW", "STRAT_PRACTICE", "OTHER"]),
-    notes: z.string().max(5000).optional(),
-  }),
+  title: z.string().min(1).max(200),
+  type: z.enum(["RANKED", "CUSTOM", "AIM_TRAINING", "VOD_REVIEW", "STRAT_PRACTICE", "OTHER"]),
+  notes: z.string().max(5000).optional(),
 });
 
 // List templates

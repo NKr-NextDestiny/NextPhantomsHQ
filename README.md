@@ -11,7 +11,7 @@ It includes:
 - WhatsApp output modes for announcements, match results and poll results: `TEXT`, `IMAGE`, `BOTH`
 - admin-managed group and private delivery rules
 - automatic WhatsApp group description with custom text blocks
-- admin tools for QR pairing, webhook setup and group ID lookup
+- Evolution Manager based WhatsApp setup
 - WhatsApp bot commands for quick group information
 
 ## Stack
@@ -39,7 +39,7 @@ The notification model is now:
 - private WhatsApp links can be changed for 5 minutes
 - every outgoing email and WhatsApp message contains an automated-message notice
 
-Only admins can change notification settings. Email can be enabled globally and additionally per player. WhatsApp is enabled globally and uses a group JID for public delivery, while private attendance reminders use the stored player phone number.
+Only admins can change notification settings. Email can be enabled globally and additionally per player. WhatsApp is enabled globally and uses a group JID for public delivery.
 
 ## WhatsApp Bot Commands
 
@@ -71,10 +71,18 @@ Debian install/update:
 ./update.sh install
 ```
 
-Regular update afterwards:
+After that, `./update.sh` opens a menu with:
+
+- regular update
+- update with complete database reset
+
+The reset path requires a deliberate double confirmation.
+
+Direct modes are still available:
 
 ```bash
-./update.sh
+./update.sh update
+./update.sh reset
 ```
 
 ## Local Development
@@ -139,7 +147,7 @@ DISCORD_WEBHOOK_URL=
 EVOLUTION_API_URL=http://EVOLUTION-VM:8080
 EVOLUTION_API_KEY=your-evolution-api-key
 EVOLUTION_INSTANCE=nextphantoms
-EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+EVOLUTION_ATTENDANCE_INSTANCE=
 ```
 
 ## Production Install for Next Phantoms HQ on Debian 13
@@ -240,7 +248,7 @@ Open `Settings -> Notifications` and configure:
 In `Settings -> Members`, admins can additionally:
 
 1. enable or disable email per player
-2. maintain the player phone number used for private WhatsApp reminders
+2. assign role and active status
 
 ### 9. Admin WhatsApp setup
 
@@ -437,7 +445,7 @@ Use the same instance names in the app:
 
 ```ini
 EVOLUTION_INSTANCE=nextphantoms
-EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+EVOLUTION_ATTENDANCE_INSTANCE=
 ```
 
 These values are the exact instance names from the Evolution Manager, not phone numbers and not group IDs.
@@ -486,7 +494,7 @@ In the Next Phantoms HQ `.env`:
 EVOLUTION_API_URL=http://YOUR-EVOLUTION-VM:8080
 EVOLUTION_API_KEY=YOUR_API_KEY
 EVOLUTION_INSTANCE=nextphantoms
-EVOLUTION_ATTENDANCE_INSTANCE=nextphantoms-private
+EVOLUTION_ATTENDANCE_INSTANCE=
 ```
 
 Restart the app stack afterwards:
@@ -507,7 +515,7 @@ After the app is connected to Evolution:
 4. choose the output mode for announcements, match results and poll results
 5. save the settings
 
-In `Settings -> Members`, admins can then maintain player phone numbers and per-player email opt-in for the private reminder flow.
+In `Settings -> Members`, admins can then manage per-player email opt-in, role and status.
 
 ## In-App Notification Settings
 
@@ -558,22 +566,12 @@ The admin UI also shows a live preview and character count before pushing the de
 
 ## Evolution Admin Access
 
-You can fetch group IDs and connect WhatsApp in two ways:
+Use the Evolution Manager for:
 
-1. in the app under `Settings -> Notifications`
-2. directly on the server with:
-
-```bash
-cd /opt/NextPhantomsHQ/server
-pnpm evolution:groups
-```
-
-Optional with explicit instance name:
-
-```bash
-cd /opt/NextPhantomsHQ/server
-pnpm evolution:groups -- my-other-instance
-```
+1. instance creation
+2. QR pairing
+3. webhook setup
+4. group lookup
 
 ## Replay Parsing Notes
 
@@ -629,4 +627,4 @@ pnpm evolution:groups
 
 ## Last Reviewed
 
-Last reviewed: 2026-04-23
+Last reviewed: 2026-04-25

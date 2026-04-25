@@ -11,11 +11,9 @@ import { parsePagination } from "../middleware/pagination.js";
 export const notesRouter = Router();
 
 const noteSchema = z.object({
-  body: z.object({
-    title: z.string().min(1).max(200),
-    content: z.string().min(1),
-    isPrivate: z.boolean().optional(),
-  }),
+  title: z.string().min(1).max(200),
+  content: z.string().min(1),
+  isPrivate: z.boolean().optional(),
 });
 
 // List notes (own private + all team notes)
