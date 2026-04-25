@@ -55,6 +55,15 @@ function copy(locale?: string | null) {
       answer: "Answer",
       reason: "Reason",
       overview: "Overview",
+      eventNeeded: "Response needed",
+      eventUpdated: "Event updated",
+      eventCancelled: "Event cancelled",
+      announcement: "New announcement",
+      pollClosed: "Poll closed",
+      pollCreated: "New poll",
+      alreadyResponded: "Already responded",
+      attendanceOutro: "The buttons take you straight to the matching attendance page.",
+      infoOnlyOutro: "The email link is informational only and does not change your previous answer.",
     };
   }
   if (normalized === "pirate") {
@@ -72,6 +81,15 @@ function copy(locale?: string | null) {
       answer: "Antwort",
       reason: "Grund",
       overview: "Überblick",
+      eventNeeded: "Antwort benötigt",
+      eventUpdated: "Termin aktualisiert",
+      eventCancelled: "Termin abgesagt",
+      announcement: "Neue Ankündigung",
+      pollClosed: "Umfrage beendet",
+      pollCreated: "Neue Umfrage",
+      alreadyResponded: "Bereits abgestimmt",
+      attendanceOutro: "Über die Buttons kommst du direkt zur passenden Abstimmungsseite.",
+      infoOnlyOutro: "Der E-Mail-Link dient hier nur noch zur Information und ändert deine Antwort nicht mehr.",
     };
   }
   return {
@@ -88,6 +106,15 @@ function copy(locale?: string | null) {
     answer: "Antwort",
     reason: "Grund",
     overview: "Überblick",
+    eventNeeded: "Antwort benötigt",
+    eventUpdated: "Termin aktualisiert",
+    eventCancelled: "Termin abgesagt",
+    announcement: "Neue Ankündigung",
+    pollClosed: "Umfrage beendet",
+    pollCreated: "Neue Umfrage",
+    alreadyResponded: "Bereits abgestimmt",
+    attendanceOutro: "Über die Buttons kommst du direkt zur passenden Abstimmungsseite.",
+    infoOnlyOutro: "Der E-Mail-Link dient hier nur noch zur Information und ändert deine Antwort nicht mehr.",
   };
 }
 
@@ -241,7 +268,7 @@ export async function sendAnnouncementNotification(
   await sendEmail(to, `[Next Phantoms HQ] Neue Ankündigung: ${title}`, renderTemplate({
     locale,
     preheader: title,
-    title: "Neue Ankündigung",
+    title: text.announcement,
     intro: `<strong>${createdBy}</strong> hat eine neue Ankündigung veröffentlicht.`,
     sections: [
       { label: text.title, value: title },
@@ -288,7 +315,7 @@ export async function sendPollResultNotification(
   await sendEmail(to, `[Next Phantoms HQ] Umfrage beendet: ${question}`, renderTemplate({
     locale,
     preheader: question,
-    title: "Umfrage beendet",
+    title: text.pollClosed,
     intro: `Die Ergebnisse für <strong>${question}</strong> sind da.`,
     sections: results.map((line) => ({ value: line })),
     actions: absoluteLink(link) ? [{ label: text.open, href: absoluteLink(link)! }] : [],
@@ -307,7 +334,7 @@ export async function sendPollCreatedNotification(
   await sendEmail(to, `[Next Phantoms HQ] Neue Umfrage: ${question}`, renderTemplate({
     locale,
     preheader: question,
-    title: "Neue Umfrage",
+    title: text.pollCreated,
     intro: `<strong>${createdBy}</strong> hat eine neue Umfrage erstellt.`,
     sections: [
       { label: text.title, value: question },
@@ -327,6 +354,7 @@ export async function sendAttendanceReminder(
   token?: string,
   appUrl?: string,
 ) {
+  const text = copy(locale);
   const baseUrl = appUrl || config.appUrl;
   const actions = token ? [
     { label: "✅ Verfügbar", href: `${baseUrl}/attendance/${token}?vote=AVAILABLE` },
@@ -337,14 +365,14 @@ export async function sendAttendanceReminder(
   await sendEmail(to, `[Next Phantoms HQ] Erinnerung: ${title}`, renderTemplate({
     locale,
     preheader: `${title} wartet auf deine Antwort`,
-    title: "Antwort benötigt",
+    title: text.eventNeeded,
     intro: `Bitte gib deine Verfügbarkeit für <strong>${title}</strong> an.`,
     sections: [
-      { label: copy(locale).type, value: eventType },
-      { label: copy(locale).time, value: date },
+      { label: text.type, value: eventType },
+      { label: text.time, value: date },
     ],
     actions,
-    outro: "Über die Buttons kommst du direkt zur passenden Abstimmungsseite.",
+    outro: text.attendanceOutro,
   }));
 }
 
@@ -362,7 +390,7 @@ export async function sendAttendanceAlreadyResponded(
   await sendEmail(to, `[Next Phantoms HQ] Bereits abgestimmt: ${title}`, renderTemplate({
     locale,
     preheader: `${title} ist bereits beantwortet`,
-    title: "Bereits abgestimmt",
+    title: text.alreadyResponded,
     intro: `Für <strong>${title}</strong> liegt bereits eine Antwort von dir vor.`,
     sections: [
       { label: text.type, value: eventType },
@@ -371,6 +399,6 @@ export async function sendAttendanceAlreadyResponded(
       ...(reason ? [{ label: text.reason, value: reason }] : []),
     ],
     actions: absoluteLink(link) ? [{ label: text.open, href: absoluteLink(link)! }] : [],
-    outro: "Der E-Mail-Link dient hier nur noch zur Information und ändert deine Antwort nicht mehr.",
+    outro: text.infoOnlyOutro,
   }));
 }

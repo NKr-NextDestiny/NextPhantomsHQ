@@ -20,8 +20,11 @@ interface TeamSettings {
   logoUrl?: string;
   discordWebhookUrl?: string;
   defaultTimezone?: string;
+  defaultAttendanceOpenHoursBefore?: number;
+  defaultAttendanceCloseHoursBefore?: number;
   emailNotificationsEnabled?: boolean;
   whatsappNotificationsEnabled?: boolean;
+  whatsappLanguage?: "de" | "en" | "pirate";
   whatsappGroupJid?: string | null;
   announcementNotificationMode?: "TEXT" | "IMAGE" | "BOTH";
   matchResultNotificationMode?: "TEXT" | "IMAGE" | "BOTH";
@@ -71,7 +74,15 @@ interface CommandInfo {
   description: string;
 }
 
-type CooldownAction = "postCommands" | "addBlock" | "updateBlock" | "deleteBlock" | "updateGroupDescription";
+type CooldownAction =
+  | "postCommands"
+  | "addBlock"
+  | "updateBlock"
+  | "deleteBlock"
+  | "updateGroupDescription"
+  | "demoAnnouncement"
+  | "demoMatchResult"
+  | "demoPollResult";
 
 const WHATSAPP_COOLDOWN_MS = 15000;
 
@@ -145,9 +156,17 @@ export default function SettingsPage() {
   const [notifyConfig, setNotifyConfig] = useState<NotificationConfig>({ email: false, whatsapp: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [teamForm, setTeamForm] = useState({ name: "", tag: "", description: "", discordWebhookUrl: "" });
+  const [teamForm, setTeamForm] = useState({
+    name: "",
+    tag: "",
+    description: "",
+    discordWebhookUrl: "",
+    defaultAttendanceOpenHoursBefore: "72",
+    defaultAttendanceCloseHoursBefore: "2",
+  });
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
   const [whatsappNotificationsEnabled, setWhatsappNotificationsEnabled] = useState(false);
+  const [whatsappLanguage, setWhatsappLanguage] = useState<"de" | "en" | "pirate">("de");
   const [whatsappGroupJid, setWhatsappGroupJid] = useState("");
   const [announcementNotificationMode, setAnnouncementNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const [matchResultNotificationMode, setMatchResultNotificationMode] = useState<"TEXT" | "IMAGE" | "BOTH">("TEXT");
@@ -173,13 +192,21 @@ export default function SettingsPage() {
   const [newCharacter, setNewCharacter] = useState("");
   const [newRole, setNewRole] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
-  const initialTeamForm = useRef({ name: "", tag: "", description: "", discordWebhookUrl: "" });
+  const initialTeamForm = useRef({
+    name: "",
+    tag: "",
+    description: "",
+    discordWebhookUrl: "",
+    defaultAttendanceOpenHoursBefore: "72",
+    defaultAttendanceCloseHoursBefore: "2",
+  });
   const initialGameConfig = useRef<GameConfig>({ maps: [], characters: [], characterLabel: "Operator", playerRoles: [] });
   const initialAnnouncementMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const initialMatchResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const initialPollResultMode = useRef<"TEXT" | "IMAGE" | "BOTH">("TEXT");
   const initialEmailEnabled = useRef(true);
   const initialWhatsappEnabled = useRef(false);
+  const initialWhatsappLanguage = useRef<"de" | "en" | "pirate">("de");
   const initialWhatsappGroupJid = useRef("");
 
   // Nur Admins dürfen hier rein
@@ -200,14 +227,23 @@ export default function SettingsPage() {
       if (teamRes.status === "fulfilled" && teamRes.value.data) {
         const ts = teamRes.value.data;
         setTeamSettings(ts);
-        const form = { name: ts.name, tag: ts.tag, description: ts.description || "", discordWebhookUrl: ts.discordWebhookUrl || "" };
+        const form = {
+          name: ts.name,
+          tag: ts.tag,
+          description: ts.description || "",
+          discordWebhookUrl: ts.discordWebhookUrl || "",
+          defaultAttendanceOpenHoursBefore: String(ts.defaultAttendanceOpenHoursBefore ?? 72),
+          defaultAttendanceCloseHoursBefore: String(ts.defaultAttendanceCloseHoursBefore ?? 2),
+        };
         setTeamForm(form);
         initialTeamForm.current = form;
         setEmailNotificationsEnabled(ts.emailNotificationsEnabled ?? true);
         setWhatsappNotificationsEnabled(ts.whatsappNotificationsEnabled ?? false);
+        setWhatsappLanguage(ts.whatsappLanguage || "de");
         setWhatsappGroupJid(ts.whatsappGroupJid || "");
         initialEmailEnabled.current = ts.emailNotificationsEnabled ?? true;
         initialWhatsappEnabled.current = ts.whatsappNotificationsEnabled ?? false;
+        initialWhatsappLanguage.current = ts.whatsappLanguage || "de";
         initialWhatsappGroupJid.current = ts.whatsappGroupJid || "";
         const announcementMode = ts.announcementNotificationMode || "TEXT";
         const matchMode = ts.matchResultNotificationMode || "TEXT";
@@ -312,9 +348,15 @@ export default function SettingsPage() {
 
   const hasUnsavedChanges = () => {
     const tf = initialTeamForm.current;
-    const teamDirty = teamForm.name !== tf.name || teamForm.tag !== tf.tag || teamForm.description !== tf.description || teamForm.discordWebhookUrl !== tf.discordWebhookUrl;
+    const teamDirty = teamForm.name !== tf.name
+      || teamForm.tag !== tf.tag
+      || teamForm.description !== tf.description
+      || teamForm.discordWebhookUrl !== tf.discordWebhookUrl
+      || teamForm.defaultAttendanceOpenHoursBefore !== tf.defaultAttendanceOpenHoursBefore
+      || teamForm.defaultAttendanceCloseHoursBefore !== tf.defaultAttendanceCloseHoursBefore;
     const channelDirty = emailNotificationsEnabled !== initialEmailEnabled.current
       || whatsappNotificationsEnabled !== initialWhatsappEnabled.current
+      || whatsappLanguage !== initialWhatsappLanguage.current
       || whatsappGroupJid !== initialWhatsappGroupJid.current
       || announcementNotificationMode !== initialAnnouncementMode.current
       || matchResultNotificationMode !== initialMatchResultMode.current
@@ -336,7 +378,11 @@ export default function SettingsPage() {
   const saveTeam = async () => {
     setSaving(true);
     try {
-      await api.put("/api/team", teamForm);
+      await api.put("/api/team", {
+        ...teamForm,
+        defaultAttendanceOpenHoursBefore: Number.parseInt(teamForm.defaultAttendanceOpenHoursBefore || "72", 10),
+        defaultAttendanceCloseHoursBefore: Number.parseInt(teamForm.defaultAttendanceCloseHoursBefore || "2", 10),
+      });
       success(tc("saved"));
       load();
     } catch {
@@ -363,6 +409,7 @@ export default function SettingsPage() {
       await api.put("/api/team", {
         emailNotificationsEnabled,
         whatsappNotificationsEnabled,
+        whatsappLanguage,
         whatsappGroupJid: whatsappGroupJid || null,
         announcementNotificationMode,
         matchResultNotificationMode,
@@ -460,9 +507,16 @@ export default function SettingsPage() {
   };
 
   const sendNotificationDemo = async (kind: "announcement" | "matchResult" | "pollResult") => {
+    const action: Record<typeof kind, CooldownAction> = {
+      announcement: "demoAnnouncement",
+      matchResult: "demoMatchResult",
+      pollResult: "demoPollResult",
+    };
+    if (isCooldownActive(action[kind])) return;
     try {
       await api.post(`/api/team/whatsapp/demo/${kind}`);
       success("Demo erfolgreich an die WhatsApp-Gruppe gesendet.");
+      startCooldown(action[kind]);
     } catch {
       error("Demo konnte nicht gesendet werden.");
     }
@@ -561,6 +615,20 @@ export default function SettingsPage() {
             </div>
             <Textarea label={t("team.description")} value={teamForm.description} onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })} />
             <Input label={t("team.webhookUrl")} value={teamForm.discordWebhookUrl} onChange={(e) => setTeamForm({ ...teamForm, discordWebhookUrl: e.target.value })} placeholder={t("team.webhookPlaceholder")} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Standard: Abstimmung öffnet (h vorher)"
+                type="number"
+                value={teamForm.defaultAttendanceOpenHoursBefore}
+                onChange={(e) => setTeamForm({ ...teamForm, defaultAttendanceOpenHoursBefore: e.target.value })}
+              />
+              <Input
+                label="Standard: Abstimmung schließt (h vorher)"
+                type="number"
+                value={teamForm.defaultAttendanceCloseHoursBefore}
+                onChange={(e) => setTeamForm({ ...teamForm, defaultAttendanceCloseHoursBefore: e.target.value })}
+              />
+            </div>
             <Button onClick={saveTeam} isLoading={saving}>
               <Save className="h-4 w-4" /> {tc("save")}
             </Button>
@@ -711,6 +779,16 @@ export default function SettingsPage() {
             onChange={(e) => setWhatsappGroupJid(e.target.value)}
             placeholder="1234567890-123456789@g.us"
           />
+          <Select
+            label="WhatsApp-Sprache"
+            value={whatsappLanguage}
+            onChange={(e) => setWhatsappLanguage(e.target.value as "de" | "en" | "pirate")}
+            options={[
+              { value: "de", label: "Deutsch" },
+              { value: "en", label: "English" },
+              { value: "pirate", label: "Pirate" },
+            ]}
+          />
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <Select
               label="Ankündigungen per WhatsApp"
@@ -744,16 +822,27 @@ export default function SettingsPage() {
             />
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => sendNotificationDemo("announcement")}>
+            <Button variant="outline" onClick={() => sendNotificationDemo("announcement")} disabled={isCooldownActive("demoAnnouncement")}>
               <TestTube2 className="h-4 w-4" /> Ankündigung-Demo
             </Button>
-            <Button variant="outline" onClick={() => sendNotificationDemo("matchResult")}>
+            <Button variant="outline" onClick={() => sendNotificationDemo("matchResult")} disabled={isCooldownActive("demoMatchResult")}>
               <TestTube2 className="h-4 w-4" /> Match-Demo
             </Button>
-            <Button variant="outline" onClick={() => sendNotificationDemo("pollResult")}>
+            <Button variant="outline" onClick={() => sendNotificationDemo("pollResult")} disabled={isCooldownActive("demoPollResult")}>
               <TestTube2 className="h-4 w-4" /> Umfrage-Demo
             </Button>
           </div>
+          {(isCooldownActive("demoAnnouncement") || isCooldownActive("demoMatchResult") || isCooldownActive("demoPollResult")) && (
+            <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+              Demo-Cooldown aktiv:
+              {" "}
+              {[
+                isCooldownActive("demoAnnouncement") ? `Ankündigung ${getCooldownSeconds("demoAnnouncement")}s` : null,
+                isCooldownActive("demoMatchResult") ? `Match ${getCooldownSeconds("demoMatchResult")}s` : null,
+                isCooldownActive("demoPollResult") ? `Umfrage ${getCooldownSeconds("demoPollResult")}s` : null,
+              ].filter(Boolean).join(" · ")}
+            </p>
+          )}
           <div className="mt-4">
             <Button onClick={saveNotificationSettings} isLoading={saving}>
               <Save className="h-4 w-4" /> {tc("save")}

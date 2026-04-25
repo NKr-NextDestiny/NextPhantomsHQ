@@ -11,7 +11,13 @@ import { safeEmit } from "../config/socket.js";
 import { sendWebhookNotification, buildMatchEmbed } from "../services/discord-webhook.service.js";
 import * as channelNotify from "../services/channel-notification.service.js";
 import { notifyTeam } from "../services/notification.service.js";
-import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
+import {
+  activateAttendanceForEvent,
+  buildAttendanceWindow,
+  buildRecurringDates,
+  createEventReminders,
+  updateEventReminders,
+} from "../services/scheduler.service.js";
 import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
 export const matchRouter = Router();
@@ -54,6 +60,9 @@ const createSchema = z.object({
   contactInfo: z.string().optional().nullable(),
   serverRegion: z.string().optional().nullable(),
   recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).optional().default("NONE"),
+  attendanceOpenHoursBefore: z.number().int().min(0).max(336).optional(),
+  attendanceCloseHoursBefore: z.number().int().min(0).max(336).optional(),
+  activateAttendanceNow: z.boolean().optional(),
   reminderIntervals: z.array(z.number()).optional().default([]),
   playerStats: z.array(playerStatSchema).optional().default([]),
   trainingId: z.string().optional().nullable(),
@@ -85,6 +94,13 @@ const matchInclude = {
   replay: true,
   review: true,
 };
+
+function canVoteForEvent(opensAt?: Date | null, closesAt?: Date | null) {
+  const now = new Date();
+  if (opensAt && now < opensAt) return { allowed: false, error: "Die Abstimmung ist noch nicht geöffnet." };
+  if (closesAt && now > closesAt) return { allowed: false, error: "Die Abstimmung ist bereits geschlossen." };
+  return { allowed: true };
+}
 
 // List matches
 matchRouter.get("/", authenticate, teamContext, requireFeature("matches"), async (req, res, next) => {
@@ -130,49 +146,88 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
 
     // Use team defaults for reminder intervals if not provided and type is SCRIM
     let intervals = reminderIntervals || [];
-    if (data.type === "SCRIM" && intervals.length === 0) {
-      const team = await prisma.team.findUnique({ where: { id: req.teamId! }, select: { defaultReminderIntervals: true } });
-      intervals = team?.defaultReminderIntervals || [];
-    }
-
-    const match = await prisma.match.create({
-      data: {
-        ...data,
-        reminderIntervals: intervals,
-        createdById: req.user!.id,
-        teamId: req.teamId!,
+    const team = await prisma.team.findUnique({
+      where: { id: req.teamId! },
+      select: {
+        defaultReminderIntervals: true,
+        defaultAttendanceOpenHoursBefore: true,
+        defaultAttendanceCloseHoursBefore: true,
       },
     });
+    if (data.type === "SCRIM" && intervals.length === 0) {
+      intervals = team?.defaultReminderIntervals || [];
+    }
+    const attendanceOpenHoursBefore = data.attendanceOpenHoursBefore ?? team?.defaultAttendanceOpenHoursBefore ?? 72;
+    const attendanceCloseHoursBefore = data.attendanceCloseHoursBefore ?? team?.defaultAttendanceCloseHoursBefore ?? 2;
+    const recurringDates = data.recurrence === "NONE" ? [] : buildRecurringDates(data.date, data.recurrence);
 
-    if (playerStats && playerStats.length > 0) {
-      for (const ps of playerStats) {
-        const kd = ps.deaths > 0 ? ps.kills / ps.deaths : ps.kills;
-        const headshotRate = ps.kills > 0 ? ps.headshots / ps.kills : 0;
-        await prisma.matchPlayerStat.create({
-          data: {
-            userId: ps.userId || null,
-            externalName: ps.externalName || null,
-            matchId: match.id,
-            teamId: req.teamId!,
-            kills: ps.kills, deaths: ps.deaths, assists: ps.assists, headshots: ps.headshots,
-            score: ps.score, operator: ps.operator, operators: ps.operators,
-            notes: ps.notes, clutches: ps.clutches,
-            kd: Math.round(kd * 100) / 100,
-            headshotRate: Math.round(headshotRate * 100) / 100,
-          },
-        });
+    const createdMatches = [];
+    for (const currentDate of [data.date, ...recurringDates]) {
+      const attendanceWindow = buildAttendanceWindow(
+        currentDate,
+        attendanceOpenHoursBefore,
+        attendanceCloseHoursBefore,
+        Boolean(data.activateAttendanceNow),
+      );
+      const meetOffset = data.meetTime ? data.date.getTime() - data.meetTime.getTime() : null;
+      const endOffset = data.endDate ? data.endDate.getTime() - data.date.getTime() : null;
+
+      const match = await prisma.match.create({
+        data: {
+          ...data,
+          date: currentDate,
+          meetTime: meetOffset !== null ? new Date(currentDate.getTime() - meetOffset) : data.meetTime,
+          endDate: endOffset !== null ? new Date(currentDate.getTime() + endOffset) : data.endDate,
+          attendanceOpenHoursBefore,
+          attendanceCloseHoursBefore,
+          attendanceOpensAt: attendanceWindow.opensAt,
+          attendanceClosesAt: attendanceWindow.closesAt,
+          attendanceActivatedAt: attendanceWindow.activatedAt,
+          attendanceOpenedNotificationSentAt: attendanceWindow.openedNotificationSentAt,
+          reminderIntervals: intervals,
+          createdById: req.user!.id,
+          teamId: req.teamId!,
+        },
+      });
+
+      if (playerStats && playerStats.length > 0) {
+        for (const ps of playerStats) {
+          const kd = ps.deaths > 0 ? ps.kills / ps.deaths : ps.kills;
+          const headshotRate = ps.kills > 0 ? ps.headshots / ps.kills : 0;
+          await prisma.matchPlayerStat.create({
+            data: {
+              userId: ps.userId || null,
+              externalName: ps.externalName || null,
+              matchId: match.id,
+              teamId: req.teamId!,
+              kills: ps.kills, deaths: ps.deaths, assists: ps.assists, headshots: ps.headshots,
+              score: ps.score, operator: ps.operator, operators: ps.operators,
+              notes: ps.notes, clutches: ps.clutches,
+              kd: Math.round(kd * 100) / 100,
+              headshotRate: Math.round(headshotRate * 100) / 100,
+            },
+          });
+        }
       }
-    }
 
-    // Event reminders for scrim-type matches
-    if (intervals.length > 0) {
-      await createEventReminders("MATCH", match.id, match.date, intervals, req.teamId!);
+      if (intervals.length > 0) {
+        await createEventReminders("MATCH", match.id, match.date, intervals, req.teamId!);
+      }
+      if (data.activateAttendanceNow) {
+        await activateAttendanceForEvent("MATCH", match.id, true);
+      }
+      createdMatches.push(match);
     }
+    const [match] = createdMatches;
 
     // Notifications for scrim-type matches
     if (data.type === "SCRIM") {
       await notifyTeam({ type: "MATCH_CREATED", title: "Neuer Scrim", message: `Scrim vs ${match.opponent}`, link: `/matches/${match.id}`, teamId: req.teamId!, actorId: req.user!.id });
-      channelNotify.notifyNewEvent(req.teamId!, "Scrim", `Scrim vs ${match.opponent}`, match.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
+      await Promise.all(
+        createdMatches.map((entry) =>
+          channelNotify.notifyNewEvent(req.teamId!, "Scrim", `Scrim vs ${entry.opponent}`, entry.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error),
+        ),
+      );
     }
 
     const full = await prisma.match.findUnique({ where: { id: match.id }, include: matchInclude });
@@ -185,7 +240,7 @@ matchRouter.post("/", authenticate, teamContext, requireFeature("matches"), requ
       channelNotify.notifyMatchResult(req.teamId!, match.id).catch(console.error);
     }
 
-    res.status(201).json({ success: true, data: full });
+    res.status(201).json({ success: true, data: full, createdCount: createdMatches.length });
   } catch (error) { next(error); }
 });
 
@@ -197,7 +252,14 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
 
     const { playerStats, ...data } = req.body;
 
-    const match = await prisma.match.update({ where: { id: String(req.params.id) }, data });
+    const match = await prisma.match.update({
+      where: { id: String(req.params.id) },
+      data: {
+        ...data,
+        ...(data.attendanceOpenHoursBefore !== undefined && { attendanceOpenHoursBefore: data.attendanceOpenHoursBefore }),
+        ...(data.attendanceCloseHoursBefore !== undefined && { attendanceCloseHoursBefore: data.attendanceCloseHoursBefore }),
+      },
+    });
 
     if (playerStats !== undefined) {
       await prisma.matchPlayerStat.deleteMany({ where: { matchId: match.id } });
@@ -220,6 +282,26 @@ matchRouter.put("/:id", authenticate, teamContext, requireFeature("matches"), re
     // Update reminders if date or intervals changed
     if (match.reminderIntervals.length > 0 && (data.date || data.reminderIntervals)) {
       await updateEventReminders("MATCH", match.id, match.date, match.reminderIntervals, req.teamId!);
+    }
+
+    if (data.date !== undefined || data.attendanceOpenHoursBefore !== undefined || data.attendanceCloseHoursBefore !== undefined) {
+      const attendanceWindow = buildAttendanceWindow(
+        match.date,
+        match.attendanceOpenHoursBefore,
+        match.attendanceCloseHoursBefore,
+        false,
+      );
+      await prisma.match.update({
+        where: { id: match.id },
+        data: {
+          attendanceOpensAt: attendanceWindow.opensAt,
+          attendanceClosesAt: attendanceWindow.closesAt,
+          attendanceOpenedNotificationSentAt: null,
+        },
+      });
+    }
+    if (data.activateAttendanceNow) {
+      await activateAttendanceForEvent("MATCH", match.id, true);
     }
 
     // Notifications for scrim-type
@@ -269,6 +351,8 @@ matchRouter.post("/:id/vote", authenticate, teamContext, requireFeature("matches
   try {
     const match = await prisma.match.findUnique({ where: { id: String(req.params.id) } });
     if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
+    const availability = canVoteForEvent(match.attendanceOpensAt, match.attendanceClosesAt);
+    if (!availability.allowed) throw new AppError(409, availability.error!);
 
     const vote = await prisma.matchVote.upsert({
       where: { userId_matchId: { userId: req.user!.id, matchId: match.id } },
@@ -280,6 +364,16 @@ matchRouter.post("/:id/vote", authenticate, teamContext, requireFeature("matches
     safeEmit(`team:${req.teamId}`, "match:vote", { matchId: match.id, vote });
     scheduleGroupDescriptionUpdate(req.teamId!);
     res.json({ success: true, data: vote });
+  } catch (error) { next(error); }
+});
+
+matchRouter.post("/:id/activate-attendance", authenticate, teamContext, requireFeature("matches"), requireTeamRole("COACH"), async (req, res, next) => {
+  try {
+    const match = await prisma.match.findUnique({ where: { id: String(req.params.id) } });
+    if (!match || match.teamId !== req.teamId) throw new AppError(404, "Match not found");
+    await activateAttendanceForEvent("MATCH", match.id, true);
+    const refreshed = await prisma.match.findUnique({ where: { id: match.id }, include: matchInclude });
+    res.json({ success: true, data: refreshed });
   } catch (error) { next(error); }
 });
 

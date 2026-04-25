@@ -8,6 +8,20 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.7",
+    date: "2026-04-25",
+    tags: ["feature", "fix", "improvement"],
+    title: "Attendance-Fenster, WhatsApp-Sprache und sauberere Admin-Settings",
+    changes: [
+      "Trainings und Matches können jetzt Attendance-Fenster mit Start-/Endzeit relativ zum Termin speichern; Trainings unterstützen zusätzlich Sofort-Aktivierung und wiederkehrende Erstellung",
+      "Team-Defaults für Attendance-Öffnung und -Schließung sind jetzt direkt in den HQ-Einstellungen pflegbar und werden beim Erstellen neuer Trainings übernommen",
+      "WhatsApp hat jetzt eine eigene Admin-Spracheinstellung; Bot-Befehle, Gruppenbeschreibung und Gruppen-/Privatnachrichten folgen dieser Sprache",
+      "Mitgliederverwaltung pflegt keine Telefonnummern mehr manuell über das HQ; der Admin kann dort nur noch Rolle, Status und E-Mail-Opt-in verwalten",
+      "WhatsApp-Demo-Aktionen haben jetzt ebenfalls Cooldowns, damit weder Testnachrichten noch Gruppenaktionen gespammt werden",
+      "Benachrichtigungs-E-Mails und WhatsApp-Texte weiter bereinigt: richtige Umlaute, klarere Formulierungen und konsistent markierte Automationshinweise",
+    ],
+  },
+  {
     version: "2.4.6",
     date: "2026-04-25",
     tags: ["fix", "improvement"],

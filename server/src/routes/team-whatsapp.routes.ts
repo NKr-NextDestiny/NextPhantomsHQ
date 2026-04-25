@@ -49,8 +49,8 @@ const demoSchema = z.object({
 
 teamWhatsAppRouter.use(authenticate, teamContext, requireAdmin);
 
-teamWhatsAppRouter.get("/commands", async (_req, res) => {
-  const helpMessage = await formatCommandHelpMessage();
+teamWhatsAppRouter.get("/commands", async (req, res) => {
+  const helpMessage = await formatCommandHelpMessage(req.teamId);
   res.json({ success: true, data: { commands: BOT_COMMANDS, helpMessage } });
 });
 

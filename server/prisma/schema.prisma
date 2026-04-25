@@ -172,9 +172,12 @@ model Team {
   discordWebhookUrl String?
 
   defaultReminderIntervals Int[]    @default([60, 1440])
+  defaultAttendanceOpenHoursBefore Int @default(72)
+  defaultAttendanceCloseHoursBefore Int @default(2)
   autoEmailEvents          Boolean  @default(false)
   emailNotificationsEnabled Boolean @default(true)
   whatsappNotificationsEnabled Boolean @default(false)
+  whatsappLanguage         String   @default("de")
   whatsappGroupJid         String?
   announcementNotificationMode NotificationContentMode @default(TEXT)
   matchResultNotificationMode  NotificationContentMode @default(TEXT)
@@ -253,6 +256,12 @@ model Training {
   date        DateTime
   endDate     DateTime?
   recurrence  RecurrenceType @default(NONE)
+  attendanceOpenHoursBefore Int @default(72)
+  attendanceCloseHoursBefore Int @default(2)
+  attendanceOpensAt DateTime?
+  attendanceClosesAt DateTime?
+  attendanceActivatedAt DateTime?
+  attendanceOpenedNotificationSentAt DateTime?
   notes       String?
   location    String?
   reminderIntervals Int[]    @default([])
@@ -388,6 +397,12 @@ model Match {
   contactInfo       String?
   serverRegion      String?
   recurrence        RecurrenceType @default(NONE)
+  attendanceOpenHoursBefore Int @default(72)
+  attendanceCloseHoursBefore Int @default(2)
+  attendanceOpensAt DateTime?
+  attendanceClosesAt DateTime?
+  attendanceActivatedAt DateTime?
+  attendanceOpenedNotificationSentAt DateTime?
   reminderIntervals Int[]          @default([])
 
   // Ratings (optional, used for SCRIM type)

@@ -29,9 +29,14 @@ const groupDescriptionBlockDelegate = (prisma as unknown as {
 
 const timers = new Map<string, NodeJS.Timeout>();
 
-function formatDate(date: Date | null | undefined) {
-  if (!date) return "Kein Datum";
-  return date.toLocaleString("de-DE", {
+function normalizeLocale(locale?: string | null) {
+  if (locale === "en" || locale === "pirate") return locale;
+  return "de";
+}
+
+function formatDate(date: Date | null | undefined, locale: string) {
+  if (!date) return locale === "en" ? "No date" : "Kein Datum";
+  return date.toLocaleString(locale === "en" ? "en-GB" : "de-DE", {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -91,13 +96,11 @@ async function getUpcomingTeamItems(teamId: string) {
   return { trainings, matches, polls, blocks };
 }
 
-function formatVotes(votes: VoteRecord[], totalMembers?: number) {
+function formatVotes(votes: VoteRecord[], totalMembers: number, locale: string) {
   const available = votes.filter((vote) => vote.status === "AVAILABLE");
   const unavailable = votes.filter((vote) => vote.status === "UNAVAILABLE");
   const maybe = votes.filter((vote) => vote.status === "MAYBE");
-  const outstanding = typeof totalMembers === "number"
-    ? Math.max(totalMembers - available.length - unavailable.length - maybe.length, 0)
-    : null;
+  const outstanding = Math.max(totalMembers - available.length - unavailable.length - maybe.length, 0);
 
   const unavailableReasons = unavailable
     .filter((vote) => vote.comment)
@@ -106,19 +109,16 @@ function formatVotes(votes: VoteRecord[], totalMembers?: number) {
     .filter((vote) => vote.comment)
     .map((vote) => `- ${vote.user.displayName}: ${vote.comment}`);
 
-  const lines = [
-    `Zusagen: ${available.length}`,
-    `Absagen: ${unavailable.length}`,
-    `Vielleicht: ${maybe.length}`,
-  ];
-  if (outstanding !== null) lines.push(`Ausstehend: ${outstanding}`);
+  const lines = locale === "en"
+    ? [`Available: ${available.length}`, `Unavailable: ${unavailable.length}`, `Maybe: ${maybe.length}`, `Pending: ${outstanding}`]
+    : [`Zusagen: ${available.length}`, `Absagen: ${unavailable.length}`, `Vielleicht: ${maybe.length}`, `Ausstehend: ${outstanding}`];
 
   if (unavailableReasons.length > 0) {
-    lines.push("Absagegründe:");
+    lines.push(locale === "en" ? "Reasons (unavailable):" : "Absagegründe:");
     lines.push(...unavailableReasons);
   }
   if (maybeReasons.length > 0) {
-    lines.push("Vielleicht-Gründe:");
+    lines.push(locale === "en" ? "Reasons (maybe):" : "Vielleicht-Gründe:");
     lines.push(...maybeReasons);
   }
 
@@ -129,12 +129,13 @@ export async function buildGroupDescription(teamId: string) {
   const team = await prisma.team.findUnique({ where: { id: teamId } });
   if (!team) return "";
 
+  const locale = normalizeLocale(team.whatsappLanguage);
   const memberCount = await prisma.teamMember.count({ where: { teamId } });
   const { trainings, matches, polls, blocks } = await getUpcomingTeamItems(teamId);
 
   const mergedEvents = [
     ...trainings.map((training) => ({
-      kind: "Training",
+      kind: locale === "en" ? "Training" : "Training",
       title: training.title,
       date: training.date,
       notes: training.notes,
@@ -159,29 +160,29 @@ export async function buildGroupDescription(teamId: string) {
   if (above.length > 0) parts.push(above.join("\n\n"));
 
   if (current) {
-    parts.push(`📅 Nächster Termin\n${current.kind}: ${current.title}\n${formatDate(current.date)}`);
-    if (current.notes) parts.push(`📝 Info\n${current.notes}`);
-    parts.push(`📌 Status\n${formatVotes(current.votes, memberCount)}`);
+    parts.push(locale === "en" ? `📅 Next Event\n${current.kind}: ${current.title}\n${formatDate(current.date, locale)}` : `📅 Nächster Termin\n${current.kind}: ${current.title}\n${formatDate(current.date, locale)}`);
+    if (current.notes) parts.push(`📝 ${locale === "en" ? "Info" : "Info"}\n${current.notes}`);
+    parts.push(`📌 Status\n${formatVotes(current.votes, memberCount, locale)}`);
   } else {
-    parts.push("📅 Nächster Termin\nAktuell ist kein kommender Termin eingetragen.");
+    parts.push(locale === "en" ? "📅 Next Event\nThere is currently no upcoming event scheduled." : "📅 Nächster Termin\nAktuell ist kein kommender Termin eingetragen.");
   }
 
   if (polls.length > 0) {
     const pollLines = polls.map((poll) => {
       const totalVotes = poll.options.reduce((sum, option) => sum + option._count.votes, 0);
-      return `- ${poll.question} (${totalVotes} Stimmen${poll.deadline ? `, bis ${formatDate(poll.deadline)}` : ""})`;
+      return `- ${poll.question} (${totalVotes} ${locale === "en" ? "votes" : "Stimmen"}${poll.deadline ? `${locale === "en" ? ", until " : ", bis "}${formatDate(poll.deadline, locale)}` : ""})`;
     });
-    parts.push(`📊 Offene Umfragen\n${pollLines.join("\n")}`);
+    parts.push(locale === "en" ? `📊 Open Polls\n${pollLines.join("\n")}` : `📊 Offene Umfragen\n${pollLines.join("\n")}`);
   }
 
   if (upcoming.length > 0) {
-    const lines = upcoming.map((event) => `- ${event.kind}: ${event.title} | ${formatDate(event.date)}`);
-    parts.push(`⏭️ Danach\n${lines.join("\n")}`);
+    const lines = upcoming.map((event) => `- ${event.kind}: ${event.title} | ${formatDate(event.date, locale)}`);
+    parts.push(locale === "en" ? `⏭️ After That\n${lines.join("\n")}` : `⏭️ Danach\n${lines.join("\n")}`);
   }
 
   if (below.length > 0) parts.push(below.join("\n\n"));
 
-  parts.push("🤖 Automatisch gepflegt von Next Phantoms HQ");
+  parts.push(locale === "en" ? "🤖 Automatically maintained by Next Phantoms HQ" : "🤖 Automatisch gepflegt von Next Phantoms HQ");
   return clipDescription(parts.join("\n\n").trim());
 }
 

@@ -20,9 +20,12 @@ const updateTeamSchema = z.object({
   description: z.string().optional().nullable(),
   discordWebhookUrl: z.string().optional().nullable(),
   defaultReminderIntervals: z.array(z.number()).optional(),
+  defaultAttendanceOpenHoursBefore: z.number().int().min(0).max(336).optional(),
+  defaultAttendanceCloseHoursBefore: z.number().int().min(0).max(336).optional(),
   autoEmailEvents: z.boolean().optional(),
   emailNotificationsEnabled: z.boolean().optional(),
   whatsappNotificationsEnabled: z.boolean().optional(),
+  whatsappLanguage: z.enum(["de", "en", "pirate"]).optional(),
   whatsappGroupJid: z.string().optional().nullable(),
   announcementNotificationMode: z.enum(["TEXT", "IMAGE", "BOTH"]).optional(),
   matchResultNotificationMode: z.enum(["TEXT", "IMAGE", "BOTH"]).optional(),
@@ -42,7 +45,6 @@ const updateMemberSchema = z.object({
   status: z.enum(["ACTIVE", "SUBSTITUTE", "BENCH", "INACTIVE"]).optional(),
   ign: z.string().optional().nullable(),
   realName: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
   emailNotifications: z.boolean().optional(),
 });
 
@@ -155,11 +157,10 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
       },
     });
 
-    if (req.body.phone !== undefined || req.body.emailNotifications !== undefined) {
+    if (req.body.emailNotifications !== undefined) {
       await prisma.user.update({
         where: { id: String(req.params.uid) },
         data: {
-          ...(req.body.phone !== undefined && { phone: req.body.phone }),
           ...(req.body.emailNotifications !== undefined && { emailNotifications: req.body.emailNotifications }),
         },
       });

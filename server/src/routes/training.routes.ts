@@ -10,7 +10,13 @@ import { logAudit } from "../services/audit.service.js";
 import { notifyTeam } from "../services/notification.service.js";
 import { sendWebhookNotification, buildTrainingEmbed } from "../services/discord-webhook.service.js";
 import * as channelNotify from "../services/channel-notification.service.js";
-import { createEventReminders, updateEventReminders } from "../services/scheduler.service.js";
+import {
+  activateAttendanceForEvent,
+  buildAttendanceWindow,
+  buildRecurringDates,
+  createEventReminders,
+  updateEventReminders,
+} from "../services/scheduler.service.js";
 import { safeEmit } from "../config/socket.js";
 import { scheduleGroupDescriptionUpdate } from "../services/group-description.service.js";
 
@@ -23,6 +29,9 @@ const createSchema = z.object({
   date: z.string().transform(s => new Date(s)),
   endDate: z.string().transform(s => new Date(s)).optional().nullable(),
   recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"]).optional(),
+  attendanceOpenHoursBefore: z.number().int().min(0).max(336).optional(),
+  attendanceCloseHoursBefore: z.number().int().min(0).max(336).optional(),
+  activateAttendanceNow: z.boolean().optional(),
   notes: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   reminderIntervals: z.array(z.number()).optional(),
@@ -34,6 +43,13 @@ const voteSchema = z.object({
   status: z.enum(["AVAILABLE", "UNAVAILABLE", "MAYBE"]),
   comment: z.string().optional().nullable(),
 });
+
+function canVoteForEvent(opensAt?: Date | null, closesAt?: Date | null) {
+  const now = new Date();
+  if (opensAt && now < opensAt) return { allowed: false, error: "Die Abstimmung ist noch nicht geöffnet." };
+  if (closesAt && now > closesAt) return { allowed: false, error: "Die Abstimmung ist bereits geschlossen." };
+  return { allowed: true };
+}
 
 // List trainings
 trainingRouter.get("/", authenticate, teamContext, requireFeature("training"), async (req, res, next) => {
@@ -79,32 +95,67 @@ trainingRouter.get("/:id", authenticate, teamContext, requireFeature("training")
 trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), validate(createSchema), async (req, res, next) => {
   try {
     const data = req.body;
-    const team = await prisma.team.findUnique({ where: { id: req.teamId! } });
-    const intervals = data.reminderIntervals ?? team?.defaultReminderIntervals ?? [];
-
-    const training = await prisma.training.create({
-      data: {
-        title: data.title,
-        type: data.type,
-        meetTime: data.meetTime,
-        date: data.date,
-        endDate: data.endDate || null,
-        recurrence: data.recurrence || "NONE",
-        notes: data.notes || null,
-        location: data.location || null,
-        reminderIntervals: intervals,
-        createdById: req.user!.id,
-        teamId: req.teamId!,
-      },
-      include: {
-        createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
-        votes: true,
+    const team = await prisma.team.findUnique({
+      where: { id: req.teamId! },
+      select: {
+        defaultReminderIntervals: true,
+        defaultAttendanceOpenHoursBefore: true,
+        defaultAttendanceCloseHoursBefore: true,
       },
     });
+    const intervals = data.reminderIntervals ?? team?.defaultReminderIntervals ?? [];
+    const attendanceOpenHoursBefore = data.attendanceOpenHoursBefore ?? team?.defaultAttendanceOpenHoursBefore ?? 72;
+    const attendanceCloseHoursBefore = data.attendanceCloseHoursBefore ?? team?.defaultAttendanceCloseHoursBefore ?? 2;
+    const recurrence = data.recurrence || "NONE";
+    const recurringDates = recurrence === "NONE" ? [] : buildRecurringDates(data.date, recurrence);
 
-    if (intervals.length > 0) {
-      await createEventReminders("TRAINING", training.id, training.date, intervals, req.teamId!);
+    const createdTrainings = [];
+    const allDates = [data.date, ...recurringDates];
+    for (const currentDate of allDates) {
+      const meetOffset = data.date.getTime() - data.meetTime.getTime();
+      const endOffset = data.endDate ? data.endDate.getTime() - data.date.getTime() : null;
+      const attendanceWindow = buildAttendanceWindow(
+        currentDate,
+        attendanceOpenHoursBefore,
+        attendanceCloseHoursBefore,
+        Boolean(data.activateAttendanceNow),
+      );
+
+      const training = await prisma.training.create({
+        data: {
+          title: data.title,
+          type: data.type,
+          meetTime: new Date(currentDate.getTime() - meetOffset),
+          date: currentDate,
+          endDate: endOffset !== null ? new Date(currentDate.getTime() + endOffset) : null,
+          recurrence,
+          attendanceOpenHoursBefore,
+          attendanceCloseHoursBefore,
+          attendanceOpensAt: attendanceWindow.opensAt,
+          attendanceClosesAt: attendanceWindow.closesAt,
+          attendanceActivatedAt: attendanceWindow.activatedAt,
+          attendanceOpenedNotificationSentAt: attendanceWindow.openedNotificationSentAt,
+          notes: data.notes || null,
+          location: data.location || null,
+          reminderIntervals: intervals,
+          createdById: req.user!.id,
+          teamId: req.teamId!,
+        },
+        include: {
+          createdBy: { select: { id: true, displayName: true, avatarUrl: true } },
+          votes: true,
+        },
+      });
+
+      if (intervals.length > 0) {
+        await createEventReminders("TRAINING", training.id, training.date, intervals, req.teamId!);
+      }
+      if (data.activateAttendanceNow) {
+        await activateAttendanceForEvent("TRAINING", training.id, true);
+      }
+      createdTrainings.push(training);
     }
+    const [training] = createdTrainings;
 
     await notifyTeam({
       type: "TRAINING_CREATED",
@@ -115,7 +166,11 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
       actorId: req.user!.id,
     });
 
-    channelNotify.notifyNewEvent(req.teamId!, "Training", training.title, training.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error);
+    await Promise.all(
+      createdTrainings.map((entry) =>
+        channelNotify.notifyNewEvent(req.teamId!, "Training", entry.title, entry.date.toLocaleString("de-DE"), req.user!.displayName).catch(console.error),
+      ),
+    );
 
     await logAudit(req.user!.id, "CREATE", "training", training.id, { title: training.title }, req.teamId);
 
@@ -123,7 +178,7 @@ trainingRouter.post("/", authenticate, teamContext, requireFeature("training"), 
     sendWebhookNotification(buildTrainingEmbed({ title: training.title, type: training.type, date: training.date.toISOString() })).catch(console.error);
     scheduleGroupDescriptionUpdate(req.teamId!);
 
-    res.status(201).json({ success: true, data: training });
+    res.status(201).json({ success: true, data: training, createdCount: createdTrainings.length });
   } catch (error) { next(error); }
 });
 
@@ -143,6 +198,8 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
         ...(data.date !== undefined && { date: data.date }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.recurrence !== undefined && { recurrence: data.recurrence }),
+        ...(data.attendanceOpenHoursBefore !== undefined && { attendanceOpenHoursBefore: data.attendanceOpenHoursBefore }),
+        ...(data.attendanceCloseHoursBefore !== undefined && { attendanceCloseHoursBefore: data.attendanceCloseHoursBefore }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.location !== undefined && { location: data.location }),
         ...(data.reminderIntervals !== undefined && { reminderIntervals: data.reminderIntervals }),
@@ -155,6 +212,27 @@ trainingRouter.put("/:id", authenticate, teamContext, requireFeature("training")
 
     if (data.date || data.reminderIntervals) {
       await updateEventReminders("TRAINING", training.id, training.date, training.reminderIntervals, req.teamId!);
+    }
+
+    if (data.date !== undefined || data.attendanceOpenHoursBefore !== undefined || data.attendanceCloseHoursBefore !== undefined) {
+      const attendanceWindow = buildAttendanceWindow(
+        training.date,
+        training.attendanceOpenHoursBefore,
+        training.attendanceCloseHoursBefore,
+        false,
+      );
+      await prisma.training.update({
+        where: { id: training.id },
+        data: {
+          attendanceOpensAt: attendanceWindow.opensAt,
+          attendanceClosesAt: attendanceWindow.closesAt,
+          attendanceOpenedNotificationSentAt: null,
+        },
+      });
+    }
+
+    if (data.activateAttendanceNow) {
+      await activateAttendanceForEvent("TRAINING", training.id, true);
     }
 
     await logAudit(req.user!.id, "UPDATE", "training", training.id, undefined, req.teamId);
@@ -192,6 +270,8 @@ trainingRouter.post("/:id/vote", authenticate, teamContext, requireFeature("trai
   try {
     const training = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
     if (!training || training.teamId !== req.teamId) throw new AppError(404, "Training not found");
+    const availability = canVoteForEvent(training.attendanceOpensAt, training.attendanceClosesAt);
+    if (!availability.allowed) throw new AppError(409, availability.error!);
 
     const vote = await prisma.trainingVote.upsert({
       where: { userId_trainingId: { userId: req.user!.id, trainingId: String(req.params.id) } },
@@ -204,6 +284,16 @@ trainingRouter.post("/:id/vote", authenticate, teamContext, requireFeature("trai
     scheduleGroupDescriptionUpdate(req.teamId!);
 
     res.json({ success: true, data: vote });
+  } catch (error) { next(error); }
+});
+
+trainingRouter.post("/:id/activate-attendance", authenticate, teamContext, requireFeature("training"), requireTeamRole("COACH"), async (req, res, next) => {
+  try {
+    const training = await prisma.training.findUnique({ where: { id: String(req.params.id) } });
+    if (!training || training.teamId !== req.teamId) throw new AppError(404, "Training not found");
+    await activateAttendanceForEvent("TRAINING", training.id, true);
+    const refreshed = await prisma.training.findUnique({ where: { id: training.id } });
+    res.json({ success: true, data: refreshed });
   } catch (error) { next(error); }
 });
 

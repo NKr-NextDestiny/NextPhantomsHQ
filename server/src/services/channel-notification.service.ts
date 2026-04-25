@@ -8,6 +8,7 @@ import { readDecryptedFile } from "./file-encryption.service.js";
 import { logger } from "../config/logger.js";
 
 type ContentMode = "TEXT" | "IMAGE" | "BOTH";
+type TeamLocale = "de" | "en" | "pirate";
 
 const AUTOMATED_NOTICE = "Dies ist eine automatisierte Nachricht von Next Phantoms HQ.";
 
@@ -22,10 +23,23 @@ interface NotifyMember {
 interface TeamNotificationSettings {
   emailNotificationsEnabled: boolean;
   whatsappNotificationsEnabled: boolean;
+  whatsappLanguage: string | null;
   whatsappGroupJid: string | null;
   announcementNotificationMode: ContentMode;
   matchResultNotificationMode: ContentMode;
   pollResultNotificationMode: ContentMode;
+}
+
+function normalizeLocale(locale?: string | null): TeamLocale {
+  if (locale === "en" || locale === "pirate") return locale;
+  return "de";
+}
+
+function automatedNotice(locale?: string | null) {
+  const normalized = normalizeLocale(locale);
+  if (normalized === "en") return "This is an automated message from Next Phantoms HQ.";
+  if (normalized === "pirate") return "Dies ist eine automatisierte Flaschenpost von Next Phantoms HQ.";
+  return AUTOMATED_NOTICE;
 }
 
 function inferMimeType(fileName: string): string {
@@ -53,6 +67,7 @@ async function getSettings(teamId: string): Promise<TeamNotificationSettings> {
     select: {
       emailNotificationsEnabled: true,
       whatsappNotificationsEnabled: true,
+      whatsappLanguage: true,
       whatsappGroupJid: true,
       announcementNotificationMode: true,
       matchResultNotificationMode: true,
@@ -63,6 +78,7 @@ async function getSettings(teamId: string): Promise<TeamNotificationSettings> {
   return {
     emailNotificationsEnabled: team?.emailNotificationsEnabled ?? true,
     whatsappNotificationsEnabled: team?.whatsappNotificationsEnabled ?? false,
+    whatsappLanguage: team?.whatsappLanguage ?? "de",
     whatsappGroupJid: team?.whatsappGroupJid ?? null,
     announcementNotificationMode: (team?.announcementNotificationMode as ContentMode) || "TEXT",
     matchResultNotificationMode: (team?.matchResultNotificationMode as ContentMode) || "TEXT",
@@ -111,10 +127,17 @@ async function sendGroupWhatsapp(
   if (!settings.whatsappNotificationsEnabled || !settings.whatsappGroupJid) return;
   await evolutionService.sendWhatsAppNotification(
     settings.whatsappGroupJid,
-    `${text}\n\n${AUTOMATED_NOTICE}`,
+    `${text}\n\n${automatedNotice(settings.whatsappLanguage)}`,
     mode,
     media,
   );
+}
+
+function groupText(locale: string | null | undefined, copy: { de: string; en?: string; pirate?: string }) {
+  const normalized = normalizeLocale(locale);
+  if (normalized === "en" && copy.en) return copy.en;
+  if (normalized === "pirate" && copy.pirate) return copy.pirate;
+  return copy.de;
 }
 
 export function getAvailableChannels(): { email: boolean; whatsapp: boolean } {
@@ -134,7 +157,10 @@ export async function notifyNewEvent(
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
   const link = eventType === "Training" ? "/training" : "/matches";
-  const text = `📅 Neues ${eventType}: ${title}\n${date}\nVon ${createdBy}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `📅 Neues ${eventType}: ${title}\n${date}\nVon ${createdBy}`,
+    en: `📅 New ${eventType}: ${title}\n${date}\nBy ${createdBy}`,
+  });
 
   await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
     emailService.sendNewEventNotification(member.email!, member.language, eventType, title, date, createdBy, link),
@@ -152,7 +178,10 @@ export async function notifyEventUpdated(
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
   const link = eventType === "Training" ? "/training" : "/matches";
-  const text = `🔄 ${eventType} aktualisiert: ${title}\n${date}\nGeändert von ${updatedBy}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `🔄 ${eventType} aktualisiert: ${title}\n${date}\nGeändert von ${updatedBy}`,
+    en: `🔄 ${eventType} updated: ${title}\n${date}\nUpdated by ${updatedBy}`,
+  });
 
   await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
     emailService.sendEventUpdatedNotification(member.email!, member.language, eventType, title, date, updatedBy, link),
@@ -169,7 +198,10 @@ export async function notifyEventDeleted(
   const settings = await getSettings(teamId);
   const members = await getRecipients(teamId);
   const link = eventType === "Training" ? "/training" : "/matches";
-  const text = `❌ ${eventType} abgesagt: ${title}\nVon ${deletedBy}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `❌ ${eventType} abgesagt: ${title}\nVon ${deletedBy}`,
+    en: `❌ ${eventType} cancelled: ${title}\nBy ${deletedBy}`,
+  });
 
   await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
     emailService.sendEventDeletedNotification(member.email!, member.language, eventType, title, deletedBy, link),
@@ -186,7 +218,10 @@ export async function notifyAnnouncement(teamId: string, announcementId: string)
   });
   if (!announcement) return;
 
-  const text = `📣 Neue Ankündigung: ${announcement.title}\nVon ${announcement.createdBy.displayName}\n\n${announcement.content}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `📣 Neue Ankündigung: ${announcement.title}\nVon ${announcement.createdBy.displayName}\n\n${announcement.content}`,
+    en: `📣 New announcement: ${announcement.title}\nBy ${announcement.createdBy.displayName}\n\n${announcement.content}`,
+  });
   const media = announcement.imageUrl
     ? await loadEncryptedImage(announcement.imageUrl, announcement.imageFileName)
     : await createAnnouncementImage({
@@ -213,10 +248,10 @@ export async function notifyMatchResult(teamId: string, matchId: string): Promis
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match || match.scoreUs === null || match.scoreThem === null || !match.result) return;
 
-  const text =
-    `🏆 Match-Ergebnis\n` +
-    `Next Phantoms ${match.scoreUs}:${match.scoreThem} ${match.opponent}\n` +
-    `${match.result}\n${match.map || "Ohne Map"}\n${match.competition || "Ohne Wettbewerb"}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `🏆 Match-Ergebnis\nNext Phantoms ${match.scoreUs}:${match.scoreThem} ${match.opponent}\n${match.result}\n${match.map || "Ohne Map"}\n${match.competition || "Ohne Wettbewerb"}`,
+    en: `🏆 Match Result\nNext Phantoms ${match.scoreUs}:${match.scoreThem} ${match.opponent}\n${match.result}\n${match.map || "No map"}\n${match.competition || "No competition"}`,
+  });
   const media = await createMatchResultImage({
     opponent: match.opponent,
     scoreUs: match.scoreUs!,
@@ -261,7 +296,10 @@ export async function notifyPollResults(teamId: string, pollId: string): Promise
     const percent = totalVotes > 0 ? Math.round((option._count.votes / totalVotes) * 100) : 0;
     return `${option.text}: ${option._count.votes} Stimmen (${percent}%)`;
   });
-  const text = `📊 Abstimmung beendet: ${poll.question}\n\n${resultLines.join("\n")}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `📊 Abstimmung beendet: ${poll.question}\n\n${resultLines.join("\n")}`,
+    en: `📊 Poll closed: ${poll.question}\n\n${resultLines.join("\n")}`,
+  });
   const media = await createPollResultImage({ question: poll.question, lines: resultLines });
 
   await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
@@ -285,7 +323,10 @@ export async function notifyPollCreated(teamId: string, pollId: string): Promise
   if (!poll) return;
 
   const optionLines = poll.options.map((option, index) => `${index + 1}. ${option.text}`);
-  const text = `📊 Neue Umfrage: ${poll.question}\nVon ${poll.createdBy.displayName}\n\n${optionLines.join("\n")}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `📊 Neue Umfrage: ${poll.question}\nVon ${poll.createdBy.displayName}\n\n${optionLines.join("\n")}`,
+    en: `📊 New poll: ${poll.question}\nBy ${poll.createdBy.displayName}\n\n${optionLines.join("\n")}`,
+  });
 
   await sendEmails(members, settings.emailNotificationsEnabled, (member) =>
     emailService.sendPollCreatedNotification(
@@ -302,19 +343,28 @@ export async function notifyPollCreated(teamId: string, pollId: string): Promise
 
 export async function notifyReminderCreated(teamId: string, title: string, content?: string | null) {
   const settings = await getSettings(teamId);
-  const text = `🔔 Neue Erinnerung: ${title}${content ? `\n\n${content}` : ""}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `🔔 Neue Erinnerung: ${title}${content ? `\n\n${content}` : ""}`,
+    en: `🔔 New reminder: ${title}${content ? `\n\n${content}` : ""}`,
+  });
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
 export async function notifyReminderUpdated(teamId: string, title: string, content?: string | null) {
   const settings = await getSettings(teamId);
-  const text = `🔄 Erinnerung aktualisiert: ${title}${content ? `\n\n${content}` : ""}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `🔄 Erinnerung aktualisiert: ${title}${content ? `\n\n${content}` : ""}`,
+    en: `🔄 Reminder updated: ${title}${content ? `\n\n${content}` : ""}`,
+  });
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
 export async function notifyReminderDeleted(teamId: string, title: string) {
   const settings = await getSettings(teamId);
-  const text = `❌ Erinnerung gelöscht: ${title}`;
+  const text = groupText(settings.whatsappLanguage, {
+    de: `❌ Erinnerung gelöscht: ${title}`,
+    en: `❌ Reminder deleted: ${title}`,
+  });
   await sendGroupWhatsapp(settings, text, "TEXT");
 }
 
@@ -331,7 +381,11 @@ export async function sendPrivateAttendanceReminder(
 ): Promise<void> {
   const settings = await getSettings(teamId);
   const attendanceLink = whatsappToken ? `${config.appUrl}/attendance/${whatsappToken}` : undefined;
-  const baseText = `⏰ Automatisierte Erinnerung: ${title}\nTyp: ${eventType}\n${date}\n\nBitte gib deine Verfügbarkeit an.`;
+  const locale = settings.whatsappLanguage ?? member.language;
+  const baseText = groupText(locale, {
+    de: `⏰ Automatisierte Erinnerung: ${title}\nTyp: ${eventType}\n${date}\n\nBitte gib deine Verfügbarkeit an.`,
+    en: `⏰ Automated reminder: ${title}\nType: ${eventType}\n${date}\n\nPlease share your availability.`,
+  });
 
   const tasks: Promise<void>[] = [];
 
@@ -364,7 +418,7 @@ export async function sendPrivateAttendanceReminder(
     tasks.push(
       evolutionService.sendWhatsAppText(
         member.phone,
-        `${baseText}\n${attendanceLink}\n\n${AUTOMATED_NOTICE}`,
+        `${baseText}\n${attendanceLink}\n\n${automatedNotice(locale)}`,
         "private",
       ),
     );
