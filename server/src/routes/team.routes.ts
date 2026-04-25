@@ -45,6 +45,7 @@ const updateMemberSchema = z.object({
   status: z.enum(["ACTIVE", "SUBSTITUTE", "BENCH", "INACTIVE"]).optional(),
   ign: z.string().optional().nullable(),
   realName: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
   emailNotifications: z.boolean().optional(),
 });
 
@@ -157,10 +158,11 @@ teamRouter.put("/members/:uid", authenticate, teamContext, requireAdmin, validat
       },
     });
 
-    if (req.body.emailNotifications !== undefined) {
+    if (req.body.phone !== undefined || req.body.emailNotifications !== undefined) {
       await prisma.user.update({
         where: { id: String(req.params.uid) },
         data: {
+          ...(req.body.phone !== undefined && { phone: req.body.phone }),
           ...(req.body.emailNotifications !== undefined && { emailNotifications: req.body.emailNotifications }),
         },
       });

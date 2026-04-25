@@ -998,14 +998,15 @@ export default function SettingsPage() {
         <Card>
           <h2 className="mb-4 text-lg font-semibold text-[var(--foreground)]">{t("members.title")} ({members.length})</h2>
           <p className="mb-4 text-sm text-[var(--muted-foreground)]">
-            WhatsApp-Nummern werden nicht mehr manuell im HQ gepflegt. Für private WhatsApp-Nachrichten muss der Spieler mit der verbundenen Evolution-Instanz eindeutig erreichbar sein.
+            Private WhatsApp-Nachrichten, Abstimmungslinks und Erinnerungen gehen nur an Mitglieder mit hier fest hinterlegter Telefonnummer. Ohne Nummer wird niemand privat per WhatsApp angeschrieben.
           </p>
           {members.length === 0 ? (
             <p className="text-[var(--muted-foreground)]">{t("members.empty")}</p>
           ) : (
             <div className="space-y-2">
               {members.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 rounded-lg bg-[var(--secondary)] p-3">
+                <div key={m.id} className="rounded-lg bg-[var(--secondary)] p-3">
+                  <div className="flex items-center gap-3">
                   {m.user.avatarUrl ? (
                     <img src={m.user.avatarUrl} alt="" className="h-10 w-10 rounded-full" />
                   ) : (
@@ -1057,7 +1058,7 @@ export default function SettingsPage() {
                       disabled={!emailNotificationsEnabled}
                       onChange={async (e) => {
                         try {
-                          await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, emailNotifications: e.target.checked });
+                          await api.put(`/api/team/members/${m.user.id}`, { role: m.role, status: m.status, phone: m.user.phone || null, emailNotifications: e.target.checked });
                           success(tc("saved"));
                           load();
                         } catch { error(tc("saveError")); }
@@ -1070,6 +1071,38 @@ export default function SettingsPage() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,280px)_auto] md:items-end">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-[var(--foreground)]">
+                        Telefonnummer für private WhatsApp-Nachrichten
+                      </label>
+                      <input
+                        defaultValue={m.user.phone || ""}
+                        onBlur={async (e) => {
+                          const nextPhone = e.target.value.trim();
+                          if ((m.user.phone || "") === nextPhone) return;
+                          try {
+                            await api.put(`/api/team/members/${m.user.id}`, {
+                              role: m.role,
+                              status: m.status,
+                              phone: nextPhone || null,
+                              emailNotifications: m.user.emailNotifications,
+                            });
+                            success(tc("saved"));
+                            load();
+                          } catch {
+                            error(tc("saveError"));
+                          }
+                        }}
+                        placeholder="491701234567"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm text-[var(--foreground)] focus:border-[var(--primary)] focus:outline-none"
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--muted-foreground)]">
+                      Format: internationale Nummer ohne Leerzeichen. Nur mit dieser Nummer gibt es private WhatsApp-Links und Reminder.
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
