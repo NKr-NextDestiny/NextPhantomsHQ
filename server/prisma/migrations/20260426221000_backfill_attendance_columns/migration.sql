@@ -1,0 +1,20 @@
+ALTER TABLE "teams"
+  ADD COLUMN IF NOT EXISTS "defaultAttendanceOpenHoursBefore" INTEGER NOT NULL DEFAULT 72,
+  ADD COLUMN IF NOT EXISTS "defaultAttendanceCloseHoursBefore" INTEGER NOT NULL DEFAULT 2,
+  ADD COLUMN IF NOT EXISTS "whatsappLanguage" TEXT NOT NULL DEFAULT 'de';
+
+ALTER TABLE "trainings"
+  ADD COLUMN IF NOT EXISTS "attendanceOpenHoursBefore" INTEGER NOT NULL DEFAULT 72,
+  ADD COLUMN IF NOT EXISTS "attendanceCloseHoursBefore" INTEGER NOT NULL DEFAULT 2,
+  ADD COLUMN IF NOT EXISTS "attendanceOpensAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceClosesAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceActivatedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceOpenedNotificationSentAt" TIMESTAMP(3);
+
+ALTER TABLE "matches"
+  ADD COLUMN IF NOT EXISTS "attendanceOpenHoursBefore" INTEGER NOT NULL DEFAULT 72,
+  ADD COLUMN IF NOT EXISTS "attendanceCloseHoursBefore" INTEGER NOT NULL DEFAULT 2,
+  ADD COLUMN IF NOT EXISTS "attendanceOpensAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceClosesAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceActivatedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "attendanceOpenedNotificationSentAt" TIMESTAMP(3);
