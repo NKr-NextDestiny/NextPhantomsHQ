@@ -8,6 +8,18 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.8",
+    date: "2026-04-26",
+    tags: ["fix", "improvement"],
+    title: "Robusterer Docker-Start, Prisma-Build-Fix und DB-Backfill",
+    changes: [
+      "Bestehende Datenbanken bekommen jetzt eine explizite Vorwärts-Migration für die neuen Attendance- und WhatsApp-Default-Spalten, damit der Server nicht mehr beim Start mit fehlenden Team-Spalten crasht",
+      "Prisma-Client-Build im Server patcht relative ESM-Imports jetzt zuverlässig mit .js-Endungen, damit Node den generierten Client lokal und im Docker-Container sauber laden kann",
+      "Docker-Build für den Server verwendet denselben Prisma-Import-Fix bereits bei der Generierung im Image, damit Build- und Laufzeitverhalten konsistent bleiben",
+      "Wichtig für Reset-Deployments: Ein kompletter Datenbank-Reset erzeugt immer exakt das Schema der aktuell ausgecheckten Migrationen; deshalb hilft der Reset nur dann, wenn der Host vorher auch wirklich den neuen Commit gepullt hat",
+    ],
+  },
+  {
     version: "2.4.7",
     date: "2026-04-25",
     tags: ["feature", "fix", "improvement"],
