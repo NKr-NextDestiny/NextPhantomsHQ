@@ -67,6 +67,29 @@ do_update() {
   echo "API: http://localhost/api/health"
 }
 
+do_rebuild_from_scratch() {
+  log "Hole neuesten Stand von origin/$BRANCH..."
+  git fetch origin "$BRANCH"
+  git checkout "$BRANCH"
+  git pull --ff-only origin "$BRANCH"
+
+  warn "Stoppe und entferne alle Compose-Container, Netzwerke und Volumes..."
+  docker compose down --volumes --remove-orphans
+
+  log "Baue den Docker-Stack komplett neu..."
+  docker compose build --no-cache
+
+  log "Starte den Docker-Stack frisch..."
+  docker compose up -d --force-recreate
+
+  log "Fuehre Prisma-Migrationen im frischen Server-Container aus..."
+  docker compose exec -T server sh -lc "cd server && npx prisma migrate deploy && npx prisma generate"
+
+  ok "Kompletter Neuaufbau abgeschlossen"
+  echo "App: http://localhost"
+  echo "API: http://localhost/api/health"
+}
+
 confirm_reset() {
   local confirm_one=""
   local confirm_two=""
@@ -82,11 +105,7 @@ confirm_reset() {
 
 do_update_with_reset() {
   confirm_reset
-  do_update
-
-  warn "Setze Datenbank im Server-Container vollstaendig zurueck..."
-  docker compose exec -T server sh -lc "cd server && npx prisma migrate reset --force --skip-seed && npx prisma generate"
-  ok "Datenbank-Reset abgeschlossen"
+  do_rebuild_from_scratch
 }
 
 show_menu() {

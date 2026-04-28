@@ -8,6 +8,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "2.4.9",
+    date: "2026-04-28",
+    tags: ["fix", "improvement"],
+    title: "Reset baut Docker jetzt wirklich komplett frisch auf",
+    changes: [
+      "update.sh fuehrt beim Modus fuer kompletten Reset jetzt erst den neuesten Git-Stand ein und faehrt dann den gesamten Compose-Stack inklusive Volumes und Orphans herunter",
+      "Nach dem Reset wird das gesamte Docker-Setup ohne Cache neu gebaut und mit frischen Containern wieder gestartet, statt nur ein Prisma-Reset in der laufenden Datenbank auszufuehren",
+      "Der Reset-Pfad ist damit jetzt ein echter Neuaufbau fuer Postgres, Server und Client und beseitigt auch alte Volume-Staende, die trotz Datenbank-Reset noch Probleme verursachen konnten",
+    ],
+  },
+  {
     version: "2.4.8",
     date: "2026-04-26",
     tags: ["fix", "improvement"],
